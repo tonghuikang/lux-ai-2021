@@ -1,2 +1,4 @@
 *.tar.gz
 *.pyc
+
+.ipynb_checkpoints/
