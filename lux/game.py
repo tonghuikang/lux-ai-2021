@@ -1,3 +1,5 @@
+from typing import Dict
+
 from .constants import Constants
 from .game_map import GameMap
 from .game_objects import Player, Unit, City, CityTile
@@ -18,6 +20,11 @@ class Game:
         self.map_height = int(mapInfo[1])
         self.map = GameMap(self.map_width, self.map_height)
         self.players = [Player(0), Player(1)]
+
+        self.night_turns_left = (360 - self.turn)//40 * 10 + min(10, (360 - self.turn)%40)
+        self.turns_to_night = (30 - self.turn)%40
+        self.turns_to_dawn = (40 - self.turn%40)
+
 
     def _end_turn(self):
         print("D_FINISH")
@@ -84,3 +91,16 @@ class Game:
                 y = int(strs[2])
                 road = float(strs[3])
                 self.map.get_cell(x, y).road = road
+
+        # update statistics
+        self.night_turns_left = (360 - self.turn)//40 * 10 + min(10, (360 - self.turn)%40)
+        self.turns_to_night = (30 - self.turn)%40
+        self.turns_to_dawn = (40 - self.turn%40)
+
+
+
+class Observation(Dict[str, any]):
+    def __init__(self, player=0) -> None:
+        self.player = player
+        # self.updates = []
+        # self.step = 0

@@ -8,17 +8,17 @@ import time
 os.environ["notebook_debug"] = "YES"
 NOTEBOOK_DEBUG = os.environ["notebook_debug"]
 
-from lux.game import Game
+from lux.game import Game, Observation
+from lux.game_objects import Player
 from lux.game_map import Cell, RESOURCE_TYPES, Position
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
 from lux import annotate
 
 
-def update_game_state_with_observation(game_state, observation):
+def update_game_state_with_observation(game_state: Game, observation: Observation) -> Game:
 
     if observation["step"] == 0:
-        game_state = Game()
         game_state._initialize(observation["updates"])
         game_state._update(observation["updates"][2:])
         game_state.id = observation.player
@@ -28,16 +28,28 @@ def update_game_state_with_observation(game_state, observation):
     return game_state
 
 
-def calculate_game_statistics(game_state):
-    game_statistics = {}
+def calculate_resource_scores(game_state: Game, player: Player):
+    width, height = game_state.map_width, game_state.map_height
+    resource_scores_matrix = [[0 for _ in range(width)] for _ in range(height)]
 
-    # TODO check off by one errors    
-    game_statistics["current_turn"] = game_state.turn
-    game_statistics["night_turns_left"] = (360 - game_state.turn)//40 * 10 + min(10, (360 - game_state.turn)%40)
-    game_statistics["turns_to_night"] = (30 - game_state.turn)%40
-    game_statistics["turns_to_dawn"] = (40 - game_state.turn%40)
-
-    return game_statistics
+    for y in range(height):
+        for x in range(width):
+            resource_scores_cell = 0
+            for dx,dy in [(1,0),(0,1),(-1,0),(0,-1),(0,0)]:
+                xx,yy = x+dx,y+dy
+                if 0 <= xx < width and 0 <= yy < height:
+                    cell = game_state.map.get_cell(xx, yy)
+                    if not cell.has_resource():
+                        continue
+                    if not player.researched_coal() and cell.resource.type == RESOURCE_TYPES.COAL:
+                        continue
+                    if not player.researched_uranium() and cell.resource.type == RESOURCE_TYPES.URANIUM:
+                        continue
+                    fuel = GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][str(cell.resource.type).upper()]
+                    resource_scores_cell += fuel * cell.resource.amount
+            resource_scores_matrix[y][x] = resource_scores_cell
+    
+    return resource_scores_matrix
 
 
 def pretty_print(obj, indent=1, rec=0, key=''):
@@ -79,7 +91,7 @@ def find_resources(game_state):
     return resource_tiles
 
 
-# # the next snippet finds the closest resources that we can mine given position on a map
+# the next snippet finds the closest resources that we can mine given position on a map
 def find_closest_resources(pos, player, resource_tiles):
     closest_dist = math.inf
     closest_resource_tile = None
@@ -94,7 +106,7 @@ def find_closest_resources(pos, player, resource_tiles):
     return closest_resource_tile, closest_dist
 
 
-# # find the closest city tile of a player
+# find the closest city tile of a player
 def find_closest_city_tile(pos, player):
     closest_city_tile = None
     closest_dist = math.inf

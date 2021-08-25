@@ -15,7 +15,7 @@ from lux import annotate
 from agnostic_helper import *
 
 
-game_state = None
+game_state = Game()
 missions = {}  # unit id to list of movements planned
 
 
@@ -52,14 +52,15 @@ def agent(observation, configuration):
     global game_state, missions
 
     game_state = update_game_state_with_observation(game_state, observation)
-    game_statistics = calculate_game_statistics(game_state)
-    print(game_statistics)
     
-    actions = []
-
     player = game_state.players[observation.player]
     opponent = game_state.players[1 - observation.player]  # only two players
-    pretty_print(player)
+
+    actions = []
+
+    resource_scores_matrix = calculate_resource_scores(game_state, player)
+    print(np.array(resource_scores_matrix))
+
     resource_tiles = find_resources(game_state)
 
     actions_cities = make_city_actions(player)
