@@ -5,6 +5,8 @@ import math
 import numpy as np
 import time
 
+from typing import List
+
 os.environ["notebook_debug"] = "YES"
 NOTEBOOK_DEBUG = os.environ["notebook_debug"]
 
@@ -28,7 +30,7 @@ def update_game_state_with_observation(game_state: Game, observation: Observatio
     return game_state
 
 
-def calculate_resource_scores(game_state: Game, player: Player):
+def calculate_resource_scores(game_state: Game, player: Player) -> List[List[int]]:
     width, height = game_state.map_width, game_state.map_height
     resource_scores_matrix = [[0 for _ in range(width)] for _ in range(height)]
 
@@ -50,6 +52,24 @@ def calculate_resource_scores(game_state: Game, player: Player):
             resource_scores_matrix[y][x] = resource_scores_cell
     
     return resource_scores_matrix
+
+
+def calculate_maxpool(game_state: Game, resource_scores_matrix: List[List[int]]) -> List[List[int]]:
+    width, height = game_state.map_width, game_state.map_height
+    maxpool_scores_matrix = [[0 for _ in range(width)] for _ in range(height)]
+
+    for y in range(height):
+        for x in range(width):
+            for dx,dy in [(1,0),(0,1),(-1,0),(0,-1)]:
+                xx,yy = x+dx,y+dy
+                if not (0 <= xx < width and 0 <= yy < height):
+                    continue
+                if resource_scores_matrix[xx][yy] + dx * 0.2 + dy * 0.1 > resource_scores_matrix[x][y]:
+                    break
+            else:
+                maxpool_scores_matrix[x][y] = resource_scores_matrix[x][y]
+
+    return maxpool_scores_matrix
 
 
 def pretty_print(obj, indent=1, rec=0, key=''):

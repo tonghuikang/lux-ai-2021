@@ -13,6 +13,7 @@ from lux.game_constants import GAME_CONSTANTS
 from lux import annotate
 
 from agnostic_helper import *
+from actions import *
 
 
 game_state = Game()
@@ -59,7 +60,12 @@ def agent(observation, configuration):
     actions = []
 
     resource_scores_matrix = calculate_resource_scores(game_state, player)
-    print(np.array(resource_scores_matrix))
+    # print(np.array(resource_scores_matrix))
+    # print()
+    maxpool_scores_matrix = calculate_maxpool(game_state, resource_scores_matrix)
+    # print(np.array(maxpool_scores_matrix))
+    # print()
+    
 
     resource_tiles = find_resources(game_state)
 
@@ -92,6 +98,7 @@ def agent(observation, configuration):
     for unit in player.units:
         if unit.can_act():
             closest_resource_tile, closest_resource_dist = find_closest_resources(unit.pos, player, resource_tiles)
+            # print(pretty_print(unit), closest_resource_tile, closest_resource_dist)
             closest_city_tile, closest_city_dist = find_closest_city_tile(unit.pos, player)
             
             # we will keep possible actions in a priority order here
@@ -140,4 +147,6 @@ def agent(observation, configuration):
             if not moved:
                 # if we are not moving the tile is occupied
                 taken_tiles.add((unit.pos.x,unit.pos.y))
+    
+    print(actions)
     return actions
