@@ -34,11 +34,11 @@ def agent(observation: Observation, configuration):
     print(player.city_tile_count)
     actions = []
 
-    resource_scores_matrix = calculate_resource_scores_matrix(game_state, player)
-    maxpool_scores_matrix = calculate_resource_maxpool_matrix(game_state, resource_scores_matrix)
-    city_tile_matrix = get_city_tile_matrix(game_state, player)
-    empty_tile_matrix = get_empty_tile_matrix(game_state, player)
-    # print(np.array([]))
+    # game_state.resource_scores_matrix
+    # game_state.maxpool_scores_matrix
+    # game_state.city_tile_matrix
+    # game_state.empty_tile_matrix
+    print(np.array([game_state.empty_tile_matrix]))
     # print()
 
     resource_tiles = find_resources(game_state)
@@ -60,7 +60,7 @@ def agent(observation: Observation, configuration):
     for unit in player.units:
         # it is too strict but we don't allow to go to the the currently occupied tile
         taken_tiles.add((unit.pos.x, unit.pos.y))
-        find_best_cluster(game_state, maxpool_scores_matrix, unit.pos)
+        find_best_cluster(game_state, unit.pos)
 
     for city in opponent.cities.values():
         for city_tile in city.citytiles:

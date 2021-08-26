@@ -13,7 +13,7 @@ from lux.game_constants import GAME_CONSTANTS
 from lux import annotate
 
 
-def find_best_cluster(game_state: Game, maxpool_scores_matrix: List[List[int]], position: Position):
+def find_best_cluster(game_state: Game, position: Position):
     width, height = game_state.map_width, game_state.map_height
 
     cooldown = GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
@@ -24,7 +24,7 @@ def find_best_cluster(game_state: Game, maxpool_scores_matrix: List[List[int]], 
     best_position = position
     best_value = -1
     
-    for y,row in enumerate(maxpool_scores_matrix):
+    for y,row in enumerate(game_state.maxpool_scores_matrix):
         for x,maxpool_scores in enumerate(row):
             if maxpool_scores > 0:
                 if abs(position.x - x) + abs(position.y - y) >= travel_range:
