@@ -22,7 +22,7 @@ def find_best_cluster(game_state: Game, position: Position):
     maxpool_scores_matrix_wrt_pos = [[0 for _ in range(width)] for _ in range(height)]
 
     best_position = position
-    best_value = -1
+    best_cell_value = -1
     
     for y,row in enumerate(game_state.maxpool_scores_matrix):
         for x,maxpool_scores in enumerate(row):
@@ -31,17 +31,17 @@ def find_best_cluster(game_state: Game, position: Position):
                     # encourage going far away
                     # [TODO] discourage returning to explored territory
                     # [TODO] discourage going to planned locations
-                    value = maxpool_scores * math.sqrt(travel_range)
-                    maxpool_scores_matrix_wrt_pos[y][x] = int(value)
+                    cell_value = maxpool_scores * math.sqrt(travel_range)
+                    maxpool_scores_matrix_wrt_pos[y][x] = int(cell_value)
 
-                    if value > best_value:
-                        best_value = value
+                    if cell_value > best_cell_value:
+                        best_cell_value = cell_value
                         best_position = Position(x,y)
 
     # print(travel_range)
     # print(np.array(maxpool_scores_matrix_wrt_pos))
 
-    return best_position, best_value
+    return best_position, best_cell_value
 
     
     

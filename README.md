@@ -52,8 +52,9 @@ I hope to finish by 31 August for the T-shirt. Afterwards I intend to publish my
 #### Procedures
 
 - Every time the unit is full and it is going to be day for the next few days, build a city.
-- Once a city is built or cooldown is ready
-  - If there is a good cluster and there are sufficient cities, build a unit
+- Once a city is built or cooldown is ready (done)
+  - If researched uranium, build unit
+  - If haven't researched uranium, haven't exceed the limit  build a unit.
   - Otherwise, do research.
 - Once a unit is built
   - It goes to to the best cluster.
