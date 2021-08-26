@@ -20,7 +20,7 @@ if __name__ == "__main__":
     observation = Observation()
     observation["updates"] = []
     observation["step"] = 0
-    player_id = 0
+    player_id = 999
     while True:
         inputs = read_input()
         observation["updates"].append(inputs)

@@ -9,28 +9,24 @@ INPUT_CONSTANTS = Constants.INPUT_CONSTANTS
 
 from typing import List, Tuple
 
-class Observation(Dict[str, any]):
-    def __init__(self, player=0) -> None:
-        self.player = player
-        # self.updates = []
-        # self.step = 0
-
 
 class Game:
-    def _update_with_observation(self, observation: Observation):
-        if observation["step"] == 0:
-            self._initialize(observation["updates"])
-            self._update(observation["updates"][2:])
-            self.player_id = observation.player
-        else:
-            self._update(observation["updates"])
+    # def _update_with_observation(self, observation: Observation):
+    #     if observation["step"] == 0:
+    #         self._initialize(observation["updates"])
+    #         self._update(observation["updates"][2:])
+    #         self.player_id = observation.player
+    #     else:
+    #         self._update(observation["updates"])
 
 
     def _initialize(self, messages):
+        print("messages", messages)
         """
         initialize state
         """
         self.player_id = int(messages[0])
+        print("int(messages[0])", int(messages[0]), self.player_id)
         self.turn = -1
         # get some other necessary initial input
         mapInfo = messages[1].split(" ")
@@ -54,6 +50,7 @@ class Game:
         print("D_FINISH")
 
     def _reset_player_states(self):
+        print(self.player_id)
         self.players[0].units = []
         self.players[0].cities = {}
         self.players[0].city_tile_count = 0
