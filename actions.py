@@ -46,7 +46,7 @@ def make_city_actions(game_state: Game) -> List[str]:
                     continue
 
                 best_position, best_cell_value = find_best_cluster(game_state, city_tile.pos)
-                if not unit_limit_exceeded and best_cell_value > 0:
+                if not unit_limit_exceeded and best_cell_value > 100:
                     print("build_workers", city_tile.pos.x, city_tile.pos.y, best_cell_value)
                     build_workers(city_tile)
                     continue
@@ -87,9 +87,6 @@ def make_unit_missions(game_state: Game, missions: Missions) -> Missions:
         if not unit.can_act():
             continue
 
-        if unit.id in missions.target_positions:  # there is already a mission
-            continue
-
         nearest_position, nearest_distance = game_state.get_nearest_empty_tile_and_distance(unit.pos)
 
         # if the unit is full and it is going to be day the next few days
@@ -103,6 +100,9 @@ def make_unit_missions(game_state: Game, missions: Missions) -> Missions:
                 missions.target_actions[unit.id] = unit.build_city()
                 continue
                 
+        if unit.id in missions.target_positions:  # there is already a mission
+            continue
+
         # once a unit is built (detected as having full space)
         # go to the best cluster
         if unit.get_cargo_space_left() == 100:
@@ -114,7 +114,7 @@ def make_unit_missions(game_state: Game, missions: Missions) -> Missions:
         # if a unit is not receiving any resources
         # move to a place with resources
         if game_state.resource_scores_matrix[unit.pos.x][unit.pos.x] <= 20 or True:
-            best_position, best_cell_value = find_best_cluster(game_state, unit.pos)
+            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, distance_multiplier=-0.5)
             unit.target_pos = best_position
             unit.target_action = None
             continue
@@ -129,12 +129,36 @@ def make_unit_missions(game_state: Game, missions: Missions) -> Missions:
 
 
 def make_unit_actions(game_state: Game, missions: Missions) -> Tuple[Missions, List[str]]:
-    player = game_state.player
+    player, opponent = game_state.player, game_state.opponent
     actions = []
 
+    occupied = set()
+    free_zones = set()
+    for city in player.cities.values():
+        for city_tile in city.citytiles:
+            xy = (city_tile.pos.x, city_tile.pos.y)
+            free_zones.add(xy)
+
     for unit in player.units:
-        # if not unit.can_act():
-        #     continue
+        xy = (unit.pos.x, unit.pos.y)
+        if xy in free_zones:
+            continue
+        occupied.add(xy)
+        
+    for city in opponent.cities.values():
+        for city_tile in city.citytiles:
+            xy = (city_tile.pos.x, city_tile.pos.y)
+            occupied.add(xy)
+
+    for unit in opponent.units:
+        xy = (unit.pos.x, unit.pos.y)
+        if xy in free_zones:
+            continue
+        occupied.add(xy)
+
+    for unit in player.units:
+        if not unit.can_act():
+            continue
 
         # if there is no mission, continue
         if (unit.id not in missions.target_positions) and (unit.id not in missions.target_actions):
@@ -149,7 +173,7 @@ def make_unit_actions(game_state: Game, missions: Missions) -> Tuple[Missions, L
             continue
 
         # the unit will need to move
-        direction = unit.pos.direction_to(missions.target_positions[unit.id], game_state)
+        direction, occupied = unit.pos.direction_to(missions.target_positions[unit.id], occupied)
         action = unit.move(direction)
         actions.append(action)
 

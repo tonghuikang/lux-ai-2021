@@ -24,7 +24,7 @@ def find_best_cluster(game_state: Game, position: Position, distance_multiplier 
     best_position = position
     best_cell_value = -1
     
-    for y,row in enumerate(game_state.maxpool_scores_matrix):
+    for y,row in enumerate(game_state.resource_scores_matrix):
         for x,maxpool_scores in enumerate(row):
             if maxpool_scores > 0:
                 distance = max(1, abs(position.x - x) + abs(position.y - y))
@@ -39,8 +39,8 @@ def find_best_cluster(game_state: Game, position: Position, distance_multiplier 
                         best_cell_value = cell_value
                         best_position = Position(x,y)
 
-    print(travel_range)
-    print(np.array(maxpool_scores_matrix_wrt_pos))
+    # print(travel_range)
+    # print(np.array(maxpool_scores_matrix_wrt_pos))
 
     return best_position, best_cell_value
 

@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, List
 
 from .constants import Constants
 from .game_map import Position

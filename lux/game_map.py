@@ -1,8 +1,7 @@
 import math
-from typing import List
+from typing import List, Set, Tuple
 
 from .constants import Constants
-from .game import Game
 
 DIRECTIONS = Constants.DIRECTIONS
 RESOURCE_TYPES = Constants.RESOURCE_TYPES
@@ -20,6 +19,7 @@ class Cell:
         self.resource: Resource = None
         self.citytile = None
         self.road = 0
+
     def has_resource(self):
         return self.resource is not None and self.resource.amount > 0
 
@@ -83,7 +83,7 @@ class Position:
         elif direction == DIRECTIONS.CENTER:
             return Position(self.x, self.y)
 
-    def direction_to(self, target_pos: 'Position', game_state: Game) -> DIRECTIONS:
+    def direction_to(self, target_pos: 'Position', occupied: Set[Tuple[int]] = set()) -> DIRECTIONS:
         """
         Return closest position to target_pos from this position
         """
@@ -95,19 +95,26 @@ class Position:
         ]
         closest_dist = self.distance_to(target_pos)
         closest_dir = DIRECTIONS.CENTER
+        closest_pos = Position(self.x, self.y)
+
         for direction in check_dirs:
             newpos = self.translate(direction, 1)
 
-            # [TODO] check for blockages
-            # cell = game_state.map.get_cell_by_pos(newpos)
-            # if cell.resource or cell.citytile:
-                # continue
-
             dist = target_pos.distance_to(newpos)
+
+            if (newpos.x, newpos.y) in occupied:
+                continue
+
             if dist < closest_dist:
                 closest_dir = direction
                 closest_dist = dist
-        return closest_dir
+                closest_pos = newpos
+
+        if closest_dir != DIRECTIONS.CENTER:
+            occupied.discard((self.x, self.y))
+        occupied.add((closest_pos.x, closest_pos.y))
+
+        return closest_dir, occupied
 
     def __str__(self) -> str:
         return f"({self.x}, {self.y})"
