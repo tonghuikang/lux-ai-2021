@@ -31,19 +31,29 @@ def make_city_actions(game_state: Game) -> List[str]:
         actions.append(action)
         units_cnt += 1
 
-    cities = list(player.cities.values())
-    if len(cities) > 0:
-        city = cities[0]
-        city.citytiles = sorted(city.citytiles, 
-                                key=lambda city_tile: find_best_cluster(game_state, city_tile.pos)[1],
-                                reverse=True)
-
+    city_tiles = []
+    for city in player.cities.values():
         for city_tile in city.citytiles:
+            city_tiles.append(city_tile)
+    if not city_tiles:
+        return []
+
+    if True:
+        city_tiles = sorted(city_tiles, 
+                            key=lambda city_tile: find_best_cluster(game_state, city_tile.pos)[1],
+                            reverse=True)
+
+        for city_tile in city_tiles:
             unit_limit_exceeded = (units_cnt >= units_cap)  # recompute every time
             if city_tile.can_act():
 
                 if player.researched_uranium() and unit_limit_exceeded:
                     continue
+
+                if not player.researched_coal() and len(city_tiles) > 6 and len(city_tiles)%2:
+                    # accelerate coal reasearch
+                    print("research for coal", city_tile.pos.x, city_tile.pos.y)
+                    do_research(city_tile)
 
                 best_position, best_cell_value = find_best_cluster(game_state, city_tile.pos)
                 if not unit_limit_exceeded and best_cell_value > 100:
@@ -108,12 +118,12 @@ def make_unit_missions(game_state: Game, missions: Missions) -> Missions:
         if unit.get_cargo_space_left() == 100:
             best_position, best_cell_value = find_best_cluster(game_state, unit.pos)
             missions.target_positions[unit.id] = best_position
-            missions.target_actions[unit.id] = None
+            missions.target_actions[unit.id] = unit.move("c")
             continue
 
         # if a unit is not receiving any resources
         # move to a place with resources
-        if game_state.resource_scores_matrix[unit.pos.x][unit.pos.x] <= 20 or True:
+        if game_state.resource_scores_matrix[unit.pos.x][unit.pos.x] <= 20:
             best_position, best_cell_value = find_best_cluster(game_state, unit.pos, distance_multiplier=-0.5)
             unit.target_pos = best_position
             unit.target_action = None

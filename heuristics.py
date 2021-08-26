@@ -13,7 +13,7 @@ from lux.game_constants import GAME_CONSTANTS
 from lux import annotate
 
 
-def find_best_cluster(game_state: Game, position: Position, distance_multiplier = -0.1):
+def find_best_cluster(game_state: Game, position: Position, distance_multiplier = -0.5):
     width, height = game_state.map_width, game_state.map_height
 
     cooldown = GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
