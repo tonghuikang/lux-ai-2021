@@ -19,29 +19,36 @@ from actions import *
 from heuristics import *
 
 game_state = Game()
-missions = collections.defaultdict(collections.deque)  # unit id to list of movements planned
-
+missions = Missions()
 
 def agent(observation: Observation, configuration):
     del configuration  # unused
     global game_state, missions
 
     game_state._update_with_observation(observation) 
-    print(game_state.player.city_tile_count)
-    actions = []
+    print("counts", game_state.player.city_tile_count, len(game_state.player.units))
+    print([(unit.pos.x,unit.pos.y) for unit in game_state.player.units])
 
     # game_state.resource_scores_matrix
     # game_state.maxpool_scores_matrix
     # game_state.city_tile_matrix
     # game_state.empty_tile_matrix
-    # print(np.array([game_state.empty_tile_matrix]))
+    # print(np.array([game_state.maxpool_scores_matrix]))
     # print()
 
     resource_tiles = find_resources(game_state)
 
     actions_cities = make_city_actions(game_state)
-    actions.extend(actions_cities)
     
+    missions = make_unit_missions(game_state, missions)
+    print(missions)
+
+    missions, actions_units = make_unit_actions(game_state, missions)
+
+    actions = actions_cities + actions_units
+    print(actions)
+    return actions
+
     # we want to build new tiles only if we have a lot of fuel in all cities
     can_build = True
     for city in game_state.player.cities.values():            
@@ -49,7 +56,6 @@ def agent(observation: Observation, configuration):
             can_build = False
 
     steps_until_night = 30 - observation["step"] % 40
-    
     
     # we will keep all tiles where any unit wants to move in this set to avoid collisions
     taken_tiles = set()
@@ -93,6 +99,11 @@ def agent(observation: Observation, configuration):
             if (steps_to_city + 3 > steps_until_night or unit.get_cargo_space_left() == 0) and closest_city_tile is not None:
                 actions.append(annotate.line(unit.pos.x, unit.pos.y, closest_city_tile.pos.x, closest_city_tile.pos.y))
                 directions = [unit.pos.direction_to(closest_city_tile.pos)]
+                print()
+                print("DIRECTION")
+                print(directions)
+                pretty_print(directions)
+                print()
             else:
                 # if there is no risks and we are not mining resources right now let's move toward resources
                 if closest_resource_dist != 0 and closest_resource_tile is not None:

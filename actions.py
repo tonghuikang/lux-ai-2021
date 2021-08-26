@@ -7,11 +7,13 @@ from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
 from lux import annotate
 
+from typing import Tuple, Dict
+
 from agnostic_helper import pretty_print
 from heuristics import *
 
 
-def make_city_actions(game_state: Game):
+def make_city_actions(game_state: Game) -> List[str]:
     player = game_state.player
 
     units_cap = sum([len(x.citytiles) for x in player.cities.values()])
@@ -58,3 +60,98 @@ def make_city_actions(game_state: Game):
                 # otherwise don't do anything
 
     return actions
+
+
+class Missions:
+    def __init__(self):
+        # unit_id as key
+        self.target_positions: Dict[str, Position] = {}
+        self.target_actions: Dict[str, str] = {}
+
+        # [TODO] some expiry date for missions
+
+    def __str__(self):
+        return str({unit_id: (pos.x, pos.y) for unit_id, pos in self.target_positions.items()}) + "\n" + str(self.target_actions)
+    
+    def delete(self, unit_id):
+        if unit_id in self.target_positions:
+            del self.target_positions[unit_id]
+        if unit_id in self.target_actions:
+            del self.target_actions[unit_id]
+
+
+def make_unit_missions(game_state: Game, missions: Missions) -> Missions:
+    player = game_state.player
+
+    for unit in player.units:
+        if not unit.can_act():
+            continue
+
+        if unit.id in missions.target_positions:  # there is already a mission
+            continue
+
+        nearest_position, nearest_distance = game_state.get_nearest_empty_tile_and_distance(unit.pos)
+
+        # if the unit is full and it is going to be day the next few days
+        # go to an empty tile and build a city
+        # print(unit.id, unit.get_cargo_space_left())
+        if unit.get_cargo_space_left() == 0:
+            # print("check")
+            if nearest_distance < game_state.turns_to_night:
+                # print("build city")
+                missions.target_positions[unit.id] = nearest_position
+                missions.target_actions[unit.id] = unit.build_city()
+                continue
+                
+        # once a unit is built (detected as having full space)
+        # go to the best cluster
+        if unit.get_cargo_space_left() == 100:
+            best_position, best_cell_value = find_best_cluster(game_state, unit.pos)
+            missions.target_positions[unit.id] = best_position
+            missions.target_actions[unit.id] = None
+            continue
+
+        # if a unit is not receiving any resources
+        # move to a place with resources
+        if game_state.resource_scores_matrix[unit.pos.x][unit.pos.x] <= 20 or True:
+            best_position, best_cell_value = find_best_cluster(game_state, unit.pos)
+            unit.target_pos = best_position
+            unit.target_action = None
+            continue
+
+        # otherwise just camp and farm resources
+
+        # [TODO] when you can secure a city all the way to the end of time, do it
+
+        # [TODO] avoid overlapping missions
+    
+    return missions
+
+
+def make_unit_actions(game_state: Game, missions: Missions) -> Tuple[Missions, List[str]]:
+    player = game_state.player
+    actions = []
+
+    for unit in player.units:
+        # if not unit.can_act():
+        #     continue
+
+        # if there is no mission, continue
+        if (unit.id not in missions.target_positions) and (unit.id not in missions.target_actions):
+            continue
+
+        # if the location is reached, take action
+        if unit.pos == missions.target_positions[unit.id]:
+            if missions.target_actions[unit.id]:
+                actions.append(missions.target_actions[unit.id])
+            
+            missions.delete(unit.id)
+            continue
+
+        # the unit will need to move
+        direction = unit.pos.direction_to(missions.target_positions[unit.id], game_state)
+        action = unit.move(direction)
+        actions.append(action)
+
+    return missions, actions
+        

@@ -2,18 +2,19 @@ from typing import Dict
 
 from .constants import Constants
 from .game_map import GameMap, RESOURCE_TYPES
-from .game_objects import Player, Unit, City, CityTile
+from .game_objects import Player, Unit, City, CityTile, Position
 from .game_constants import GAME_CONSTANTS
 
 INPUT_CONSTANTS = Constants.INPUT_CONSTANTS
 
-from typing import List
+from typing import List, Tuple
 
 class Observation(Dict[str, any]):
     def __init__(self, player=0) -> None:
         self.player = player
         # self.updates = []
         # self.step = 0
+
 
 class Game:
     def _update_with_observation(self, observation: Observation):
@@ -128,6 +129,10 @@ class Game:
         self.city_tile_matrix = self.get_city_tile_matrix()
         self.empty_tile_matrix = self.get_empty_tile_matrix()
 
+        # make index
+        self.player.make_index_units_by_id()
+        self.opponent.make_index_units_by_id()
+
 
     def calculate_resource_scores_matrix(self) -> List[List[int]]:
         width, height = self.map_width, self.map_height
@@ -196,5 +201,25 @@ class Game:
                 if cell.citytile:
                     continue
                 empty_tile_matrix[y][x] = 1
-        
+
         return empty_tile_matrix
+
+
+    def get_nearest_empty_tile_and_distance(self, current_position: Position) -> Tuple[Position, int]:
+        width, height = self.map_width, self.map_height
+
+        nearest_distance = width + height
+        nearest_position = None
+
+        for y in range(height):
+            for x in range(width):
+                if self.empty_tile_matrix[y][x] == 1:
+                    position = Position(x, y)
+                    distance = position - current_position
+                    if distance < nearest_distance:
+                        nearest_distance = distance
+                        nearest_position = position
+
+        return nearest_position, nearest_distance
+
+

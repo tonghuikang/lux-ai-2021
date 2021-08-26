@@ -14,10 +14,18 @@ class Player:
         self.units: list[Unit] = []
         self.cities: Dict[str, City] = {}
         self.city_tile_count = 0
+
+        self.units_by_id: Dict[str, Unit] = {}
+
     def researched_coal(self) -> bool:
         return self.research_points >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["COAL"]
+
     def researched_uranium(self) -> bool:
         return self.research_points >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["URANIUM"]
+
+    def make_index_units_by_id(self) -> None:
+        for unit in self.units:
+            self.units_by_id[unit.id] = unit
 
 
 class City:
@@ -27,10 +35,13 @@ class City:
         self.fuel = fuel
         self.citytiles: list[CityTile] = []
         self.light_upkeep = light_upkeep
+        self.fuel_needed_for_remaining_nights = -1  # [TODO]
+
     def _add_city_tile(self, x, y, cooldown):
         ct = CityTile(self.team, self.cityid, x, y, cooldown)
         self.citytiles.append(ct)
         return ct
+
     def get_light_upkeep(self):
         return self.light_upkeep
 
@@ -41,21 +52,25 @@ class CityTile:
         self.team = teamid
         self.pos = Position(x, y)
         self.cooldown = cooldown
+
     def can_act(self) -> bool:
         """
         Whether or not this unit can research or build
         """
         return self.cooldown < 1
+
     def research(self) -> str:
         """
         returns command to ask this tile to research this turn
         """
         return "r {} {}".format(self.pos.x, self.pos.y)
+
     def build_worker(self) -> str:
         """
         returns command to ask this tile to build a worker this turn
         """
         return "bw {} {}".format(self.pos.x, self.pos.y)
+
     def build_cart(self) -> str:
         """
         returns command to ask this tile to build a cart this turn
@@ -84,6 +99,11 @@ class Unit:
         self.cargo.wood = wood
         self.cargo.coal = coal
         self.cargo.uranium = uranium
+
+        self.target_pos = None
+        self.target_action = None
+
+
     def is_worker(self) -> bool:
         return self.type == UNIT_TYPES.WORKER
 

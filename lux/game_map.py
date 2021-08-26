@@ -2,6 +2,7 @@ import math
 from typing import List
 
 from .constants import Constants
+from .game import Game
 
 DIRECTIONS = Constants.DIRECTIONS
 RESOURCE_TYPES = Constants.RESOURCE_TYPES
@@ -82,7 +83,7 @@ class Position:
         elif direction == DIRECTIONS.CENTER:
             return Position(self.x, self.y)
 
-    def direction_to(self, target_pos: 'Position') -> DIRECTIONS:
+    def direction_to(self, target_pos: 'Position', game_state: Game) -> DIRECTIONS:
         """
         Return closest position to target_pos from this position
         """
@@ -96,6 +97,12 @@ class Position:
         closest_dir = DIRECTIONS.CENTER
         for direction in check_dirs:
             newpos = self.translate(direction, 1)
+
+            # [TODO] check for blockages
+            # cell = game_state.map.get_cell_by_pos(newpos)
+            # if cell.resource or cell.citytile:
+                # continue
+
             dist = target_pos.distance_to(newpos)
             if dist < closest_dist:
                 closest_dir = direction
