@@ -1,4 +1,4 @@
-# contains agent agnostic helper functions
+# these functions are agent agnostic
 
 import os, re
 import math
@@ -70,6 +70,33 @@ def calculate_maxpool(game_state: Game, resource_scores_matrix: List[List[int]])
                 maxpool_scores_matrix[x][y] = resource_scores_matrix[x][y]
 
     return maxpool_scores_matrix
+
+
+def get_city_tile_matrix(game_state: Game, player: Player) -> List[List[int]]:
+    width, height = game_state.map_width, game_state.map_height
+    city_tile_matrix = [[0 for _ in range(width)] for _ in range(height)]
+
+    for city_id, city in player.cities.items():
+        for city_tile in city.citytiles:
+            city_tile_matrix[city_tile.pos.x][city_tile.pos.y] += 1
+    
+    return city_tile_matrix
+
+
+def get_empty_tile_matrix(game_state: Game, player: Player) -> List[List[int]]:
+    width, height = game_state.map_width, game_state.map_height
+    empty_tile_matrix = [[0 for _ in range(width)] for _ in range(height)]
+
+    for y in range(height):
+        for x in range(width):
+            cell = game_state.map.get_cell(x, y)
+            if cell.has_resource():
+                continue
+            if cell.citytile:
+                continue
+            empty_tile_matrix[y][x] = 1
+    
+    return empty_tile_matrix
 
 
 def pretty_print(obj, indent=1, rec=0, key=''):

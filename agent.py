@@ -57,6 +57,7 @@ def agent(observation, configuration):
     player = game_state.players[observation.player]
     opponent = game_state.players[1 - observation.player]  # only two players
 
+    print(player.city_tile_count)
     actions = []
 
     resource_scores_matrix = calculate_resource_scores(game_state, player)
@@ -65,7 +66,12 @@ def agent(observation, configuration):
     maxpool_scores_matrix = calculate_maxpool(game_state, resource_scores_matrix)
     # print(np.array(maxpool_scores_matrix))
     # print()
-    
+    city_tile_matrix = get_city_tile_matrix(game_state, player)
+    # print(np.array(city_tile_matrix))
+    # print()
+    empty_tile_matrix = get_empty_tile_matrix(game_state, player)
+    # print(np.array(empty_tile_matrix))
+    # print()
 
     resource_tiles = find_resources(game_state)
 
@@ -74,9 +80,8 @@ def agent(observation, configuration):
     
     # we want to build new tiles only if we have a lot of fuel in all cities
     can_build = True
-    night_steps_left = ((359 - observation["step"]) // 40 + 1) * 10
     for city in player.cities.values():            
-        if city.fuel / (city.get_light_upkeep() + 20) < min(night_steps_left, 20):
+        if city.fuel / (city.get_light_upkeep() + 30) < min(game_state.night_turns_left, 20):
             can_build = False
        
     steps_until_night = 30 - observation["step"] % 40
