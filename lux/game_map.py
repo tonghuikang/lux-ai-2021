@@ -1,4 +1,4 @@
-import math
+import math, random
 from typing import List, Set, Tuple
 
 from .constants import Constants
@@ -93,6 +93,7 @@ class Position:
             DIRECTIONS.SOUTH,
             DIRECTIONS.WEST,
         ]
+        random.shuffle(check_dirs)
         closest_dist = self.distance_to(target_pos)
         closest_dir = DIRECTIONS.CENTER
         closest_pos = Position(self.x, self.y)

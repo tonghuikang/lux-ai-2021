@@ -13,7 +13,7 @@ from lux.game_constants import GAME_CONSTANTS
 from lux import annotate
 
 
-def find_best_cluster(game_state: Game, position: Position, distance_multiplier = -0.5):
+def find_best_cluster(game_state: Game, position: Position, distance_multiplier = -0.1):
     width, height = game_state.map_width, game_state.map_height
 
     cooldown = GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
@@ -28,7 +28,7 @@ def find_best_cluster(game_state: Game, position: Position, distance_multiplier 
         for x,maxpool_scores in enumerate(row):
             if maxpool_scores > 0:
                 distance = max(1, abs(position.x - x) + abs(position.y - y))
-                if distance >= travel_range:
+                if distance <= travel_range:
                     # encourage going far away
                     # [TODO] discourage returning to explored territory
                     # [TODO] discourage going to planned locations

@@ -2,3 +2,5 @@
 *.pyc
 
 .ipynb_checkpoints/
+generated_notebook.ipynb
+.DS_Store

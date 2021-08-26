@@ -44,6 +44,7 @@ class Game:
         self.turns_to_dawn = (40 - self.turn%40)
 
         self.resource_scores_matrix = None
+        self.resource_rate_matrix = None
         self.maxpool_scores_matrix = None
         self.city_tile_matrix = None
         self.empty_tile_matrix = None
@@ -124,7 +125,7 @@ class Game:
         self.turns_to_dawn = (40 - self.turn%40)
         
         # update matrices
-        self.resource_scores_matrix = self.calculate_resource_scores_matrix()
+        self.calculate_resource_scores_and_rates_matrix()
         self.maxpool_scores_matrix = self.calculate_resource_maxpool_matrix()
         self.city_tile_matrix = self.get_city_tile_matrix()
         self.empty_tile_matrix = self.get_empty_tile_matrix()
@@ -134,14 +135,16 @@ class Game:
         self.opponent.make_index_units_by_id()
 
 
-    def calculate_resource_scores_matrix(self) -> List[List[int]]:
+    def calculate_resource_scores_and_rates_matrix(self):
         width, height = self.map_width, self.map_height
         player = self.player
         resource_scores_matrix = [[0 for _ in range(width)] for _ in range(height)]
+        resource_rates_matrix = [[0 for _ in range(width)] for _ in range(height)]
 
         for y in range(height):
             for x in range(width):
-                resource_scores_cell = 0
+                resource_score_cell = 0
+                resource_rate_cell = 0
                 for dx,dy in [(1,0),(0,1),(-1,0),(0,-1),(0,0)]:
                     xx,yy = x+dx,y+dy
                     if 0 <= xx < width and 0 <= yy < height:
@@ -153,10 +156,14 @@ class Game:
                         if not player.researched_uranium() and cell.resource.type == RESOURCE_TYPES.URANIUM:
                             continue
                         fuel = GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][str(cell.resource.type).upper()]
-                        resource_scores_cell += fuel * cell.resource.amount
-                resource_scores_matrix[y][x] = resource_scores_cell
+                        mining_rate = GAME_CONSTANTS["PARAMETERS"]["WORKER_COLLECTION_RATE"][str(cell.resource.type).upper()]
+                        resource_score_cell += fuel * cell.resource.amount
+                        resource_rate_cell += fuel * mining_rate
+                resource_scores_matrix[y][x] = resource_score_cell
+                resource_rates_matrix[y][x] = resource_rate_cell
         
-        return resource_scores_matrix
+        self.resource_scores_matrix = resource_scores_matrix
+        self.resource_rates_matrix = resource_rates_matrix
 
 
     def calculate_resource_maxpool_matrix(self) -> List[List[int]]:
@@ -169,10 +176,10 @@ class Game:
                     xx,yy = x+dx,y+dy
                     if not (0 <= xx < width and 0 <= yy < height):
                         continue
-                    if self.resource_scores_matrix[xx][yy] + dx * 0.2 + dy * 0.1 > self.resource_scores_matrix[x][y]:
+                    if self.resource_scores_matrix[yy][xx] + dx * 0.2 + dy * 0.1 > self.resource_scores_matrix[y][x]:
                         break
                 else:
-                    maxpool_scores_matrix[x][y] = self.resource_scores_matrix[x][y]
+                    maxpool_scores_matrix[y][x] = self.resource_scores_matrix[y][x]
 
         return maxpool_scores_matrix
 
@@ -184,7 +191,7 @@ class Game:
 
         for city_id, city in player.cities.items():
             for city_tile in city.citytiles:
-                city_tile_matrix[city_tile.pos.x][city_tile.pos.y] += 1
+                city_tile_matrix[city_tile.pos.y][city_tile.pos.x] += 1
         
         return city_tile_matrix
 
@@ -213,12 +220,17 @@ class Game:
 
         for y in range(height):
             for x in range(width):
-                if self.empty_tile_matrix[y][x] == 1:
-                    position = Position(x, y)
-                    distance = position - current_position
-                    if distance < nearest_distance:
-                        nearest_distance = distance
-                        nearest_position = position
+                if self.empty_tile_matrix[y][x] == 0:  # not empty
+                    continue
+
+                # if (y+x)%3 == 0:  # enforce checkerboard
+                #     continue
+
+                position = Position(x, y)
+                distance = position - current_position
+                if distance < nearest_distance:
+                    nearest_distance = distance
+                    nearest_position = position
 
         return nearest_position, nearest_distance
 

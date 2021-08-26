@@ -1,15 +1,18 @@
 # functions executing the actions
 
+import os
+
+NOTEBOOK_DEBUG = "USER" in os.environ and os.environ["USER"] == "hkmac"
+
 from lux.game import Game, Player
 from lux.game_map import Cell, RESOURCE_TYPES, Position
 from lux.game_objects import CityTile
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
-from lux import annotate
+from lux.annotate import pretty_print
 
 from typing import Tuple, Dict
 
-from agnostic_helper import pretty_print
 from heuristics import *
 
 
@@ -38,36 +41,37 @@ def make_city_actions(game_state: Game) -> List[str]:
     if not city_tiles:
         return []
 
-    if True:
-        city_tiles = sorted(city_tiles, 
-                            key=lambda city_tile: find_best_cluster(game_state, city_tile.pos)[1],
-                            reverse=True)
+    city_tiles = sorted(city_tiles, 
+                        key=lambda city_tile: find_best_cluster(game_state, city_tile.pos)[1],
+                        reverse=True)
 
-        for city_tile in city_tiles:
-            unit_limit_exceeded = (units_cnt >= units_cap)  # recompute every time
-            if city_tile.can_act():
+    for city_tile in city_tiles:
+        if not city_tile.can_act():
+            continue
 
-                if player.researched_uranium() and unit_limit_exceeded:
-                    continue
+        unit_limit_exceeded = (units_cnt >= units_cap)  # recompute every time
 
-                if not player.researched_coal() and len(city_tiles) > 6 and len(city_tiles)%2:
-                    # accelerate coal reasearch
-                    print("research for coal", city_tile.pos.x, city_tile.pos.y)
-                    do_research(city_tile)
+        if player.researched_uranium() and unit_limit_exceeded:
+            continue
 
-                best_position, best_cell_value = find_best_cluster(game_state, city_tile.pos)
-                if not unit_limit_exceeded and best_cell_value > 100:
-                    print("build_workers", city_tile.pos.x, city_tile.pos.y, best_cell_value)
-                    build_workers(city_tile)
-                    continue
+        if not player.researched_coal() and len(city_tiles) > 6 and len(city_tiles)%2:
+            # accelerate coal reasearch
+            if NOTEBOOK_DEBUG: print("research for coal", city_tile.pos.x, city_tile.pos.y)
+            do_research(city_tile)
 
-                if not player.researched_uranium():
-                    # [TODO] dont bother researching uranium for smaller maps
-                    print("research", city_tile.pos.x, city_tile.pos.y)
-                    do_research(city_tile)
-                    continue
+        best_position, best_cell_value = find_best_cluster(game_state, city_tile.pos)
+        if not unit_limit_exceeded and best_cell_value > 100:
+            if NOTEBOOK_DEBUG: print("build_workers", city_tile.pos.x, city_tile.pos.y, best_cell_value)
+            build_workers(city_tile)
+            continue
 
-                # otherwise don't do anything
+        if not player.researched_uranium():
+            # [TODO] dont bother researching uranium for smaller maps
+            if NOTEBOOK_DEBUG: print("research", city_tile.pos.x, city_tile.pos.y)
+            do_research(city_tile)
+            continue
+
+        # otherwise don't do anything
 
     return actions
 
@@ -113,6 +117,9 @@ def make_unit_missions(game_state: Game, missions: Missions) -> Missions:
         if unit.id in missions.target_positions:  # there is already a mission
             continue
 
+        if game_state.resource_rates_matrix[unit.pos.y][unit.pos.x] >= 80: # continue camping
+            continue
+
         # once a unit is built (detected as having full space)
         # go to the best cluster
         if unit.get_cargo_space_left() == 100:
@@ -123,8 +130,8 @@ def make_unit_missions(game_state: Game, missions: Missions) -> Missions:
 
         # if a unit is not receiving any resources
         # move to a place with resources
-        if game_state.resource_scores_matrix[unit.pos.x][unit.pos.x] <= 20:
-            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, distance_multiplier=-0.5)
+        if game_state.resource_scores_matrix[unit.pos.y][unit.pos.x] <= 20:
+            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, distance_multiplier=-0.3)
             unit.target_pos = best_position
             unit.target_action = None
             continue
@@ -176,8 +183,9 @@ def make_unit_actions(game_state: Game, missions: Missions) -> Tuple[Missions, L
 
         # if the location is reached, take action
         if unit.pos == missions.target_positions[unit.id]:
-            if missions.target_actions[unit.id]:
-                actions.append(missions.target_actions[unit.id])
+            action = missions.target_actions[unit.id]
+            if action:
+                actions.append(action)
             
             missions.delete(unit.id)
             continue
