@@ -1,7 +1,9 @@
 import os, re
 import math
-import numpy as np
 import time
+import collections
+
+import numpy as np
 
 os.environ["notebook_debug"] = "YES"
 NOTEBOOK_DEBUG = os.environ["notebook_debug"]
@@ -14,68 +16,34 @@ from lux import annotate
 
 from agnostic_helper import *
 from actions import *
-
+from heuristics import *
 
 game_state = Game()
-missions = {}  # unit id to list of movements planned
+missions = collections.defaultdict(collections.deque)  # unit id to list of movements planned
 
 
-def make_city_actions(player):
-    # https://www.lux-ai.org/specs-2021#CityTiles
-    
-    actions = []
-    
-    # max number of units available
-    units_cap = sum([len(x.citytiles) for x in player.cities.values()])
-    # current number of units
-    units = len(player.units)
-    
-    cities = list(player.cities.values())
-    if len(cities) > 0:
-        city = cities[0]
-        created_worker = (units >= units_cap)
-        for city_tile in city.citytiles[::-1]:
-            if city_tile.can_act():
-                if created_worker:
-                    # let's do research
-                    action = city_tile.research()
-                    actions.append(action)
-                else:
-                    # let's create one more unit in the last created city tile if we can
-                    action = city_tile.build_worker()
-                    actions.append(action)
-                    created_worker = True
-    return actions
-
-
-def agent(observation, configuration):
+def agent(observation: Observation, configuration):
     del configuration  # unused
     global game_state, missions
 
-    game_state = update_game_state_with_observation(game_state, observation)
-    
+    game_state._update_with_observation(observation) 
+
     player = game_state.players[observation.player]
     opponent = game_state.players[1 - observation.player]  # only two players
 
     print(player.city_tile_count)
     actions = []
 
-    resource_scores_matrix = calculate_resource_scores(game_state, player)
-    # print(np.array(resource_scores_matrix))
-    # print()
-    maxpool_scores_matrix = calculate_maxpool(game_state, resource_scores_matrix)
-    # print(np.array(maxpool_scores_matrix))
-    # print()
+    resource_scores_matrix = calculate_resource_scores_matrix(game_state, player)
+    maxpool_scores_matrix = calculate_resource_maxpool_matrix(game_state, resource_scores_matrix)
     city_tile_matrix = get_city_tile_matrix(game_state, player)
-    # print(np.array(city_tile_matrix))
-    # print()
     empty_tile_matrix = get_empty_tile_matrix(game_state, player)
-    # print(np.array(empty_tile_matrix))
+    # print(np.array([]))
     # print()
 
     resource_tiles = find_resources(game_state)
 
-    actions_cities = make_city_actions(player)
+    actions_cities = make_city_actions(game_state, player)
     actions.extend(actions_cities)
     
     # we want to build new tiles only if we have a lot of fuel in all cities
@@ -92,7 +60,8 @@ def agent(observation, configuration):
     for unit in player.units:
         # it is too strict but we don't allow to go to the the currently occupied tile
         taken_tiles.add((unit.pos.x, unit.pos.y))
-        
+        find_best_cluster(game_state, maxpool_scores_matrix, unit.pos)
+
     for city in opponent.cities.values():
         for city_tile in city.citytiles:
             taken_tiles.add((city_tile.pos.x, city_tile.pos.y))

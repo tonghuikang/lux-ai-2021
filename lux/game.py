@@ -7,7 +7,22 @@ from .game_objects import Player, Unit, City, CityTile
 INPUT_CONSTANTS = Constants.INPUT_CONSTANTS
 
 
+class Observation(Dict[str, any]):
+    def __init__(self, player=0) -> None:
+        self.player = player
+        # self.updates = []
+        # self.step = 0
+
 class Game:
+    def _update_with_observation(self, observation: Observation):
+        if observation["step"] == 0:
+            self._initialize(observation["updates"])
+            self._update(observation["updates"][2:])
+            self.id = observation.player
+        else:
+            self._update(observation["updates"])
+
+
     def _initialize(self, messages):
         """
         initialize state
@@ -36,6 +51,12 @@ class Game:
         self.players[1].units = []
         self.players[1].cities = {}
         self.players[1].city_tile_count = 0
+
+        self.resource_scores_matrix = None
+        self.maxpool_scores_matrix = None
+        self.city_tile_matrix = None
+        self.empty_tile_matrix = None
+
 
     def _update(self, messages):
         """
@@ -98,9 +119,3 @@ class Game:
         self.turns_to_dawn = (40 - self.turn%40)
 
 
-
-class Observation(Dict[str, any]):
-    def __init__(self, player=0) -> None:
-        self.player = player
-        # self.updates = []
-        # self.step = 0

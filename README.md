@@ -64,7 +64,7 @@ I hope to finish by 31 August for the T-shirt. Afterwards I intend to publish my
 
 #### Future roadmap
 
-- (Necessary for competitive submission) When resources are depleting - secure city tiles.
+- (Necessary for competitive submission) When resources are depleting - secure city tiles by providing fuel to last through the remaining nights.
 - Consider the use of carts
 - Collision avoidance
 - Offensive strategies (start with interfering opponent operations)

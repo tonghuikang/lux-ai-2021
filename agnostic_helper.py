@@ -1,4 +1,5 @@
 # these functions are agent agnostic
+# there functions are designed to have only one obvious way of doing things
 
 import os, re
 import math
@@ -18,19 +19,7 @@ from lux.game_constants import GAME_CONSTANTS
 from lux import annotate
 
 
-def update_game_state_with_observation(game_state: Game, observation: Observation) -> Game:
-
-    if observation["step"] == 0:
-        game_state._initialize(observation["updates"])
-        game_state._update(observation["updates"][2:])
-        game_state.id = observation.player
-    else:
-        game_state._update(observation["updates"])
-    
-    return game_state
-
-
-def calculate_resource_scores(game_state: Game, player: Player) -> List[List[int]]:
+def calculate_resource_scores_matrix(game_state: Game, player: Player) -> List[List[int]]:
     width, height = game_state.map_width, game_state.map_height
     resource_scores_matrix = [[0 for _ in range(width)] for _ in range(height)]
 
@@ -54,7 +43,7 @@ def calculate_resource_scores(game_state: Game, player: Player) -> List[List[int
     return resource_scores_matrix
 
 
-def calculate_maxpool(game_state: Game, resource_scores_matrix: List[List[int]]) -> List[List[int]]:
+def calculate_resource_maxpool_matrix(game_state: Game, resource_scores_matrix: List[List[int]]) -> List[List[int]]:
     width, height = game_state.map_width, game_state.map_height
     maxpool_scores_matrix = [[0 for _ in range(width)] for _ in range(height)]
 
