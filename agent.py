@@ -27,53 +27,49 @@ def agent(observation: Observation, configuration):
     global game_state, missions
 
     game_state._update_with_observation(observation) 
-
-    player = game_state.players[observation.player]
-    opponent = game_state.players[1 - observation.player]  # only two players
-
-    print(player.city_tile_count)
+    print(game_state.player.city_tile_count)
     actions = []
 
     # game_state.resource_scores_matrix
     # game_state.maxpool_scores_matrix
     # game_state.city_tile_matrix
     # game_state.empty_tile_matrix
-    print(np.array([game_state.empty_tile_matrix]))
+    # print(np.array([game_state.empty_tile_matrix]))
     # print()
 
     resource_tiles = find_resources(game_state)
 
-    actions_cities = make_city_actions(game_state, player)
+    actions_cities = make_city_actions(game_state)
     actions.extend(actions_cities)
     
     # we want to build new tiles only if we have a lot of fuel in all cities
     can_build = True
-    for city in player.cities.values():            
+    for city in game_state.player.cities.values():            
         if city.fuel / (city.get_light_upkeep() + 30) < min(game_state.night_turns_left, 20):
             can_build = False
-       
+
     steps_until_night = 30 - observation["step"] % 40
     
     
     # we will keep all tiles where any unit wants to move in this set to avoid collisions
     taken_tiles = set()
-    for unit in player.units:
+    for unit in game_state.player.units:
         # it is too strict but we don't allow to go to the the currently occupied tile
         taken_tiles.add((unit.pos.x, unit.pos.y))
         find_best_cluster(game_state, unit.pos)
 
-    for city in opponent.cities.values():
+    for city in game_state.opponent.cities.values():
         for city_tile in city.citytiles:
             taken_tiles.add((city_tile.pos.x, city_tile.pos.y))
     
     # we can collide in cities so we will use this tiles as exceptions
-    city_tiles = {(tile.pos.x, tile.pos.y) for city in player.cities.values() for tile in city.citytiles}
+    city_tiles = {(tile.pos.x, tile.pos.y) for city in game_state.player.cities.values() for tile in city.citytiles}
 
-    for unit in player.units:
+    for unit in game_state.player.units:
         if unit.can_act():
-            closest_resource_tile, closest_resource_dist = find_closest_resources(unit.pos, player, resource_tiles)
+            closest_resource_tile, closest_resource_dist = find_closest_resources(unit.pos, game_state.player, resource_tiles)
             # print(pretty_print(unit), closest_resource_tile, closest_resource_dist)
-            closest_city_tile, closest_city_dist = find_closest_city_tile(unit.pos, player)
+            closest_city_tile, closest_city_dist = find_closest_city_tile(unit.pos, game_state.player)
             
             # we will keep possible actions in a priority order here
             directions = []

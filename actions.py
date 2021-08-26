@@ -10,7 +10,8 @@ from agnostic_helper import pretty_print
 from heuristics import *
 
 
-def make_city_actions(game_state: Game, player: Player):
+def make_city_actions(game_state: Game):
+    player = game_state.player
     # https://www.lux-ai.org/specs-2021#CityTiles
     
     actions = []

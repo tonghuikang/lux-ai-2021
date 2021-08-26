@@ -59,8 +59,8 @@ class Game:
         self.players[1].cities = {}
         self.players[1].city_tile_count = 0
 
-        self.current_player = self.players[self.player_id]
-
+        self.player = self.players[self.player_id]
+        self.opponent = self.players[1 - self.player_id]
 
     def _update(self, messages):
         """
@@ -131,7 +131,7 @@ class Game:
 
     def calculate_resource_scores_matrix(self) -> List[List[int]]:
         width, height = self.map_width, self.map_height
-        player = self.current_player
+        player = self.player
         resource_scores_matrix = [[0 for _ in range(width)] for _ in range(height)]
 
         for y in range(height):
@@ -174,7 +174,7 @@ class Game:
 
     def get_city_tile_matrix(self) -> List[List[int]]:
         width, height = self.map_width, self.map_height
-        player = self.current_player
+        player = self.player
         city_tile_matrix = [[0 for _ in range(width)] for _ in range(height)]
 
         for city_id, city in player.cities.items():
