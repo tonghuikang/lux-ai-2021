@@ -9,6 +9,7 @@ To be described.
 """
 
 
+
 cells.append(nbf.new_text_cell('markdown', preamble))
 
 init_code = """\
@@ -16,6 +17,7 @@ init_code = """\
 !cp -r ../input/lux-ai-2021/* .
 """
 cells.append(nbf.new_code_cell(init_code))
+
 
 
 filenames = [
@@ -31,13 +33,13 @@ filenames = [
     "lux/annotate.py",
 ]
 
-
 for filename in filenames:
     savefile_cell_magic = f"%%writefile {filename}\n"
     with open(filename, "r") as f:
         content = savefile_cell_magic + f.read()
     cell = nbf.new_code_cell(content)
     cells.append(cell)
+
 
 
 runner_code = """\
@@ -47,21 +49,42 @@ steps = env.run(["agent.py", "simple_agent"])
 """
 cells.append(nbf.new_code_cell(runner_code))
 
-nbf.new_text_cell('markdown', "# Simulation")
+cells.append(nbf.new_text_cell('markdown', "# Simulation"))
 
 render_code = """\
 env.render(mode="ipython", width=900, height=800)
 """
 cells.append(nbf.new_code_cell(render_code))
 
+cells.append(nbf.new_text_cell('markdown', "# Debugging"))
+
+
+
+debugging_code = """\
+import pickle
+from agent import game_logic
+
+str_step = "010"
+with open('snapshots/observation-{}.pkl'.format(str_step), 'rb') as handle:
+    observation = pickle.load(handle)
+with open('snapshots/game_state-{}.pkl'.format(str_step), 'rb') as handle:
+    game_state = pickle.load(handle)
+with open('snapshots/missions-{}.pkl'.format(str_step), 'rb') as handle:
+    missions = pickle.load(handle)
+"""
+
+
+
+cells.append(nbf.new_text_cell('markdown', "# Submission"))
+
 zip_code = """\
 !tar --exclude='*.ipynb' --exclude="*.pyc" -czf submission.tar.gz *
 """
 cells.append(nbf.new_code_cell(zip_code))
 
-
 nb = nbf.new_notebook()
 nb['worksheets'].append(nbf.new_worksheet(cells=cells))
 
-with open('generated_notebook.ipynb', 'w') as f:
+with open('notebook_generated.ipynb', 'w') as f:
     nbf.write(nb, f, 'ipynb', version=4)
+

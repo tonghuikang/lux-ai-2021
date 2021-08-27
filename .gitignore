@@ -3,5 +3,9 @@
 *.pkl
 
 .ipynb_checkpoints/
-generated_notebook.ipynb
+*.ipynb
+
+!notebook_test.ipynb
+!notebook_debug.ipynb
+
 .DS_Store
