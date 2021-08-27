@@ -24,24 +24,25 @@ class Game:
         """
         initialize state
         """
-        self.player_id = int(messages[0])
-        self.turn = -1
+        self.player_id: int = int(messages[0])
+        self.turn: int = -1
         # get some other necessary initial input
         mapInfo = messages[1].split(" ")
-        self.map_width = int(mapInfo[0])
-        self.map_height = int(mapInfo[1])
-        self.map = GameMap(self.map_width, self.map_height)
-        self.players = [Player(0), Player(1)]
+        self.map_width: int = int(mapInfo[0])
+        self.map_height: int = int(mapInfo[1])
+        self.map: GameMap = GameMap(self.map_width, self.map_height)
+        self.players: List[Player] = [Player(0), Player(1)]
 
+        # [TODO] Use constants
         self.night_turns_left = (360 - self.turn)//40 * 10 + min(10, (360 - self.turn)%40)
         self.turns_to_night = (30 - self.turn)%40
         self.turns_to_dawn = (40 - self.turn%40)
 
-        self.resource_scores_matrix = None
-        self.resource_rate_matrix = None
-        self.maxpool_scores_matrix = None
-        self.city_tile_matrix = None
-        self.empty_tile_matrix = None
+        self.resource_scores_matrix: List[List[float]] = None
+        self.resource_rates_matrix: List[List[float]] = None
+        self.maxpool_scores_matrix: List[List[float]] = None
+        self.city_tile_matrix: List[List[float]] = None
+        self.empty_tile_matrix: List[List[float]] = None
 
 
     def _end_turn(self):
@@ -117,19 +118,23 @@ class Game:
         self.night_turns_left = (360 - self.turn)//40 * 10 + min(10, (360 - self.turn)%40)
         self.turns_to_night = (30 - self.turn)%40
         self.turns_to_dawn = (40 - self.turn%40)
-        
+
+        # update data structures
+        self.calculate_occupied_and_free_zones()
+
         # update matrices
         self.calculate_resource_scores_and_rates_matrix()
+        self.calculate_dominance_matrix()
         self.maxpool_scores_matrix = self.calculate_resource_maxpool_matrix()
         self.city_tile_matrix = self.get_city_tile_matrix()
         self.empty_tile_matrix = self.get_empty_tile_matrix()
 
-        # make index
+        # make indexes
         self.player.make_index_units_by_id()
         self.opponent.make_index_units_by_id()
 
 
-    def calculate_resource_scores_and_rates_matrix(self):
+    def calculate_resource_scores_and_rates_matrix(self) -> None:
         width, height = self.map_width, self.map_height
         player = self.player
         resource_scores_matrix = [[0 for _ in range(width)] for _ in range(height)]
@@ -158,6 +163,11 @@ class Game:
         
         self.resource_scores_matrix = resource_scores_matrix
         self.resource_rates_matrix = resource_rates_matrix
+
+
+    def calculate_dominance_matrix(self) -> None:
+        # [TODO]
+        return
 
 
     def calculate_resource_maxpool_matrix(self) -> List[List[int]]:
@@ -228,4 +238,33 @@ class Game:
 
         return nearest_position, nearest_distance
 
+
+    def calculate_occupied_and_free_zones(self):
+        player, opponent = self.player, self.opponent
+
+        set_occupied_xy = set()
+        set_player_city_tiles_xy = set()
+
+        for city in player.cities.values():
+            for city_tile in city.citytiles:
+                xy = (city_tile.pos.x, city_tile.pos.y)
+                set_player_city_tiles_xy.add(xy)
+
+        for unit in player.units:
+            xy = (unit.pos.x, unit.pos.y)
+            if xy in set_player_city_tiles_xy:
+                continue
+            set_occupied_xy.add(xy)
+
+        for city in opponent.cities.values():
+            for city_tile in city.citytiles:
+                xy = (city_tile.pos.x, city_tile.pos.y)
+                set_occupied_xy.add(xy)
+
+        for unit in opponent.units:
+            xy = (unit.pos.x, unit.pos.y)
+            set_occupied_xy.add(xy)
+
+        self.map.set_occupied_xy = set_occupied_xy
+        self.map.set_player_city_tiles_xy = set_player_city_tiles_xy
 

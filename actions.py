@@ -1,10 +1,11 @@
 # functions executing the actions
 
 import os
+import builtins as __builtin__
 
 from lux.game import Game, Player
 from lux.game_map import Cell, RESOURCE_TYPES, Position
-from lux.game_objects import CityTile
+from lux.game_objects import City, CityTile
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
 from lux.annotate import pretty_print
@@ -15,12 +16,15 @@ from heuristics import *
 
 
 def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
+    if DEBUG: print = __builtin__.print
+    else: print = lambda *args: None
+
     player = game_state.player
 
     units_cap = sum([len(x.citytiles) for x in player.cities.values()])
     units_cnt = len(player.units)  # current number of units    
     
-    actions = []
+    actions: List[str] = []
     
     def do_research(city_tile: CityTile):
         action = city_tile.research()
@@ -32,7 +36,7 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
         actions.append(action)
         units_cnt += 1
 
-    city_tiles = []
+    city_tiles: List[CityTile] = []
     for city in player.cities.values():
         for city_tile in city.citytiles:
             city_tiles.append(city_tile)
@@ -54,18 +58,18 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
 
         if not player.researched_coal() and len(city_tiles) > 6 and len(city_tiles)%2:
             # accelerate coal reasearch
-            if DEBUG: print("research for coal", city_tile.pos.x, city_tile.pos.y)
+            print("research for coal", city_tile.pos.x, city_tile.pos.y)
             do_research(city_tile)
 
         best_position, best_cell_value = find_best_cluster(game_state, city_tile.pos)
         if not unit_limit_exceeded and best_cell_value > 100:
-            if DEBUG: print("build_workers", city_tile.pos.x, city_tile.pos.y, best_cell_value)
+            print("build_workers", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, best_cell_value)
             build_workers(city_tile)
             continue
 
         if not player.researched_uranium():
             # [TODO] dont bother researching uranium for smaller maps
-            if DEBUG: print("research", city_tile.pos.x, city_tile.pos.y)
+            print("research", city_tile.pos.x, city_tile.pos.y)
             do_research(city_tile)
             continue
 
@@ -93,6 +97,9 @@ class Missions:
 
 
 def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Missions:
+    if DEBUG: print = __builtin__.print
+    else: print = lambda *args: None
+
     player = game_state.player
 
     for unit in player.units:
@@ -144,32 +151,12 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
 
 def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tuple[Missions, List[str]]:
+    if DEBUG: print = __builtin__.print
+    else: print = lambda *args: None
+
     player, opponent = game_state.player, game_state.opponent
     actions = []
 
-    occupied = set()
-    free_zones = set()
-    for city in player.cities.values():
-        for city_tile in city.citytiles:
-            xy = (city_tile.pos.x, city_tile.pos.y)
-            free_zones.add(xy)
-
-    for unit in player.units:
-        xy = (unit.pos.x, unit.pos.y)
-        if xy in free_zones:
-            continue
-        occupied.add(xy)
-        
-    for city in opponent.cities.values():
-        for city_tile in city.citytiles:
-            xy = (city_tile.pos.x, city_tile.pos.y)
-            occupied.add(xy)
-
-    for unit in opponent.units:
-        xy = (unit.pos.x, unit.pos.y)
-        if xy in free_zones:
-            continue
-        occupied.add(xy)
 
     for unit in player.units:
         if not unit.can_act():
@@ -189,9 +176,12 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             continue
 
         # the unit will need to move
-        direction, occupied = unit.pos.direction_to(missions.target_positions[unit.id], occupied)
+        direction, game_state.map.set_occupied_xy = unit.pos.direction_to(missions.target_positions[unit.id], 
+                                                                          game_state.map.set_occupied_xy)
         action = unit.move(direction)
         actions.append(action)
+
+        # [TODO] make it possible for units to swap position
 
     return missions, actions
         

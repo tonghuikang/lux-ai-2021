@@ -33,6 +33,8 @@ class GameMap:
             self.map[y] = [None] * width
             for x in range(0, self.width):
                 self.map[y][x] = Cell(x, y)
+        self.set_occupied_xy: Set[Tuple] = set()
+        self.set_player_city_tiles_xy: Set[Tuple] = set()
 
     def get_cell_by_pos(self, pos) -> Cell:
         return self.map[pos.y][pos.x]
@@ -83,7 +85,7 @@ class Position:
         elif direction == DIRECTIONS.CENTER:
             return Position(self.x, self.y)
 
-    def direction_to(self, target_pos: 'Position', occupied: Set[Tuple[int]] = set()) -> DIRECTIONS:
+    def direction_to(self, target_pos: 'Position', set_occupied_xy: Set[Tuple[int]] = set()) -> DIRECTIONS:
         """
         Return closest position to target_pos from this position
         """
@@ -103,7 +105,7 @@ class Position:
 
             dist = target_pos.distance_to(newpos)
 
-            if (newpos.x, newpos.y) in occupied:
+            if (newpos.x, newpos.y) in set_occupied_xy:
                 continue
 
             if dist < closest_dist:
@@ -112,10 +114,10 @@ class Position:
                 closest_pos = newpos
 
         if closest_dir != DIRECTIONS.CENTER:
-            occupied.discard((self.x, self.y))
-        occupied.add((closest_pos.x, closest_pos.y))
+            set_occupied_xy.discard((self.x, self.y))
+        set_occupied_xy.add((closest_pos.x, closest_pos.y))
 
-        return closest_dir, occupied
+        return closest_dir, set_occupied_xy
 
     def __str__(self) -> str:
         return f"({self.x}, {self.y})"
