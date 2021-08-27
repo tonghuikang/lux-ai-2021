@@ -101,9 +101,6 @@ class Unit:
         self.cargo.coal = coal
         self.cargo.uranium = uranium
 
-        self.target_pos = None
-        self.target_action = None
-
 
     def is_worker(self) -> bool:
         return self.type == UNIT_TYPES.WORKER

@@ -141,7 +141,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # once a unit is built (detected as having max space)
         # go to the best cluster
         if unit.get_cargo_space_left() == 100:
-            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, 0.01)
+            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, random.uniform(-1,-0.5))
             print("plan mission for fresh grad", unit.id, best_position)
             missions.target_positions[unit.id] = best_position
             missions.target_actions[unit.id] = None
@@ -149,11 +149,11 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
         # if a unit is not receiving any resources
         # move to a place with resources
-        if game_state.convolved_fuel_matrix[unit.pos.y][unit.pos.x] <= 20:
-            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, -0.01)
+        if game_state.convolved_fuel_matrix[unit.pos.y][unit.pos.x] <= 40:
+            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, random.uniform(0.5,1))
             print("plan mission relocate for resources", unit.id, best_position)
-            unit.target_pos = best_position
-            unit.target_action = unit.move("c")
+            missions.target_positions[unit.id] = best_position
+            missions.target_actions[unit.id] = unit.move("c")
             continue
 
         # otherwise just camp and farm resources
@@ -183,6 +183,8 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
         # if there is no mission, continue
         if (unit.id not in missions.target_positions) and (unit.id not in missions.target_actions):
             continue
+
+        print("making action for", unit.id, unit.pos)
 
         # if the location is reached, take action
         if unit.pos == missions.target_positions[unit.id]:

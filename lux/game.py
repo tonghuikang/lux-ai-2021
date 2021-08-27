@@ -270,6 +270,9 @@ class Game:
 
 
     def get_nearest_empty_tile_and_distance(self, current_position: Position) -> Tuple[Position, int]:
+        if tuple(current_position) in self.player_units_xy_set:
+            return current_position, 0
+
         width, height = self.map_width, self.map_height
 
         nearest_distance = width + height
