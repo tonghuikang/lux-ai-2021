@@ -33,16 +33,18 @@ class Game:
         self.map: GameMap = GameMap(self.map_width, self.map_height)
         self.players: List[Player] = [Player(0), Player(1)]
 
-        # [TODO] Use constants
+        # [TODO] Use constants here
         self.night_turns_left = (360 - self.turn)//40 * 10 + min(10, (360 - self.turn)%40)
         self.turns_to_night = (30 - self.turn)%40
         self.turns_to_dawn = (40 - self.turn%40)
 
-        self.resource_scores_matrix: List[List[float]] = None
-        self.resource_rates_matrix: List[List[float]] = None
-        self.maxpool_scores_matrix: List[List[float]] = None
-        self.city_tile_matrix: List[List[float]] = None
-        self.empty_tile_matrix: List[List[float]] = None
+        # ok to have data duplication, these list will be regenerated every turn anyway
+        # no need to init?
+        # self.resource_scores_matrix: List[List[float]] = None
+        # self.resource_rates_matrix: List[List[float]] = None
+        # self.maxpool_scores_matrix: List[List[float]] = None
+        # self.city_tile_matrix: List[List[float]] = None
+        # self.empty_tile_matrix: List[List[float]] = None
 
 
     def _end_turn(self):
@@ -72,15 +74,18 @@ class Game:
                 break
             strs = update.split(" ")
             input_identifier = strs[0]
+
             if input_identifier == INPUT_CONSTANTS.RESEARCH_POINTS:
-                team = int(strs[1])
+                team = int(strs[1])   # probably player_id
                 self.players[team].research_points = int(strs[2])
+
             elif input_identifier == INPUT_CONSTANTS.RESOURCES:
                 r_type = strs[1]
                 x = int(strs[2])
                 y = int(strs[3])
                 amt = int(float(strs[4]))
                 self.map._setResource(r_type, x, y, amt)
+
             elif input_identifier == INPUT_CONSTANTS.UNITS:
                 unittype = int(strs[1])
                 team = int(strs[2])
@@ -92,12 +97,15 @@ class Game:
                 coal = int(strs[8])
                 uranium = int(strs[9])
                 self.players[team].units.append(Unit(team, unittype, unitid, x, y, cooldown, wood, coal, uranium))
+                self.map.get_cell(x, y).unit = Unit(team, unittype, unitid, x, y, cooldown, wood, coal, uranium)
+
             elif input_identifier == INPUT_CONSTANTS.CITY:
                 team = int(strs[1])
                 cityid = strs[2]
                 fuel = float(strs[3])
                 lightupkeep = float(strs[4])
                 self.players[team].cities[cityid] = City(team, cityid, fuel, lightupkeep)
+
             elif input_identifier == INPUT_CONSTANTS.CITY_TILES:
                 team = int(strs[1])
                 cityid = strs[2]
@@ -108,33 +116,110 @@ class Game:
                 citytile = city._add_city_tile(x, y, cooldown)
                 self.map.get_cell(x, y).citytile = citytile
                 self.players[team].city_tile_count += 1
+
             elif input_identifier == INPUT_CONSTANTS.ROADS:
                 x = int(strs[1])
                 y = int(strs[2])
                 road = float(strs[3])
                 self.map.get_cell(x, y).road = road
 
-        # update statistics
-        self.night_turns_left = (360 - self.turn)//40 * 10 + min(10, (360 - self.turn)%40)
-        self.turns_to_night = (30 - self.turn)%40
-        self.turns_to_dawn = (40 - self.turn%40)
-
-        # update data structures
-        self.calculate_occupied_and_free_zones()
+        # # update statistics [TODO] this might not be necessary
+        # self.night_turns_left = (360 - self.turn)//40 * 10 + min(10, (360 - self.turn)%40)
+        # self.turns_to_night = (30 - self.turn)%40
+        # self.turns_to_dawn = (40 - self.turn%40)
 
         # update matrices
-        self.calculate_resource_scores_and_rates_matrix()
-        self.calculate_dominance_matrix()
-        self.maxpool_scores_matrix = self.calculate_resource_maxpool_matrix()
-        self.city_tile_matrix = self.get_city_tile_matrix()
-        self.empty_tile_matrix = self.get_empty_tile_matrix()
+        self.calculate_matrix()
+        self.calculate_resource_matrix()
+        self.calculate_resource_maxpool_matrix()
 
         # make indexes
         self.player.make_index_units_by_id()
         self.opponent.make_index_units_by_id()
 
 
-    def calculate_resource_scores_and_rates_matrix(self) -> None:
+    def calculate_matrix(self):
+        def init_zero_matrix():
+            # [TODO] check if order of map_height and map_width is correct
+            return [[0 for _ in range(self.map_height)] for _ in range(self.map_width)]
+
+        self.empty_tile_matrix = init_zero_matrix()
+
+        self.wood_amount_matrix = init_zero_matrix()
+        self.coal_amount_matrix = init_zero_matrix()
+        self.uranium_amount_matrix = init_zero_matrix()
+
+        self.player_city_tile_matrix = init_zero_matrix()
+        self.opponent_city_tile_matrix = init_zero_matrix()
+
+        self.player_units_matrix = init_zero_matrix()
+        self.opponent_units_matrix = init_zero_matrix()
+
+        self.empty_tile_matrix = init_zero_matrix()
+
+        for y in range(self.map_width):
+            for x in range(self.map_height):
+                cell = self.map.get_cell(x, y)
+
+                if cell.has_resource():
+                    if cell.resource.type == RESOURCE_TYPES.WOOD:
+                        self.wood_amount_matrix[y][x] += cell.resource.amount
+                    if cell.resource.type == RESOURCE_TYPES.COAL:
+                        self.coal_amount_matrix[y][x] += cell.resource.amount
+                    if cell.resource.type == RESOURCE_TYPES.URANIUM:
+                        self.uranium_amount_matrix[y][x] += cell.resource.amount
+
+                elif cell.citytile:
+                    if cell.citytile.team == self.player_id:
+                        self.player_city_tile_matrix[y][x] += 1
+                    else:   # city tile belongs to opponent
+                        self.opponent_city_tile_matrix[y][x] += 1
+
+                elif cell.unit:
+                    if cell.unit.team == self.player_id:
+                        self.player_units_matrix[y][x] += 1
+                    else:   # unit belongs to opponent
+                        self.opponent_units_matrix[y][x] += 1
+
+                else:
+                    self.empty_tile_matrix[y][x] += 1
+
+        self.convert_into_sets()
+
+
+    def convert_into_sets(self):
+        # or should we use dict?
+        self.empty_tile_xy_set = set()
+        self.wood_amount_xy_set = set()
+        self.coal_amount_xy_set = set()
+        self.uranium_amount_xy_set = set()
+        self.player_city_tile_xy_set = set()
+        self.opponent_city_tile_xy_set = set()
+        self.player_units_xy_set = set()
+        self.opponent_units_xy_set = set()
+        self.empty_tile_xy_set = set()
+
+        for set_object, matrix in [
+            [self.empty_tile_xy_set,            self.empty_tile_matrix],
+            [self.wood_amount_xy_set,           self.wood_amount_matrix],
+            [self.coal_amount_xy_set,           self.coal_amount_matrix],
+            [self.uranium_amount_xy_set,        self.uranium_amount_matrix],
+            [self.player_city_tile_xy_set,      self.player_city_tile_matrix],
+            [self.opponent_city_tile_xy_set,    self.opponent_city_tile_matrix],
+            [self.player_units_xy_set,          self.player_units_matrix],
+            [self.opponent_units_xy_set,        self.opponent_units_matrix],
+            [self.empty_tile_xy_set,            self.empty_tile_matrix]]:
+
+            for y in range(self.map.width):
+                for x in range(self.map.height):
+                    if matrix[y][x] > 0:
+                        set_object.add((x,y))
+
+        self.map.set_occupied_xy = (self.player_units_xy_set | self.opponent_units_xy_set | self.player_city_tile_xy_set) \
+                                   - self.player_city_tile_xy_set
+
+
+    def calculate_resource_matrix(self) -> None:
         width, height = self.map_width, self.map_height
         player = self.player
         resource_scores_matrix = [[0 for _ in range(width)] for _ in range(height)]
@@ -160,7 +245,7 @@ class Game:
                         resource_rate_cell += fuel * mining_rate
                 resource_scores_matrix[y][x] = resource_score_cell
                 resource_rates_matrix[y][x] = resource_rate_cell
-        
+
         self.resource_scores_matrix = resource_scores_matrix
         self.resource_rates_matrix = resource_rates_matrix
 
@@ -188,39 +273,11 @@ class Game:
         return maxpool_scores_matrix
 
 
-    def get_city_tile_matrix(self) -> List[List[int]]:
-        width, height = self.map_width, self.map_height
-        player = self.player
-        city_tile_matrix = [[0 for _ in range(width)] for _ in range(height)]
-
-        for city_id, city in player.cities.items():
-            for city_tile in city.citytiles:
-                city_tile_matrix[city_tile.pos.y][city_tile.pos.x] += 1
-        
-        return city_tile_matrix
-
-
-    def get_empty_tile_matrix(self) -> List[List[int]]:
-        width, height = self.map_width, self.map_height
-        empty_tile_matrix = [[0 for _ in range(width)] for _ in range(height)]
-
-        for y in range(height):
-            for x in range(width):
-                cell = self.map.get_cell(x, y)
-                if cell.has_resource():
-                    continue
-                if cell.citytile:
-                    continue
-                empty_tile_matrix[y][x] = 1
-
-        return empty_tile_matrix
-
-
     def get_nearest_empty_tile_and_distance(self, current_position: Position) -> Tuple[Position, int]:
         width, height = self.map_width, self.map_height
 
         nearest_distance = width + height
-        nearest_position = None
+        nearest_position: Position = None
 
         for y in range(height):
             for x in range(width):
@@ -237,34 +294,3 @@ class Game:
                     nearest_position = position
 
         return nearest_position, nearest_distance
-
-
-    def calculate_occupied_and_free_zones(self):
-        player, opponent = self.player, self.opponent
-
-        set_occupied_xy = set()
-        set_player_city_tiles_xy = set()
-
-        for city in player.cities.values():
-            for city_tile in city.citytiles:
-                xy = (city_tile.pos.x, city_tile.pos.y)
-                set_player_city_tiles_xy.add(xy)
-
-        for unit in player.units:
-            xy = (unit.pos.x, unit.pos.y)
-            if xy in set_player_city_tiles_xy:
-                continue
-            set_occupied_xy.add(xy)
-
-        for city in opponent.cities.values():
-            for city_tile in city.citytiles:
-                xy = (city_tile.pos.x, city_tile.pos.y)
-                set_occupied_xy.add(xy)
-
-        for unit in opponent.units:
-            xy = (unit.pos.x, unit.pos.y)
-            set_occupied_xy.add(xy)
-
-        self.map.set_occupied_xy = set_occupied_xy
-        self.map.set_player_city_tiles_xy = set_player_city_tiles_xy
-

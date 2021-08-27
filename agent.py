@@ -21,7 +21,7 @@ def game_logic(game_state, missions, DEBUG=False):
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
-    actions_by_cities = make_city_actions(game_state, DEBUG=DEBUG)    
+    actions_by_cities = make_city_actions(game_state, DEBUG=DEBUG)
     missions = make_unit_missions(game_state, missions, DEBUG=DEBUG)
 
     print("missions")
@@ -39,7 +39,7 @@ def print_game_state(game_state, DEBUG=False) -> None:
 
     print("Citytile count: ", game_state.player.city_tile_count)
     print("Unit count: ", len(game_state.player.units))
-    
+
     print([(unit.pos.x,unit.pos.y) for unit in game_state.player.units])
 
     print("resource_rates_matrix")
@@ -72,10 +72,10 @@ def agent(observation, configuration) -> List[str]:
     else:
         # actually rebuilt from scratch
         game_state._update(observation["updates"])
-    
+
     actions, game_state, missions = game_logic(game_state, missions)
 
     if os.environ.get('GFOOTBALL_DATA_DIR', ''):  # on Kaggle compete, always print actions
         print(actions)
-    
+
     return actions

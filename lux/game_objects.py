@@ -1,7 +1,7 @@
 from typing import Dict, List
 
 from .constants import Constants
-from .game_map import Position
+from .game_position import Position
 from .game_constants import GAME_CONSTANTS
 
 UNIT_TYPES = Constants.UNIT_TYPES
@@ -119,7 +119,7 @@ class Unit:
             return GAME_CONSTANTS["PARAMETERS"]["RESOURCE_CAPACITY"]["WORKER"] - spaceused
         else:
             return GAME_CONSTANTS["PARAMETERS"]["RESOURCE_CAPACITY"]["CART"] - spaceused
-    
+
     def can_build(self, game_map) -> bool:
         """
         whether or not the unit can build where it is right now
