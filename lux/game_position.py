@@ -48,6 +48,7 @@ class Position:
                      turn_num: int = 0,
                      wood_carrying: int = 0,
                      turns_to_dawn: int = 0) -> DIRECTIONS:
+        # [TODO] bring this outside to allow the reading of game_state
         """
         Return closest position to target_pos from this position
         Lots of input because we cannot take game_state here because it will result in circular import
