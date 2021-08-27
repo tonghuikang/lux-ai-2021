@@ -24,7 +24,7 @@ class Player:
     def researched_uranium(self) -> bool:
         return self.research_points >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["URANIUM"]
 
-    def make_index_units_by_id(self) -> None:
+    def make_index_units_by_id(self):
         for unit in self.units:
             self.units_by_id[unit.id] = unit
 

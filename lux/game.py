@@ -214,7 +214,7 @@ class Game:
                                    - self.player_city_tile_xy_set
 
 
-    def calculate_resource_matrix(self) -> None:
+    def calculate_resource_matrix(self):
 
         wood_fuel_rate = GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.WOOD.upper()]
         fuel_matrix = np.array(self.wood_amount_matrix) * wood_fuel_rate
@@ -246,7 +246,7 @@ class Game:
         self.convolved_rate_matrix = convolve(rate_matrix)
 
 
-    def calculate_dominance_matrix(self) -> None:
+    def calculate_dominance_matrix(self):
         # [TODO]
         return
 
