@@ -1,4 +1,6 @@
-from typing import Dict
+from typing import Dict, List, Tuple
+
+import numpy as np
 
 from .constants import Constants
 from .game_map import GameMap, RESOURCE_TYPES
@@ -6,8 +8,6 @@ from .game_objects import Player, Unit, City, CityTile, Position
 from .game_constants import GAME_CONSTANTS
 
 INPUT_CONSTANTS = Constants.INPUT_CONSTANTS
-
-from typing import List, Tuple
 
 
 class Game:
@@ -38,17 +38,10 @@ class Game:
         self.turns_to_night = (30 - self.turn)%40
         self.turns_to_dawn = (40 - self.turn%40)
 
-        # ok to have data duplication, these list will be regenerated every turn anyway
-        # no need to init?
-        # self.resource_scores_matrix: List[List[float]] = None
-        # self.resource_rates_matrix: List[List[float]] = None
-        # self.maxpool_scores_matrix: List[List[float]] = None
-        # self.city_tile_matrix: List[List[float]] = None
-        # self.empty_tile_matrix: List[List[float]] = None
-
 
     def _end_turn(self):
         print("D_FINISH")
+
 
     def _reset_player_states(self):
         self.players[0].units = []
@@ -60,6 +53,7 @@ class Game:
 
         self.player = self.players[self.player_id]
         self.opponent = self.players[1 - self.player_id]
+
 
     def _update(self, messages):
         """
@@ -220,34 +214,35 @@ class Game:
 
 
     def calculate_resource_matrix(self) -> None:
-        width, height = self.map_width, self.map_height
-        player = self.player
-        resource_scores_matrix = [[0 for _ in range(width)] for _ in range(height)]
-        resource_rates_matrix = [[0 for _ in range(width)] for _ in range(height)]
 
-        for y in range(height):
-            for x in range(width):
-                resource_score_cell = 0
-                resource_rate_cell = 0
-                for dx,dy in [(1,0),(0,1),(-1,0),(0,-1),(0,0)]:
-                    xx,yy = x+dx,y+dy
-                    if 0 <= xx < width and 0 <= yy < height:
-                        cell = self.map.get_cell(xx, yy)
-                        if not cell.has_resource():
-                            continue
-                        if not player.researched_coal() and cell.resource.type == RESOURCE_TYPES.COAL:
-                            continue
-                        if not player.researched_uranium() and cell.resource.type == RESOURCE_TYPES.URANIUM:
-                            continue
-                        fuel = GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][str(cell.resource.type).upper()]
-                        mining_rate = GAME_CONSTANTS["PARAMETERS"]["WORKER_COLLECTION_RATE"][str(cell.resource.type).upper()]
-                        resource_score_cell += fuel * cell.resource.amount
-                        resource_rate_cell += fuel * mining_rate
-                resource_scores_matrix[y][x] = resource_score_cell
-                resource_rates_matrix[y][x] = resource_rate_cell
+        fuel_matrix = np.array(self.wood_amount_matrix) * \
+                      GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.WOOD.upper()]
+        rate_matrix = fuel_matrix > 0
 
-        self.resource_scores_matrix = resource_scores_matrix
-        self.resource_rates_matrix = resource_rates_matrix
+        if self.player.researched_coal():
+            coal_fuel_matrix = np.array(self.coal_amount_matrix) * \
+                               GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.COAL.upper()]
+            fuel_matrix += coal_fuel_matrix
+            rate_matrix += coal_fuel_matrix > 0
+
+        if self.player.researched_uranium():
+            uranium_fuel_matrix = np.array(self.uranium_amount_matrix) * \
+                                  GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.URANIUM.upper()]
+            fuel_matrix += uranium_fuel_matrix
+            rate_matrix += uranium_fuel_matrix > 0
+
+        def convolve(matrix):
+            new_matrix = matrix.copy()
+            new_matrix[:-1,:] += matrix[1:,:]
+            new_matrix[:,:-1] += matrix[:,1:]
+            new_matrix[1:,:] += matrix[:-1,:]
+            new_matrix[:,1:] += matrix[:,:-1]
+            return new_matrix.tolist()
+
+        self.resource_fuel_matrix = fuel_matrix
+        self.resource_rate_matrix = rate_matrix
+        self.convolved_fuel_matrix = convolve(fuel_matrix)
+        self.convolved_rate_matrix = convolve(rate_matrix)
 
 
     def calculate_dominance_matrix(self) -> None:
@@ -265,10 +260,10 @@ class Game:
                     xx,yy = x+dx,y+dy
                     if not (0 <= xx < width and 0 <= yy < height):
                         continue
-                    if self.resource_scores_matrix[yy][xx] + dx * 0.2 + dy * 0.1 > self.resource_scores_matrix[y][x]:
+                    if self.convolved_fuel_matrix[yy][xx] + dx * 0.2 + dy * 0.1 > self.convolved_fuel_matrix[y][x]:
                         break
                 else:
-                    maxpool_scores_matrix[y][x] = self.resource_scores_matrix[y][x]
+                    maxpool_scores_matrix[y][x] = self.convolved_fuel_matrix[y][x]
 
         return maxpool_scores_matrix
 

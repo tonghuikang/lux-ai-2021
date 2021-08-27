@@ -79,6 +79,7 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
 
 
 class Missions:
+    # probably could be better structured
     def __init__(self):
         # unit_id as key
         self.target_positions: Dict[str, Position] = {}
@@ -124,7 +125,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         if unit.id in missions.target_positions:  # there is already a mission
             continue
 
-        if game_state.resource_rates_matrix[unit.pos.y][unit.pos.x] >= 80: # continue camping
+        if game_state.convolved_rate_matrix[unit.pos.y][unit.pos.x] >= 80: # continue camping
             continue
 
         # once a unit is built (detected as having max space)
@@ -138,7 +139,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
         # if a unit is not receiving any resources
         # move to a place with resources
-        if game_state.resource_scores_matrix[unit.pos.y][unit.pos.x] <= 20:
+        if game_state.convolved_fuel_matrix[unit.pos.y][unit.pos.x] <= 20:
             best_position, best_cell_value = find_best_cluster(game_state, unit.pos, distance_multiplier=-0.3)
             print("plan mission relocate for resources", unit.id, best_position)
             unit.target_pos = best_position

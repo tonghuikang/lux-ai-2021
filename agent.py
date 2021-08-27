@@ -40,14 +40,7 @@ def print_game_state(game_state, DEBUG=False) -> None:
     print("Citytile count: ", game_state.player.city_tile_count)
     print("Unit count: ", len(game_state.player.units))
 
-    print([(unit.pos.x,unit.pos.y) for unit in game_state.player.units])
-
-    print("resource_rates_matrix")
-    print(np.array([game_state.resource_rates_matrix]))
-    print("resource_scores_matrix")
-    print(np.array([game_state.resource_scores_matrix]))
-    print("maxpool_scores_matrix")
-    print(np.array([game_state.maxpool_scores_matrix]))
+    # you can print the objects from saved game_state
 
     return
 

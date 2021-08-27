@@ -64,6 +64,8 @@ class Position:
             if (newpos.x, newpos.y) in set_occupied_xy:
                 continue
 
+            # [TODO] do not go into a city tile if you are carry substantial wood in the early game
+
             if dist < closest_dist:
                 closest_dir = direction
                 closest_dist = dist

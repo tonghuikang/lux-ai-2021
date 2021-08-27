@@ -24,10 +24,11 @@ filenames = [
     "agent.py",
     "actions.py",
     "heuristics.py",
-    "main.py", 
+    "main.py",
     "lux/game.py",
     "lux/game_map.py",
     "lux/game_objects.py",
+    "lux/game_position.py",
     "lux/game_constants.py",
     "lux/constants.py",
     "lux/annotate.py",
@@ -87,4 +88,3 @@ nb['worksheets'].append(nbf.new_worksheet(cells=cells))
 
 with open('notebook_generated.ipynb', 'w') as f:
     nbf.write(nb, f, 'ipynb', version=4)
-
