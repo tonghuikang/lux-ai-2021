@@ -1,7 +1,7 @@
 # contains designed heuristics
 # which could be fine tuned
 
-import math
+import math, random
 import numpy as np
 import builtins as __builtin__
 

@@ -1,3 +1,4 @@
+from lux import game
 import random
 from typing import List, Set, Tuple
 
@@ -41,9 +42,16 @@ class Position:
         elif direction == DIRECTIONS.CENTER:
             return Position(self.x, self.y)
 
-    def direction_to(self, target_pos: 'Position', set_occupied_xy: Set[Tuple[int]] = set()) -> DIRECTIONS:
+    def direction_to(self, target_pos: 'Position',
+                     set_occupied_xy: Set[Tuple[int]] = set(),
+                     player_city_tile_xy_set: Set[Tuple[int]] = set(),
+                     turn_num: int = 0,
+                     wood_carrying: int = 0,
+                     turns_to_dawn: int = 0) -> DIRECTIONS:
         """
         Return closest position to target_pos from this position
+        Lots of input because we cannot take game_state here because it will result in circular import
+        Probably should be implemented elsewhere
         """
         check_dirs = [
             DIRECTIONS.NORTH,
@@ -52,8 +60,8 @@ class Position:
             DIRECTIONS.WEST,
         ]
         random.shuffle(check_dirs)
-        closest_dist = self.distance_to(target_pos)
-        closest_dir = DIRECTIONS.CENTER
+        closest_dist = 1000
+        closest_dir = check_dirs[0]
         closest_pos = Position(self.x, self.y)
 
         for direction in check_dirs:
@@ -61,10 +69,12 @@ class Position:
 
             dist = target_pos.distance_to(newpos)
 
-            if (newpos.x, newpos.y) in set_occupied_xy:
+            if tuple(newpos) in set_occupied_xy:
                 continue
 
             # [TODO] do not go into a city tile if you are carry substantial wood in the early game
+            if tuple(newpos) in player_city_tile_xy_set and wood_carrying >= min(11, turns_to_dawn)*4:
+                continue
 
             if dist < closest_dist:
                 closest_dir = direction
@@ -79,3 +89,7 @@ class Position:
 
     def __str__(self) -> str:
         return f"({self.x}, {self.y})"
+
+    def __iter__(self):
+        for i in (self.x, self.y):
+            yield i

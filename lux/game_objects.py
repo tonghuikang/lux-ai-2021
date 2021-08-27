@@ -1,3 +1,4 @@
+import random
 from typing import Dict, List
 
 from .constants import Constants
@@ -5,7 +6,7 @@ from .game_position import Position
 from .game_constants import GAME_CONSTANTS
 
 UNIT_TYPES = Constants.UNIT_TYPES
-
+DIRECTIONS = Constants.DIRECTIONS
 
 class Player:
     def __init__(self, team):
@@ -140,6 +141,13 @@ class Unit:
         return the command to move unit in the given direction
         """
         return "m {} {}".format(self.id, dir)
+
+    def random_move(self) -> str:
+        return "m {} {}".format(self.id, random.choice([
+            DIRECTIONS.NORTH,
+            DIRECTIONS.EAST,
+            DIRECTIONS.SOUTH,
+            DIRECTIONS.WEST]))
 
     def transfer(self, dest_id, resourceType, amount) -> str:
         """

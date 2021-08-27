@@ -66,6 +66,7 @@ def agent(observation, configuration) -> List[str]:
         # actually rebuilt from scratch
         game_state._update(observation["updates"])
 
+    print_game_state(game_state)
     actions, game_state, missions = game_logic(game_state, missions)
 
     if os.environ.get('GFOOTBALL_DATA_DIR', ''):  # on Kaggle compete, always print actions

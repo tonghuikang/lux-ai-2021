@@ -37,6 +37,7 @@ class Game:
         self.night_turns_left = (360 - self.turn)//40 * 10 + min(10, (360 - self.turn)%40)
         self.turns_to_night = (30 - self.turn)%40
         self.turns_to_dawn = (40 - self.turn%40)
+        self.is_day_time = self.turns_to_dawn > 11
 
 
     def _end_turn(self):
@@ -215,21 +216,21 @@ class Game:
 
     def calculate_resource_matrix(self) -> None:
 
-        fuel_matrix = np.array(self.wood_amount_matrix) * \
-                      GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.WOOD.upper()]
-        rate_matrix = fuel_matrix > 0
+        wood_fuel_rate = GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.WOOD.upper()]
+        fuel_matrix = np.array(self.wood_amount_matrix) * wood_fuel_rate
+        rate_matrix = (fuel_matrix > 0) * wood_fuel_rate
 
         if self.player.researched_coal():
-            coal_fuel_matrix = np.array(self.coal_amount_matrix) * \
-                               GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.COAL.upper()]
-            fuel_matrix += coal_fuel_matrix
-            rate_matrix += coal_fuel_matrix > 0
+            coal_fuel_rate = GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.COAL.upper()]
+            coal_fuel_matrix = np.array(self.coal_amount_matrix)
+            fuel_matrix += coal_fuel_matrix * coal_fuel_rate
+            rate_matrix += (coal_fuel_matrix > 0) * coal_fuel_rate
 
         if self.player.researched_uranium():
-            uranium_fuel_matrix = np.array(self.uranium_amount_matrix) * \
-                                  GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.URANIUM.upper()]
-            fuel_matrix += uranium_fuel_matrix
-            rate_matrix += uranium_fuel_matrix > 0
+            uranium_fuel_rate = GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.URANIUM.upper()]
+            uranium_fuel_matrix = np.array(self.uranium_amount_matrix)
+            fuel_matrix += uranium_fuel_matrix * uranium_fuel_rate
+            rate_matrix += (uranium_fuel_matrix > 0) * uranium_fuel_rate
 
         def convolve(matrix):
             new_matrix = matrix.copy()
