@@ -2,8 +2,6 @@
 
 import os
 
-NOTEBOOK_DEBUG = "USER" in os.environ and os.environ["USER"] == "hkmac"
-
 from lux.game import Game, Player
 from lux.game_map import Cell, RESOURCE_TYPES, Position
 from lux.game_objects import CityTile
@@ -16,7 +14,7 @@ from typing import Tuple, Dict
 from heuristics import *
 
 
-def make_city_actions(game_state: Game) -> List[str]:
+def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
     player = game_state.player
 
     units_cap = sum([len(x.citytiles) for x in player.cities.values()])
@@ -56,18 +54,18 @@ def make_city_actions(game_state: Game) -> List[str]:
 
         if not player.researched_coal() and len(city_tiles) > 6 and len(city_tiles)%2:
             # accelerate coal reasearch
-            if NOTEBOOK_DEBUG: print("research for coal", city_tile.pos.x, city_tile.pos.y)
+            if DEBUG: print("research for coal", city_tile.pos.x, city_tile.pos.y)
             do_research(city_tile)
 
         best_position, best_cell_value = find_best_cluster(game_state, city_tile.pos)
         if not unit_limit_exceeded and best_cell_value > 100:
-            if NOTEBOOK_DEBUG: print("build_workers", city_tile.pos.x, city_tile.pos.y, best_cell_value)
+            if DEBUG: print("build_workers", city_tile.pos.x, city_tile.pos.y, best_cell_value)
             build_workers(city_tile)
             continue
 
         if not player.researched_uranium():
             # [TODO] dont bother researching uranium for smaller maps
-            if NOTEBOOK_DEBUG: print("research", city_tile.pos.x, city_tile.pos.y)
+            if DEBUG: print("research", city_tile.pos.x, city_tile.pos.y)
             do_research(city_tile)
             continue
 
@@ -94,7 +92,7 @@ class Missions:
             del self.target_actions[unit_id]
 
 
-def make_unit_missions(game_state: Game, missions: Missions) -> Missions:
+def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Missions:
     player = game_state.player
 
     for unit in player.units:
@@ -145,7 +143,7 @@ def make_unit_missions(game_state: Game, missions: Missions) -> Missions:
     return missions
 
 
-def make_unit_actions(game_state: Game, missions: Missions) -> Tuple[Missions, List[str]]:
+def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tuple[Missions, List[str]]:
     player, opponent = game_state.player, game_state.opponent
     actions = []
 

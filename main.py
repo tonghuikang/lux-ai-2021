@@ -1,6 +1,12 @@
+from _typeshed import NoneType
 from typing import Dict
 import sys
 from agent import agent
+
+from actions import Missions
+from lux.game import Game
+
+
 if __name__ == "__main__":
     
     def read_input():
@@ -12,6 +18,7 @@ if __name__ == "__main__":
         except EOFError as eof:
             raise SystemExit(eof)
     step = 0
+
     class Observation(Dict[str, any]):
         def __init__(self, player=0) -> None:
             self.player = player
@@ -20,7 +27,8 @@ if __name__ == "__main__":
     observation = Observation()
     observation["updates"] = []
     observation["step"] = 0
-    player_id = 999
+    player_id = None
+
     while True:
         inputs = read_input()
         observation["updates"].append(inputs)

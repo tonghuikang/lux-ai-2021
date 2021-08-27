@@ -21,12 +21,10 @@ class Game:
 
 
     def _initialize(self, messages):
-        print("messages", messages)
         """
         initialize state
         """
         self.player_id = int(messages[0])
-        print("int(messages[0])", int(messages[0]), self.player_id)
         self.turn = -1
         # get some other necessary initial input
         mapInfo = messages[1].split(" ")
@@ -50,7 +48,6 @@ class Game:
         print("D_FINISH")
 
     def _reset_player_states(self):
-        print(self.player_id)
         self.players[0].units = []
         self.players[0].cities = {}
         self.players[0].city_tile_count = 0

@@ -55,7 +55,7 @@ env.render(mode="ipython", width=900, height=800)
 cells.append(nbf.new_code_cell(render_code))
 
 zip_code = """\
-!tar -czf submission.tar.gz *
+!tar --exclude='*.ipynb' --exclude="*.pyc" -czf submission.tar.gz *
 """
 cells.append(nbf.new_code_cell(zip_code))
 

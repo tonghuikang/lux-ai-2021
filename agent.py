@@ -1,7 +1,7 @@
 import os
-import numpy as np
+import pickle
 
-NOTEBOOK_DEBUG = "USER" in os.environ and os.environ["USER"] == "hkmac"
+import numpy as np
 
 from lux.game import Game
 from lux.game_map import Cell, RESOURCE_TYPES, Position
@@ -15,9 +15,8 @@ from heuristics import *
 game_state = Game()
 missions = Missions()
 
-def agent(observation, configuration):
-    del configuration  # unused
-    global game_state, missions
+
+def game_logic(observation, game_state, missions, DEBUG=False):
 
     ### Do not edit ###
     if observation["step"] == 0:
@@ -28,23 +27,42 @@ def agent(observation, configuration):
     else:
         game_state._update(observation["updates"])
     
-    if NOTEBOOK_DEBUG: print("counts", game_state.player.city_tile_count, len(game_state.player.units))
-    if NOTEBOOK_DEBUG: print([(unit.pos.x,unit.pos.y) for unit in game_state.player.units])
+    if DEBUG: print("Tile and unit counts:", game_state.player.city_tile_count, len(game_state.player.units))
+    if DEBUG: print([(unit.pos.x,unit.pos.y) for unit in game_state.player.units])
 
     # game_state.resource_scores_matrix
     # game_state.maxpool_scores_matrix
     # game_state.city_tile_matrix
     # game_state.empty_tile_matrix
-    if NOTEBOOK_DEBUG:
+    if DEBUG:
         print(np.array([game_state.resource_scores_matrix]))
 
-    actions_cities = make_city_actions(game_state)
+    actions_cities = make_city_actions(game_state, DEBUG=DEBUG)
     
-    missions = make_unit_missions(game_state, missions)
-    if NOTEBOOK_DEBUG: print(missions)
+    missions = make_unit_missions(game_state, missions, DEBUG=DEBUG)
+    if DEBUG: print(missions)
 
-    missions, actions_units = make_unit_actions(game_state, missions)
+    missions, actions_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
 
     actions = actions_cities + actions_units
-    print(actions)
+    return actions, game_state, missions
+
+
+def agent(observation, configuration) -> List[str]:
+    del configuration  # unused
+    global game_state, missions, DEBUG
+
+    str_step = str(observation["step"]).zfill(3)
+    with open('snapshots/observation-{}.pkl'.format(str_step), 'wb') as handle:
+        pickle.dump(observation, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open('snapshots/game_state-{}.pkl'.format(str_step), 'wb') as handle:
+        pickle.dump(game_state, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    with open('snapshots/missions-{}.pkl'.format(str_step), 'wb') as handle:
+        pickle.dump(missions, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+    actions, game_state, missions = game_logic(observation, game_state, missions)
+
+    if os.environ.get('GFOOTBALL_DATA_DIR', ''):  # on Kaggle compete
+        print(actions)
+    
     return actions
