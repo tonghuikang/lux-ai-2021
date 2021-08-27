@@ -1,11 +1,21 @@
+# OS
+.DS_Store
+
+# datafiles
 *.tar.gz
 *.pyc
 *.pkl
 
+# notebooks
 .ipynb_checkpoints/
 *.ipynb
 
 !notebook_test.ipynb
 !notebook_debug.ipynb
 
-.DS_Store
+# reference bots
+ref/
+
+# replays
+errorlogs/
+replays/
