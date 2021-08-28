@@ -210,8 +210,8 @@ class Game:
                     if matrix[y][x] > 0:
                         set_object.add((x,y))
 
-        self.map.set_occupied_xy = (self.player_units_xy_set | self.opponent_units_xy_set | self.player_city_tile_xy_set) \
-                                   - self.player_city_tile_xy_set
+        self.occupied_xy_set = (self.player_units_xy_set | self.opponent_units_xy_set | self.player_city_tile_xy_set) \
+                                - self.player_city_tile_xy_set
 
 
     def calculate_resource_matrix(self):

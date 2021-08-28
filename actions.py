@@ -2,18 +2,20 @@
 
 import os, random
 import builtins as __builtin__
+from typing import Tuple, Dict, Set
+
 from lux import game
 
 from lux.game import Game, Player
 from lux.game_map import Cell, RESOURCE_TYPES, Position
-from lux.game_objects import City, CityTile
+from lux.game_objects import City, CityTile, Unit
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
 from lux.annotate import pretty_print
 
-from typing import Tuple, Dict
-
 from heuristics import *
+
+DIRECTIONS = Constants.DIRECTIONS
 
 
 def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
@@ -106,7 +108,6 @@ class Missions:
                 del self.target_actions[unit_id]
 
 
-
 def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Missions:
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
@@ -175,8 +176,11 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
     player, opponent = game_state.player, game_state.opponent
     actions = []
 
+    prev_actions_len = -1
+    while prev_actions_len < len(actions):
+      prev_actions_len = len(actions)
 
-    for unit in player.units:
+      for unit in player.units:
         if not unit.can_act():
             continue
 
@@ -198,12 +202,9 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             continue
 
         # the unit will need to move
-        direction, game_state.map.set_occupied_xy = unit.pos.direction_to(missions.target_positions[unit.id],
-                                                                          game_state.map.set_occupied_xy,
-                                                                          game_state.player_city_tile_xy_set,
-                                                                          turn_num=game_state.turn,
-                                                                          wood_carrying=unit.cargo.wood,
-                                                                          turns_to_dawn=game_state.turns_to_dawn)
+        direction = attempt_direction_to(game_state, unit, missions.target_positions[unit.id])
+        if direction == "c":
+            continue
         action = unit.move(direction)
         print("make move", unit.id, unit.pos, direction)
         actions.append(action)
@@ -211,3 +212,39 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
         # [TODO] make it possible for units to swap position
 
     return missions, actions
+
+
+def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> DIRECTIONS:
+    check_dirs = [
+        DIRECTIONS.NORTH,
+        DIRECTIONS.EAST,
+        DIRECTIONS.SOUTH,
+        DIRECTIONS.WEST,
+    ]
+    random.shuffle(check_dirs)
+    closest_dist = 1000
+    closest_dir = DIRECTIONS.CENTER
+    closest_pos = unit.pos
+
+    for direction in check_dirs:
+        newpos = unit.pos.translate(direction, 1)
+        dist = target_pos.distance_to(newpos)
+
+        if tuple(newpos) in game_state.occupied_xy_set:
+            continue
+
+        # [TODO] do not go into a city tile if you are carry substantial wood in the early game
+        if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood >= min(11, game_state.turns_to_dawn)*4:
+            continue
+
+        if dist < closest_dist:
+            closest_dir = direction
+            closest_dist = dist
+            closest_pos = newpos
+
+    if closest_dir != DIRECTIONS.CENTER:
+        game_state.occupied_xy_set.discard(tuple(unit.pos))
+        game_state.occupied_xy_set.add(tuple(closest_pos))
+        unit.cooldown += 2
+
+    return closest_dir

@@ -88,6 +88,7 @@ cells.append(nbf.new_text_cell('markdown', "# Submission"))
 zip_code = """\
 !rm snapshots/*.pkl
 !tar --exclude='*.ipynb' --exclude="*.pyc" --exclude="*.pkl" -czf submission.tar.gz *
+!rm *.py && !rm -rf __pycache__/ && !rm -rf lux/
 """
 cells.append(nbf.new_code_cell(zip_code))
 

@@ -33,10 +33,11 @@ def game_logic(game_state, missions, DEBUG=False):
     return actions, game_state, missions
 
 
-def print_game_state(game_state, DEBUG=False):
+def print_game_state(game_state: Game, DEBUG=False):
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
+    print("Turn number: ", game_state.turn)
     print("Citytile count: ", game_state.player.city_tile_count)
     print("Unit count: ", len(game_state.player.units))
 
