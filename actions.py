@@ -244,7 +244,8 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
 
     if closest_dir != DIRECTIONS.CENTER:
         game_state.occupied_xy_set.discard(tuple(unit.pos))
-        game_state.occupied_xy_set.add(tuple(closest_pos))
+        if tuple(closest_pos) not in game_state.player_city_tile_xy_set:
+            game_state.occupied_xy_set.add(tuple(closest_pos))
         unit.cooldown += 2
 
     return closest_dir

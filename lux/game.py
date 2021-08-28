@@ -126,7 +126,6 @@ class Game:
         # update matrices
         self.calculate_matrix()
         self.calculate_resource_matrix()
-        self.calculate_resource_maxpool_matrix()
 
         # make indexes
         self.player.make_index_units_by_id()
@@ -210,7 +209,15 @@ class Game:
                     if matrix[y][x] > 0:
                         set_object.add((x,y))
 
-        self.occupied_xy_set = (self.player_units_xy_set | self.opponent_units_xy_set | self.player_city_tile_xy_set) \
+        out_of_map = set()
+        for y in [-1, self.map_width]:
+            for x in range(self.map_height):
+                out_of_map.add((x,y))
+        for y in range(self.map_height):
+            for x in [-1, self.map_width]:
+                out_of_map.add((x,y))
+
+        self.occupied_xy_set = (self.player_units_xy_set | self.opponent_units_xy_set | self.player_city_tile_xy_set | out_of_map) \
                                 - self.player_city_tile_xy_set
 
 
@@ -245,15 +252,16 @@ class Game:
         self.convolved_fuel_matrix = convolve(fuel_matrix)
         self.convolved_rate_matrix = convolve(rate_matrix)
 
+        self.calculate_resource_maxpool_matrix()
 
     def calculate_dominance_matrix(self):
         # [TODO]
         return
 
 
-    def calculate_resource_maxpool_matrix(self) -> List[List[int]]:
+    def calculate_resource_maxpool_matrix(self):
         width, height = self.map_width, self.map_height
-        maxpool_scores_matrix = [[0 for _ in range(width)] for _ in range(height)]
+        resource_maxpool_matrix = [[0 for _ in range(width)] for _ in range(height)]
 
         for y in range(height):
             for x in range(width):
@@ -264,9 +272,9 @@ class Game:
                     if self.convolved_fuel_matrix[yy][xx] + dx * 0.2 + dy * 0.1 > self.convolved_fuel_matrix[y][x]:
                         break
                 else:
-                    maxpool_scores_matrix[y][x] = self.convolved_fuel_matrix[y][x]
+                    resource_maxpool_matrix[y][x] = self.convolved_fuel_matrix[y][x]
 
-        return maxpool_scores_matrix
+        self.resource_maxpool_matrix = resource_maxpool_matrix
 
 
     def get_nearest_empty_tile_and_distance(self, current_position: Position) -> Tuple[Position, int]:

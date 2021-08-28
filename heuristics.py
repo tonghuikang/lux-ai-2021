@@ -32,7 +32,7 @@ def find_best_cluster(game_state: Game, position: Position, distance_multiplier 
 
     polar_offset = random.uniform(0,math.pi)
 
-    for y,row in enumerate(game_state.convolved_fuel_matrix):
+    for y,row in enumerate(game_state.resource_maxpool_matrix):
         for x,maxpool_scores in enumerate(row):
 
             # [TODO] make it smarter than random
