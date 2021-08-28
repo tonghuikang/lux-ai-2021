@@ -21,7 +21,7 @@ def find_best_cluster(game_state: Game, position: Position, distance_multiplier 
     width, height = game_state.map_width, game_state.map_height
 
     cooldown = GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
-    travel_range = max(0, game_state.turns_to_night // cooldown - 2)
+    travel_range = max(1, game_state.turns_to_night // cooldown - 2)
     # [TODO] consider the resources carried as well
     # [TODO] fix bug regarding nighttime travel, but just let them die perhaps
 
@@ -32,7 +32,7 @@ def find_best_cluster(game_state: Game, position: Position, distance_multiplier 
 
     polar_offset = random.uniform(0,math.pi)
 
-    for y,row in enumerate(game_state.resource_maxpool_matrix):
+    for y,row in enumerate(game_state.resource_rate_matrix):
         for x,maxpool_scores in enumerate(row):
 
             # [TODO] make it smarter than random

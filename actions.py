@@ -59,13 +59,19 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
         if player.researched_uranium() and unit_limit_exceeded:
             continue
 
-        if not player.researched_coal() and len(city_tiles) > 6 and len(city_tiles)%2:
+        if not player.researched_uranium() and game_state.turns_to_night < 6:
+            print("research and dont build units at night", city_tile.pos.x, city_tile.pos.y)
+            do_research(city_tile)
+            continue
+
+        if not player.researched_coal() and len(city_tiles) > 4 and len(city_tiles)%2:
             # accelerate coal reasearch
             print("research for coal", city_tile.pos.x, city_tile.pos.y)
             do_research(city_tile)
+            continue
 
         best_position, best_cell_value = find_best_cluster(game_state, city_tile.pos)
-        if not unit_limit_exceeded and best_cell_value > 100:
+        if not unit_limit_exceeded and best_cell_value > 0:
             print("build_worker", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, best_cell_value)
             build_workers(city_tile)
             continue
@@ -127,7 +133,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # print(unit.id, unit.get_cargo_space_left())
         if unit.get_cargo_space_left() == 0:
             nearest_position, nearest_distance = game_state.get_nearest_empty_tile_and_distance(unit.pos)
-            if nearest_distance < game_state.turns_to_night - 4:
+            if nearest_distance < game_state.turns_to_night - 5:
                 print("plan mission build city", unit.id, nearest_position)
                 missions.target_positions[unit.id] = nearest_position
                 missions.target_actions[unit.id] = unit.build_city()
@@ -143,6 +149,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # go to the best cluster
         if unit.get_cargo_space_left() == 100:
             best_position, best_cell_value = find_best_cluster(game_state, unit.pos, random.uniform(-1,-0.5))
+            # [TODO] what if best_cell_value is zero
             print("plan mission for fresh grad", unit.id, best_position)
             missions.target_positions[unit.id] = best_position
             missions.target_actions[unit.id] = None
@@ -150,8 +157,9 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
         # if a unit is not receiving any resources
         # move to a place with resources
-        if game_state.convolved_fuel_matrix[unit.pos.y][unit.pos.x] <= 40:
+        if game_state.convolved_fuel_matrix[unit.pos.y][unit.pos.x] < 20:
             best_position, best_cell_value = find_best_cluster(game_state, unit.pos, random.uniform(0.5,1))
+            # [TODO] what if best_cell_value is zero
             print("plan mission relocate for resources", unit.id, best_position)
             missions.target_positions[unit.id] = best_position
             missions.target_actions[unit.id] = unit.move("c")

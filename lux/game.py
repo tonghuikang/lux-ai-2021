@@ -33,12 +33,6 @@ class Game:
         self.map: GameMap = GameMap(self.map_width, self.map_height)
         self.players: List[Player] = [Player(0), Player(1)]
 
-        # [TODO] Use constants here
-        self.night_turns_left = (360 - self.turn)//40 * 10 + min(10, (360 - self.turn)%40)
-        self.turns_to_night = (30 - self.turn)%40
-        self.turns_to_dawn = (40 - self.turn%40)
-        self.is_day_time = self.turns_to_dawn > 11
-
 
     def _end_turn(self):
         print("D_FINISH")
@@ -63,6 +57,18 @@ class Game:
         self.map = GameMap(self.map_width, self.map_height)
         self.turn += 1
         self._reset_player_states()
+
+        # [TODO] Use constants here
+        self.night_turns_left = (360 - self.turn)//40 * 10 + min(10, (360 - self.turn)%40)
+
+        self.turns_to_night = (30 - self.turn)%40
+        self.turns_to_night = 0 if self.turns_to_night > 30 else self.turns_to_night
+
+        self.turns_to_dawn = (40 - self.turn%40)
+        self.turns_to_dawn = 0 if self.turns_to_dawn > 10 else self.turns_to_dawn
+
+        self.is_day_time = self.turns_to_dawn == 0
+
 
         for update in messages:
             if update == "D_DONE":
@@ -117,11 +123,6 @@ class Game:
                 y = int(strs[2])
                 road = float(strs[3])
                 self.map.get_cell(x, y).road = road
-
-        # # update statistics [TODO] this might not be necessary
-        # self.night_turns_left = (360 - self.turn)//40 * 10 + min(10, (360 - self.turn)%40)
-        # self.turns_to_night = (30 - self.turn)%40
-        # self.turns_to_dawn = (40 - self.turn%40)
 
         # update matrices
         self.calculate_matrix()
@@ -224,20 +225,26 @@ class Game:
     def calculate_resource_matrix(self):
 
         wood_fuel_rate = GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.WOOD.upper()]
+        wood_count_rate = GAME_CONSTANTS["PARAMETERS"]["WORKER_COLLECTION_RATE"][RESOURCE_TYPES.COAL.upper()]
         fuel_matrix = np.array(self.wood_amount_matrix) * wood_fuel_rate
-        rate_matrix = (fuel_matrix > 0) * wood_fuel_rate
+        count_matrix = (fuel_matrix > 0) * wood_count_rate
+        rate_matrix = (fuel_matrix > 0) * wood_fuel_rate * wood_count_rate
 
         if self.player.researched_coal():
             coal_fuel_rate = GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.COAL.upper()]
+            coal_count_rate = GAME_CONSTANTS["PARAMETERS"]["WORKER_COLLECTION_RATE"][RESOURCE_TYPES.COAL.upper()]
             coal_fuel_matrix = np.array(self.coal_amount_matrix)
             fuel_matrix += coal_fuel_matrix * coal_fuel_rate
-            rate_matrix += (coal_fuel_matrix > 0) * coal_fuel_rate
+            count_matrix += (coal_fuel_matrix > 0) * coal_count_rate
+            rate_matrix += (coal_fuel_matrix > 0) * coal_fuel_rate * coal_count_rate
 
         if self.player.researched_uranium():
             uranium_fuel_rate = GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.URANIUM.upper()]
+            uranium_count_rate = GAME_CONSTANTS["PARAMETERS"]["WORKER_COLLECTION_RATE"][RESOURCE_TYPES.URANIUM.upper()]
             uranium_fuel_matrix = np.array(self.uranium_amount_matrix)
             fuel_matrix += uranium_fuel_matrix * uranium_fuel_rate
-            rate_matrix += (uranium_fuel_matrix > 0) * uranium_fuel_rate
+            count_matrix += (uranium_fuel_matrix > 0) * uranium_count_rate
+            rate_matrix += (uranium_fuel_matrix > 0) * uranium_fuel_rate * uranium_count_rate
 
         def convolve(matrix):
             new_matrix = matrix.copy()
@@ -247,12 +254,15 @@ class Game:
             new_matrix[:,1:] += matrix[:,:-1]
             return new_matrix.tolist()
 
-        self.resource_fuel_matrix = fuel_matrix
-        self.resource_rate_matrix = rate_matrix
+        self.resource_fuel_matrix = fuel_matrix.tolist()
+        self.resource_count_matrix = count_matrix.tolist()
+        self.resource_rate_matrix = rate_matrix.tolist()
         self.convolved_fuel_matrix = convolve(fuel_matrix)
+        self.convolved_count_matrix = convolve(count_matrix)
         self.convolved_rate_matrix = convolve(rate_matrix)
 
         self.calculate_resource_maxpool_matrix()
+
 
     def calculate_dominance_matrix(self):
         # [TODO]
