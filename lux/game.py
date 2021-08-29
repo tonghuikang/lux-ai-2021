@@ -46,8 +46,8 @@ class Game:
         self.players[1].cities = {}
         self.players[1].city_tile_count = 0
 
-        self.player = self.players[self.player_id]
-        self.opponent = self.players[1 - self.player_id]
+        self.player: Player = self.players[self.player_id]
+        self.opponent: Player = self.players[1 - self.player_id]
 
 
     def _update(self, messages):
@@ -222,6 +222,15 @@ class Game:
                                 - self.player_city_tile_xy_set
 
 
+    def convolve(self, matrix):
+        new_matrix = matrix.copy()
+        new_matrix[:-1,:] += matrix[1:,:]
+        new_matrix[:,:-1] += matrix[:,1:]
+        new_matrix[1:,:] += matrix[:-1,:]
+        new_matrix[:,1:] += matrix[:,:-1]
+        return new_matrix.tolist()
+
+
     def calculate_resource_matrix(self):
 
         wood_fuel_rate = GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.WOOD.upper()]
@@ -246,27 +255,21 @@ class Game:
             count_matrix += (uranium_fuel_matrix > 0) * uranium_count_rate
             rate_matrix += (uranium_fuel_matrix > 0) * uranium_fuel_rate * uranium_count_rate
 
-        def convolve(matrix):
-            new_matrix = matrix.copy()
-            new_matrix[:-1,:] += matrix[1:,:]
-            new_matrix[:,:-1] += matrix[:,1:]
-            new_matrix[1:,:] += matrix[:-1,:]
-            new_matrix[:,1:] += matrix[:,:-1]
-            return new_matrix.tolist()
-
         self.resource_fuel_matrix = fuel_matrix.tolist()
         self.resource_count_matrix = count_matrix.tolist()
         self.resource_rate_matrix = rate_matrix.tolist()
-        self.convolved_fuel_matrix = convolve(fuel_matrix)
-        self.convolved_count_matrix = convolve(count_matrix)
-        self.convolved_rate_matrix = convolve(rate_matrix)
+        self.convolved_fuel_matrix = self.convolve(fuel_matrix)
+        self.convolved_count_matrix = self.convolve(count_matrix)
+        self.convolved_rate_matrix = self.convolve(rate_matrix)
 
         self.calculate_resource_maxpool_matrix()
 
 
-    def calculate_dominance_matrix(self):
-        # [TODO]
-        return
+    def calculate_dominance_matrix(self, feature_matrix, masking_factor = 0.5):
+        mask = (1 - masking_factor * np.array(self.player_units_matrix))
+        feature_matrix = self.convolve(np.array(feature_matrix))
+        masked_matrix = mask * np.array(feature_matrix)
+        return masked_matrix
 
 
     def calculate_resource_maxpool_matrix(self):

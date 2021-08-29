@@ -32,7 +32,10 @@ def find_best_cluster(game_state: Game, position: Position, distance_multiplier 
 
     polar_offset = random.uniform(0,math.pi)
 
-    for y,row in enumerate(game_state.resource_rate_matrix):
+    # matrix = game_state.calculate_dominance_matrix(game_state.resource_rate_matrix)
+    matrix = game_state.resource_maxpool_matrix
+
+    for y,row in enumerate(matrix):
         for x,maxpool_scores in enumerate(row):
 
             # [TODO] make it smarter than random
@@ -40,6 +43,7 @@ def find_best_cluster(game_state: Game, position: Position, distance_multiplier 
             polar_score = math.sin(math.atan2(dx,dy) + polar_offset)**2
             if game_state.turn < 30:  # not so much
                 polar_score = math.sqrt(polar_score)
+            polar_score = 1
 
             if maxpool_scores > 0:
                 distance = max(1, dx + dy)

@@ -1,3 +1,4 @@
+from lux import annotate
 import random
 from typing import Dict, List
 
@@ -135,7 +136,7 @@ class Unit:
 
     def move(self, dir) -> str:
         """
-        return the command to move unit in the given direction
+        return the command to move unit in the given direction, and annotate
         """
         return "m {} {}".format(self.id, dir)
 
