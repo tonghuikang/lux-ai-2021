@@ -143,6 +143,7 @@ class Game:
         self.wood_amount_matrix = init_zero_matrix()
         self.coal_amount_matrix = init_zero_matrix()
         self.uranium_amount_matrix = init_zero_matrix()
+        self.resource_amount_matrix = init_zero_matrix()
 
         self.player_city_tile_matrix = init_zero_matrix()
         self.opponent_city_tile_matrix = init_zero_matrix()
@@ -173,6 +174,7 @@ class Game:
                         self.coal_amount_matrix[y][x] += cell.resource.amount
                     if cell.resource.type == RESOURCE_TYPES.URANIUM:
                         self.uranium_amount_matrix[y][x] += cell.resource.amount
+                    self.resource_amount_matrix[y][x] += cell.resource.amount
 
                 elif cell.citytile:
                     is_empty = False
@@ -192,6 +194,7 @@ class Game:
         self.wood_amount_xy_set = set()
         self.coal_amount_xy_set = set()
         self.uranium_amount_xy_set = set()
+        self.resource_amount_xy_set = set()
         self.player_city_tile_xy_set = set()
         self.opponent_city_tile_xy_set = set()
         self.player_units_xy_set = set()
@@ -202,6 +205,7 @@ class Game:
             [self.wood_amount_xy_set,           self.wood_amount_matrix],
             [self.coal_amount_xy_set,           self.coal_amount_matrix],
             [self.uranium_amount_xy_set,        self.uranium_amount_matrix],
+            [self.resource_amount_xy_set,       self.resource_amount_matrix],
             [self.player_city_tile_xy_set,      self.player_city_tile_matrix],
             [self.opponent_city_tile_xy_set,    self.opponent_city_tile_matrix],
             [self.player_units_xy_set,          self.player_units_matrix],
@@ -294,8 +298,9 @@ class Game:
 
 
     def get_nearest_empty_tile_and_distance(self, current_position: Position) -> Tuple[Position, int]:
-        if tuple(current_position) in self.empty_tile_xy_set:
-            return current_position, 0
+        if tuple(current_position) not in self.resource_amount_xy_set:
+            if tuple(current_position) not in self.player_city_tile_xy_set:
+                return current_position, 0
 
         width, height = self.map_width, self.map_height
 

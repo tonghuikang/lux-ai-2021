@@ -64,7 +64,7 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
             continue
 
         best_position, best_cell_value = find_best_cluster(game_state, city_tile.pos)
-        if not unit_limit_exceeded and best_cell_value > 100:
+        if not unit_limit_exceeded and best_cell_value > 0:
             print("build_worker", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, best_cell_value)
             build_workers(city_tile)
             continue
@@ -88,7 +88,7 @@ class Mission:
         # [TODO] some expiry date for each mission
 
     def __str__(self):
-        return " ".join(str(self.target_position), self.target_action)
+        return " ".join([str(self.target_position), self.target_action])
 
 
 class Missions(collections.defaultdict):
@@ -103,6 +103,9 @@ class Missions(collections.defaultdict):
             if unit_id not in player.units_by_id:
                 del self[unit_id]
 
+    def __str__(self):
+        return " ".join([unit_id + " " + str(x) for unit_id,x in self.items()])
+
 
 
 def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Missions:
@@ -113,12 +116,8 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
     missions.cleanup(player)  # remove dead units
 
     for unit in player.units:
-        if not unit.can_act():
-            continue
-
-        if unit.id in missions and missions[unit.id].target_position == unit.pos:
-            # take action and not make missions if already at position
-            continue
+        # if not unit.can_act():
+        #     continue
 
         # if the unit is full and it is going to be day the next few days
         # go to an empty tile and build a city
@@ -131,6 +130,10 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
                 missions.add(mission)
                 continue
 
+        if unit.id in missions and missions[unit.id].target_position == unit.pos:
+            # take action and not make missions if already at position
+            continue
+
         # if unit.id in missions:  # there is already a mission
         #     continue
 
@@ -140,7 +143,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # once a unit is built (detected as having max space)
         # go to the best cluster
         if unit.get_cargo_space_left() == 100:
-            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, random.uniform(-1,-0.5))
+            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, random.uniform(0.5,0.6))
             # [TODO] what if best_cell_value is zero
             print("plan mission for fresh grad", unit.id, best_position)
             mission = Mission(unit.id, best_position)
@@ -253,8 +256,8 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
         if tuple(newpos) in game_state.occupied_xy_set:
             continue
 
-        # [TODO] do not go into a city tile if you are carry substantial wood in the early game
-        if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood >= min(11, game_state.turns_to_dawn)*4:
+        # [TODO] do not go into a city tile if you are carry substantial max wood
+        if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood == 100:
             continue
 
         # dist = calculate_path_distance(game_state, newpos, target_pos)
