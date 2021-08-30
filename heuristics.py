@@ -6,6 +6,7 @@ import numpy as np
 import builtins as __builtin__
 
 from typing import List
+from lux import game
 
 from lux.game import Game, Player
 from lux.game_map import Cell, RESOURCE_TYPES, Position
@@ -37,6 +38,8 @@ def find_best_cluster(game_state: Game, position: Position, distance_multiplier 
 
     for y,row in enumerate(matrix):
         for x,score in enumerate(row):
+            if (x,y) in game_state.targeted_xy_set:
+                continue
 
             # [TODO] make it smarter than random
 

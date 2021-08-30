@@ -103,6 +103,9 @@ class Missions(collections.defaultdict):
     def __str__(self):
         return " ".join([unit_id + " " + str(x) for unit_id,x in self.items()])
 
+    def get_targets(self):
+        return [mission.target_position for mission in self.values()]
+
 
 
 def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Missions:
@@ -114,6 +117,9 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
     for unit in player.units:
         # mission is planned regardless whether the unit can act
+
+        # avoid sharing the same target
+        game_state.repopulate_targets(missions.get_targets())
 
         # if the unit is full and it is going to be day the next few days
         # go to an empty tile and build a citytile
@@ -131,29 +137,27 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
             continue
 
         if unit.id in missions:
+            # the mission will be recaluated if the unit fails to make a move
             continue
 
         # once a unit is built or has build a house (detected as having max space)
         # go to the best cluster biased towards being far
         if unit.get_cargo_space_left() == 100 or unit.cargo.wood >= 60:
-            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, 2.0)
+            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, 1.0)
             # [TODO] what if best_cell_value is zero
             print("plan mission for fresh grad", unit.id, best_position)
             mission = Mission(unit.id, best_position)
             missions.add(mission)
             continue
 
-        # if a unit is not receiving any resources
         # move to a place with resources biased towards being near
-        if game_state.convolved_fuel_matrix[unit.pos.y][unit.pos.x] == 0:
+        if True:
             best_position, best_cell_value = find_best_cluster(game_state, unit.pos, -0.5)
             # [TODO] what if best_cell_value is zero
             print("plan mission relocate for resources", unit.id, best_position)
             mission = Mission(unit.id, best_position, None)
             missions.add(mission)
             continue
-
-        # otherwise just camp and farm resources
 
         # [TODO] when you can secure a city all the way to the end of time, do it
 

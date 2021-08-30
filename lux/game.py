@@ -25,6 +25,8 @@ class Game:
         self.map: GameMap = GameMap(self.map_width, self.map_height)
         self.players: List[Player] = [Player(0), Player(1)]
 
+        self.targeted_xy_set: Set = set()
+
 
     def _end_turn(self):
         print("D_FINISH")
@@ -265,7 +267,7 @@ class Game:
 
 
     def repopulate_targets(self, pos_list: List[Position]):
-        self.targeted_xy_set: Set = set(tuple(pos) for pos in pos_list)
+        self.targeted_xy_set: Set = set(tuple(pos) for pos in pos_list) - self.player_city_tile_xy_set
 
 
     def calculate_dominance_matrix(self, feature_matrix, masking_factor = 0.5):
