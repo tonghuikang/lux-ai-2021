@@ -32,26 +32,28 @@ def find_best_cluster(game_state: Game, position: Position, distance_multiplier 
 
     polar_offset = random.uniform(0,math.pi)
 
-    # matrix = game_state.calculate_dominance_matrix(game_state.resource_rate_matrix)
-    matrix = game_state.convolved_rate_matrix
+    # design your matrices here
+    matrix = game_state.calculate_dominance_matrix(game_state.convolved_rate_matrix)
 
     for y,row in enumerate(matrix):
-        for x,maxpool_scores in enumerate(row):
+        for x,score in enumerate(row):
 
             # [TODO] make it smarter than random
+
+            # add random preferences in the directions
             dx, dy = abs(position.x - x), abs(position.y - y)
-            polar_score = math.sin(math.atan2(dx,dy) + polar_offset)**2
+            polar_factor = math.sin(math.atan2(dx,dy) + polar_offset)**2
             if game_state.turn < 30:  # not so much
-                polar_score = math.sqrt(polar_score)
+                polar_factor = math.sqrt(polar_factor)
             # polar_score = 1
 
-            if maxpool_scores > 0:
+            if score > 0:
                 distance = max(1, dx + dy)
                 if distance <= travel_range:
                     # encourage going far away
                     # [TODO] discourage returning to explored territory
                     # [TODO] discourage going to planned locations
-                    cell_value = polar_score * maxpool_scores * distance ** distance_multiplier
+                    cell_value = polar_factor * score * distance ** distance_multiplier
                     score_matrix_wrt_pos[y][x] = int(cell_value)
 
                     if cell_value > best_cell_value:

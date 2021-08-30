@@ -44,7 +44,6 @@ def print_game_state(game_state: Game, DEBUG=False):
     print("Unit count: ", len(game_state.player.units))
 
     # you can also read the pickled game_state and print its attributes
-
     return
 
 
@@ -69,8 +68,12 @@ def print_and_annotate_missions(game_state: Game, missions: Missions, DEBUG=Fals
         if mission.target_action and mission.target_action.split(" ")[0] == "bcity":
             annotation = annotate.circle(mission.target_position.x, mission.target_position.y)
             annotations.append(annotation)
+        else:
+            annotation = annotate.x(mission.target_position.x, mission.target_position.y)
+            annotations.append(annotation)
 
-    annotation = annotate.sidetext("hello")
+    annotation = annotate.sidetext("U:{} C:{}".format(len(game_state.player_units_xy_set),
+                                                      len(game_state.player_city_tile_xy_set)))
     annotations.append(annotation)
 
     return annotations
@@ -126,8 +129,4 @@ def agent(observation, configuration, DEBUG=False):
             pickle.dump(missions, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     actions, game_state, missions = game_logic(game_state, missions)
-
-    if os.environ.get('GFOOTBALL_DATA_DIR', ''):  # on Kaggle compete, always print actions
-        print(actions)
-
     return actions

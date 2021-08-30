@@ -11,14 +11,6 @@ INPUT_CONSTANTS = Constants.INPUT_CONSTANTS
 
 
 class Game:
-    # def _update_with_observation(self, observation: Observation):
-    #     if observation["step"] == 0:
-    #         self._initialize(observation["updates"])
-    #         self._update(observation["updates"][2:])
-    #         self.player_id = observation.player
-    #     else:
-    #         self._update(observation["updates"])
-
 
     def _initialize(self, messages):
         """
@@ -311,9 +303,6 @@ class Game:
             for x in range(width):
                 if self.empty_tile_matrix[y][x] == 0:  # not empty
                     continue
-
-                # if (y+x)%3 == 0:  # enforce checkerboard
-                #     continue
 
                 position = Position(x, y)
                 distance = position - current_position

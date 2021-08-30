@@ -45,10 +45,6 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
     if not city_tiles:
         return []
 
-    city_tiles = sorted(city_tiles,
-                        key=lambda city_tile: find_best_cluster(game_state, city_tile.pos)[1],
-                        reverse=True)
-
     for city_tile in city_tiles:
         if not city_tile.can_act():
             continue
@@ -116,8 +112,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
     missions.cleanup(player)  # remove dead units
 
     for unit in player.units:
-        # if not unit.can_act():
-        #     continue
+        # mission is planned regardless whether the unit can act
 
         # if the unit is full and it is going to be day the next few days
         # go to an empty tile and build a citytile
@@ -136,7 +131,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
         # once a unit is built or has build a house (detected as having max space)
         # go to the best cluster biased towards being far
-        if unit.get_cargo_space_left() == 100:
+        if unit.get_cargo_space_left() == 100 or unit.cargo.wood >= 60:
             best_position, best_cell_value = find_best_cluster(game_state, unit.pos, 1.0)
             # [TODO] what if best_cell_value is zero
             print("plan mission for fresh grad", unit.id, best_position)
@@ -146,7 +141,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
         # if a unit is not receiving any resources
         # move to a place with resources biased towards being near
-        if game_state.convolved_fuel_matrix[unit.pos.y][unit.pos.x] <= 40:
+        if game_state.convolved_fuel_matrix[unit.pos.y][unit.pos.x] == 0:
             best_position, best_cell_value = find_best_cluster(game_state, unit.pos, -0.1)
             # [TODO] what if best_cell_value is zero
             print("plan mission relocate for resources", unit.id, best_position)
@@ -253,7 +248,7 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
             continue
 
         # [TODO] do not go into a city tile if you are carry substantial max wood
-        if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood == 100:
+        if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood >= 60:
             continue
 
         # dist = calculate_path_distance(game_state, newpos, target_pos)
