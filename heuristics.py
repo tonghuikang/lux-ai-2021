@@ -45,7 +45,7 @@ def find_best_cluster(game_state: Game, position: Position, distance_multiplier 
             polar_factor = math.sin(math.atan2(dx,dy) + polar_offset)**2
             if game_state.turn < 30:  # not so much
                 polar_factor = math.sqrt(polar_factor)
-            # polar_score = 1
+            # polar_factor = 1
 
             if score > 0:
                 distance = max(1, dx + dy)

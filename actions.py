@@ -81,6 +81,7 @@ class Mission:
         self.target_position: Position = target_position
         self.target_action: str = target_action
         self.unit_id: str = unit_id
+        self.delays: int = 0
         # [TODO] some expiry date for each mission
 
     def __str__(self):
@@ -129,10 +130,13 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
             # take action and not make missions if already at position
             continue
 
+        if unit.id in missions:
+            continue
+
         # once a unit is built or has build a house (detected as having max space)
         # go to the best cluster biased towards being far
         if unit.get_cargo_space_left() == 100 or unit.cargo.wood >= 60:
-            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, 1.0)
+            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, 2.0)
             # [TODO] what if best_cell_value is zero
             print("plan mission for fresh grad", unit.id, best_position)
             mission = Mission(unit.id, best_position)
@@ -142,7 +146,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # if a unit is not receiving any resources
         # move to a place with resources biased towards being near
         if game_state.convolved_fuel_matrix[unit.pos.y][unit.pos.x] == 0:
-            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, -0.1)
+            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, -0.5)
             # [TODO] what if best_cell_value is zero
             print("plan mission relocate for resources", unit.id, best_position)
             mission = Mission(unit.id, best_position, None)
@@ -167,16 +171,19 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
     player, opponent = game_state.player, game_state.opponent
     actions = []
 
+    units_with_mission_but_no_action = set(missions.keys())
     prev_actions_len = -1
     while prev_actions_len < len(actions):
       prev_actions_len = len(actions)
 
       for unit in player.units:
         if not unit.can_act():
+            units_with_mission_but_no_action.discard(unit.id)
             continue
 
         # if there is no mission, continue
         if unit.id not in missions:
+            units_with_mission_but_no_action.discard(unit.id)
             continue
 
         mission: Mission = missions[unit.id]
@@ -185,6 +192,7 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
 
         # if the location is reached, take action
         if unit.pos == mission.target_position:
+            units_with_mission_but_no_action.discard(unit.id)
             print("location reached and make action", unit.id, unit.pos)
             action = mission.target_action
             if action:
@@ -195,12 +203,19 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
         # the unit will need to move
         direction = attempt_direction_to(game_state, unit, mission.target_position)
         if direction != "c":
+            units_with_mission_but_no_action.discard(unit.id)
             action = unit.move(direction)
             print("make move", unit.id, unit.pos, direction)
             actions.append(action)
             continue
 
         # [TODO] make it possible for units to swap positions
+
+    for unit_id in units_with_mission_but_no_action:
+        mission: Mission = missions[unit_id]
+        mission.delays += 1
+        if mission.delays >= 1:
+            del missions[unit_id]
 
     return missions, actions
 

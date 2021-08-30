@@ -1,4 +1,4 @@
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Set
 
 import numpy as np
 
@@ -262,6 +262,10 @@ class Game:
         self.convolved_rate_matrix = self.convolve(rate_matrix)
 
         self.calculate_resource_maxpool_matrix()
+
+
+    def repopulate_targets(self, pos_list: List[Position]):
+        self.targeted_xy_set: Set = set(tuple(pos) for pos in pos_list)
 
 
     def calculate_dominance_matrix(self, feature_matrix, masking_factor = 0.5):
