@@ -64,13 +64,13 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
             continue
 
         best_position, best_cell_value = find_best_cluster(game_state, city_tile.pos)
-        if not unit_limit_exceeded and best_cell_value > 0:
+        if not unit_limit_exceeded and best_cell_value > 100:
             print("build_worker", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, best_cell_value)
             build_workers(city_tile)
             continue
 
         if not player.researched_uranium():
-            # [TODO] dont bother researching uranium for smaller maps
+            # [TODO] dont bother researching uranium for maps with little uranium
             print("research", city_tile.pos.x, city_tile.pos.y)
             do_research(city_tile)
             continue
@@ -116,19 +116,23 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         if not unit.can_act():
             continue
 
-       # if the unit is full and it is going to be day the next few days
+        if unit.id in missions and missions[unit.id].target_position == unit.pos:
+            # take action and not make missions if already at position
+            continue
+
+        # if the unit is full and it is going to be day the next few days
         # go to an empty tile and build a city
         # print(unit.id, unit.get_cargo_space_left())
         if unit.get_cargo_space_left() == 0:
             nearest_position, nearest_distance = game_state.get_nearest_empty_tile_and_distance(unit.pos)
             if nearest_distance < game_state.turns_to_night - 5:
-                print("plan mission to build house", unit.id, nearest_position)
+                print("plan mission to build citytile", unit.id, nearest_position)
                 mission = Mission(unit.id, nearest_position, unit.build_city())
                 missions.add(mission)
                 continue
 
-        if unit.id in missions:  # there is already a mission
-            continue
+        # if unit.id in missions:  # there is already a mission
+        #     continue
 
         # if game_state.convolved_rate_matrix[unit.pos.y][unit.pos.x] >= 80: # continue camping
         #     continue
@@ -139,13 +143,13 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
             best_position, best_cell_value = find_best_cluster(game_state, unit.pos, random.uniform(-1,-0.5))
             # [TODO] what if best_cell_value is zero
             print("plan mission for fresh grad", unit.id, best_position)
-            mission = Mission(unit.id, best_position, unit.build_city())
+            mission = Mission(unit.id, best_position)
             missions.add(mission)
             continue
 
         # if a unit is not receiving any resources
         # move to a place with resources
-        if game_state.convolved_fuel_matrix[unit.pos.y][unit.pos.x] < 20:
+        if game_state.convolved_fuel_matrix[unit.pos.y][unit.pos.x] <= 40:
             best_position, best_cell_value = find_best_cluster(game_state, unit.pos, random.uniform(0.5,1))
             # [TODO] what if best_cell_value is zero
             print("plan mission relocate for resources", unit.id, best_position)
@@ -253,7 +257,8 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
         if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood >= min(11, game_state.turns_to_dawn)*4:
             continue
 
-        dist = calculate_path_distance(game_state, newpos, target_pos)
+        # dist = calculate_path_distance(game_state, newpos, target_pos)
+        dist = newpos - target_pos
 
         if dist < closest_dist:
             closest_dir = direction

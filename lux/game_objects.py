@@ -26,6 +26,7 @@ class Player:
         return self.research_points >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["URANIUM"]
 
     def make_index_units_by_id(self):
+        self.units_by_id: Dict[str, Unit] = {}
         for unit in self.units:
             self.units_by_id[unit.id] = unit
 

@@ -27,12 +27,11 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     missions, actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
     movement_annotations = annotate_movements(game_state, actions_by_units)
 
-    actions = actions_by_cities + actions_by_units + movement_annotations
+    print("actions_by_cities", actions_by_cities)
+    print("actions_by_units", actions_by_units)
+    print("mission_annotations", mission_annotations)
+    print("movement_annotations", movement_annotations)
     actions = actions_by_cities + actions_by_units + mission_annotations + movement_annotations
-    print("actions", actions_by_cities)
-    print("actions", actions_by_units)
-    print("actions", mission_annotations)
-    print("actions", movement_annotations)
     return actions, game_state, missions
 
 
@@ -67,7 +66,7 @@ def print_and_annotate_missions(game_state: Game, missions: Missions, DEBUG=Fals
         annotation = annotate.line(unit.pos.x, unit.pos.y, mission.target_position.x, mission.target_position.y)
         annotations.append(annotation)
 
-        if mission.target_action.split(" ")[0] == "bcity":
+        if mission.target_action and mission.target_action.split(" ")[0] == "bcity":
             annotation = annotate.circle(mission.target_position.x, mission.target_position.y)
             annotations.append(annotation)
 
@@ -108,15 +107,6 @@ def agent(observation, configuration, DEBUG=False):
     del configuration  # unused
     global game_state, missions
 
-    if not os.environ.get('GFOOTBALL_DATA_DIR', ''):  # on Kaggle compete, do not save items
-        str_step = str(observation["step"]).zfill(3)
-        with open('snapshots/observation-{}.pkl'.format(str_step), 'wb') as handle:
-            pickle.dump(observation, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        with open('snapshots/game_state-{}.pkl'.format(str_step), 'wb') as handle:
-            pickle.dump(game_state, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        with open('snapshots/missions-{}.pkl'.format(str_step), 'wb') as handle:
-            pickle.dump(missions, handle, protocol=pickle.HIGHEST_PROTOCOL)
-
     if observation["step"] == 0:
         game_state = Game()
         game_state._initialize(observation["updates"])
@@ -126,7 +116,15 @@ def agent(observation, configuration, DEBUG=False):
         # actually rebuilt and recomputed from scratch
         game_state._update(observation["updates"])
 
-    print_game_state(game_state)
+    if not os.environ.get('GFOOTBALL_DATA_DIR', ''):  # on Kaggle compete, do not save items
+        str_step = str(observation["step"]).zfill(3)
+        with open('snapshots/observation-{}.pkl'.format(str_step), 'wb') as handle:
+            pickle.dump(observation, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open('snapshots/game_state-{}.pkl'.format(str_step), 'wb') as handle:
+            pickle.dump(game_state, handle, protocol=pickle.HIGHEST_PROTOCOL)
+        with open('snapshots/missions-{}.pkl'.format(str_step), 'wb') as handle:
+            pickle.dump(missions, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
     actions, game_state, missions = game_logic(game_state, missions)
 
     if os.environ.get('GFOOTBALL_DATA_DIR', ''):  # on Kaggle compete, always print actions

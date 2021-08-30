@@ -136,7 +136,7 @@ class Game:
     def calculate_matrix(self):
         def init_zero_matrix():
             # [TODO] check if order of map_height and map_width is correct
-            return [[0 for _ in range(self.map_height)] for _ in range(self.map_width)]
+            return [[0 for _ in range(self.map_width)] for _ in range(self.map_height)]
 
         self.empty_tile_matrix = init_zero_matrix()
 
@@ -152,11 +152,21 @@ class Game:
 
         self.empty_tile_matrix = init_zero_matrix()
 
-        for y in range(self.map_width):
-            for x in range(self.map_height):
+        for y in range(self.map_height):
+            for x in range(self.map_width):
                 cell = self.map.get_cell(x, y)
 
+                is_empty = True
+
+                if cell.unit:
+                    is_empty = False
+                    if cell.unit.team == self.player_id:
+                        self.player_units_matrix[y][x] += 1
+                    else:   # unit belongs to opponent
+                        self.opponent_units_matrix[y][x] += 1
+
                 if cell.has_resource():
+                    is_empty = False
                     if cell.resource.type == RESOURCE_TYPES.WOOD:
                         self.wood_amount_matrix[y][x] += cell.resource.amount
                     if cell.resource.type == RESOURCE_TYPES.COAL:
@@ -165,18 +175,13 @@ class Game:
                         self.uranium_amount_matrix[y][x] += cell.resource.amount
 
                 elif cell.citytile:
+                    is_empty = False
                     if cell.citytile.team == self.player_id:
                         self.player_city_tile_matrix[y][x] += 1
                     else:   # city tile belongs to opponent
                         self.opponent_city_tile_matrix[y][x] += 1
 
-                elif cell.unit:
-                    if cell.unit.team == self.player_id:
-                        self.player_units_matrix[y][x] += 1
-                    else:   # unit belongs to opponent
-                        self.opponent_units_matrix[y][x] += 1
-
-                else:
+                if is_empty:
                     self.empty_tile_matrix[y][x] += 1
 
         self.convert_into_sets()
@@ -184,7 +189,6 @@ class Game:
 
     def convert_into_sets(self):
         # or should we use dict?
-        self.empty_tile_xy_set = set()
         self.wood_amount_xy_set = set()
         self.coal_amount_xy_set = set()
         self.uranium_amount_xy_set = set()
@@ -195,7 +199,6 @@ class Game:
         self.empty_tile_xy_set = set()
 
         for set_object, matrix in [
-            [self.empty_tile_xy_set,            self.empty_tile_matrix],
             [self.wood_amount_xy_set,           self.wood_amount_matrix],
             [self.coal_amount_xy_set,           self.coal_amount_matrix],
             [self.uranium_amount_xy_set,        self.uranium_amount_matrix],
@@ -205,14 +208,14 @@ class Game:
             [self.opponent_units_xy_set,        self.opponent_units_matrix],
             [self.empty_tile_xy_set,            self.empty_tile_matrix]]:
 
-            for y in range(self.map.width):
-                for x in range(self.map.height):
+            for y in range(self.map.height):
+                for x in range(self.map.width):
                     if matrix[y][x] > 0:
                         set_object.add((x,y))
 
         out_of_map = set()
-        for y in [-1, self.map_width]:
-            for x in range(self.map_height):
+        for y in [-1, self.map_height]:
+            for x in range(self.map_width):
                 out_of_map.add((x,y))
         for y in range(self.map_height):
             for x in [-1, self.map_width]:
@@ -291,7 +294,7 @@ class Game:
 
 
     def get_nearest_empty_tile_and_distance(self, current_position: Position) -> Tuple[Position, int]:
-        if tuple(current_position) in self.player_units_xy_set:
+        if tuple(current_position) in self.empty_tile_xy_set:
             return current_position, 0
 
         width, height = self.map_width, self.map_height
