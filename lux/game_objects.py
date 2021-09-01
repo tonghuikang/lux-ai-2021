@@ -23,7 +23,7 @@ class Player:
         return self.research_points >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["COAL"]
 
     def researched_uranium(self) -> bool:
-        return self.research_points >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["URANIUM"]
+        return self.research_points > GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["URANIUM"]
 
     def make_index_units_by_id(self):
         self.units_by_id: Dict[str, Unit] = {}

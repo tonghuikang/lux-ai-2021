@@ -113,8 +113,8 @@ def agent(observation, configuration, DEBUG=False):
     if observation["step"] == 0:
         game_state = Game()
         game_state._initialize(observation["updates"])
-        game_state._update(observation["updates"][2:])
         game_state.player_id = observation.player
+        game_state._update(observation["updates"][2:])
     else:
         # actually rebuilt and recomputed from scratch
         game_state._update(observation["updates"])

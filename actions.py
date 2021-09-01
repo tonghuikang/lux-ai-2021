@@ -30,6 +30,7 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
 
     def do_research(city_tile: CityTile):
         action = city_tile.research()
+        game_state.player.research_points += 1
         actions.append(action)
 
     def build_workers(city_tile: CityTile):
@@ -148,7 +149,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         if is_unit_alone and (unit.get_cargo_space_left() == 100 or unit.cargo.wood >= 60):
             best_position, best_cell_value = find_best_cluster(game_state, unit.pos, 1.0)
             # [TODO] what if best_cell_value is zero
-            print("plan mission for fresh grad", unit.id, best_position)
+            print("plan mission for far exploration", unit.id, best_position)
             mission = Mission(unit.id, best_position)
             missions.add(mission)
             continue
@@ -157,7 +158,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         if True:
             best_position, best_cell_value = find_best_cluster(game_state, unit.pos, -0.5)
             # [TODO] what if best_cell_value is zero
-            print("plan mission relocate for resources", unit.id, best_position)
+            print("plan mission for near exploration", unit.id, best_position)
             mission = Mission(unit.id, best_position, None)
             missions.add(mission)
             continue
