@@ -115,7 +115,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
     else: print = lambda *args: None
 
     player = game_state.player
-    convolved_player_unit_matrix = game_state.convolve(np.array(game_state.player_units_matrix))
+    convolved_player_unit_matrix = game_state.convolve(game_state.player_units_matrix)
     missions.cleanup(player)  # remove dead units
 
     for unit in player.units:
@@ -143,7 +143,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
             # the mission will be recaluated if the unit fails to make a move
             continue
 
-        is_unit_alone = convolved_player_unit_matrix[unit.pos.y][unit.pos.x] > 1
+        is_unit_alone = convolved_player_unit_matrix[unit.pos.y, unit.pos.x] > 1
 
         # once a unit is built or has build a house (detected as having max space)
         # go to the best cluster biased towards being far

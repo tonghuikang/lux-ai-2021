@@ -26,7 +26,7 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.1, 
     # [TODO] consider the resources carried as well
     # [TODO] fix bug regarding nighttime travel, but just let them die perhaps
 
-    score_matrix_wrt_pos = [[0 for _ in range(width)] for _ in range(height)]
+    score_matrix_wrt_pos = game_state.init_zero_matrix()
 
     best_position = unit.pos
     best_cell_value = -1
@@ -56,13 +56,13 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.1, 
                     # [TODO] discourage returning to explored territory
                     # [TODO] discourage going to planned locations
                     cell_value = polar_factor * score * distance ** distance_multiplier
-                    score_matrix_wrt_pos[y][x] = int(cell_value)
+                    score_matrix_wrt_pos[y,x] = int(cell_value)
 
                     if cell_value > best_cell_value:
                         best_cell_value = cell_value
                         best_position = Position(x,y)
 
     print(travel_range)
-    print(np.array(score_matrix_wrt_pos))
+    print(score_matrix_wrt_pos)
 
     return best_position, best_cell_value
