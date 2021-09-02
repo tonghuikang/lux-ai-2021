@@ -91,8 +91,9 @@ class Game:
                 wood = int(strs[7])
                 coal = int(strs[8])
                 uranium = int(strs[9])
-                self.players[team].units.append(Unit(team, unittype, unitid, x, y, cooldown, wood, coal, uranium))
-                self.map.get_cell(x, y).unit = Unit(team, unittype, unitid, x, y, cooldown, wood, coal, uranium)
+                unit = Unit(team, unittype, unitid, x, y, cooldown, wood, coal, uranium)
+                self.players[team].units.append(unit)
+                self.map.get_cell(x, y).unit = unit
 
             elif input_identifier == INPUT_CONSTANTS.CITY:
                 team = int(strs[1])
@@ -270,10 +271,11 @@ class Game:
         self.targeted_xy_set: Set = set(tuple(pos) for pos in pos_list) - self.player_city_tile_xy_set
 
 
-    def calculate_dominance_matrix(self, feature_matrix, masking_factor = 0.5):
+    def calculate_dominance_matrix(self, feature_matrix, masking_factor = 0.5, exempted=(0,0)):
         mask = (1 - masking_factor * np.array(self.player_units_matrix))
         feature_matrix = self.convolve(np.array(feature_matrix))
         masked_matrix = mask * np.array(feature_matrix)
+        masked_matrix[exempted[0]][exempted[1]] = feature_matrix[exempted[0]][exempted[1]]
         return masked_matrix
 
 

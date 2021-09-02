@@ -102,7 +102,7 @@ class Unit:
         self.cargo.wood = wood
         self.cargo.coal = coal
         self.cargo.uranium = uranium
-
+        self.compute_travel_range()
 
     def is_worker(self) -> bool:
         return self.type == UNIT_TYPES.WORKER
@@ -165,3 +165,10 @@ class Unit:
         return the command to pillage whatever is underneath the worker
         """
         return "p {}".format(self.id)
+
+    def compute_travel_range(self) -> None:
+        fuel_per_turn = GAME_CONSTANTS["PARAMETERS"]["LIGHT_UPKEEP"]["WORKER"]
+        cooldown = GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
+        turn_survivable = (self.cargo.wood // GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"]["WOOD"]) // fuel_per_turn
+        turn_survivable += self.cargo.coal + self.cargo.uranium  # assumed RESOURCE_TO_FUEL_RATE > fuel_per_turn
+        self.night_travel_range = turn_survivable // cooldown  # plus one perhaps

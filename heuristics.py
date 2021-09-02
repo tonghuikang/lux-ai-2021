@@ -8,34 +8,33 @@ import builtins as __builtin__
 from typing import List
 from lux import game
 
-from lux.game import Game, Player
+from lux.game import Game, Player, Unit
 from lux.game_map import Cell, RESOURCE_TYPES, Position
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
 from lux import annotate
 
 
-def find_best_cluster(game_state: Game, position: Position, distance_multiplier = -0.1, DEBUG=False):
+def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.1, DEBUG=False):
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
     width, height = game_state.map_width, game_state.map_height
 
     cooldown = GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
-    travel_range = max(1, game_state.turns_to_night // cooldown - 2)
+    travel_range = max(1, game_state.turns_to_night // cooldown + unit.night_travel_range - 2)
     # [TODO] consider the resources carried as well
     # [TODO] fix bug regarding nighttime travel, but just let them die perhaps
 
     score_matrix_wrt_pos = [[0 for _ in range(width)] for _ in range(height)]
 
-    best_position = position
+    best_position = unit.pos
     best_cell_value = -1
 
     polar_offset = random.uniform(0,math.pi)
 
     # design your matrices here
     matrix = game_state.calculate_dominance_matrix(game_state.convolved_rate_matrix)
-
     for y,row in enumerate(matrix):
         for x,score in enumerate(row):
             if (x,y) in game_state.targeted_xy_set:
@@ -44,7 +43,7 @@ def find_best_cluster(game_state: Game, position: Position, distance_multiplier 
             # [TODO] make it smarter than random
 
             # add random preferences in the directions
-            dx, dy = abs(position.x - x), abs(position.y - y)
+            dx, dy = abs(unit.pos.x - x), abs(unit.pos.y - y)
             polar_factor = math.sin(math.atan2(dx,dy) + polar_offset)**2
             if game_state.turn < 30:  # not so much
                 polar_factor = math.sqrt(polar_factor)

@@ -60,7 +60,8 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
             do_research(city_tile)
             continue
 
-        best_position, best_cell_value = find_best_cluster(game_state, city_tile.pos)
+        unit = Unit(game_state.player_id, 0, "tmp", city_tile.pos.x, city_tile.pos.y, 1, 0, 0, 0)
+        best_position, best_cell_value = find_best_cluster(game_state, unit)
         if not unit_limit_exceeded and best_cell_value > 0:
             print("build_worker", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, best_cell_value)
             build_workers(city_tile)
@@ -147,18 +148,18 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # once a unit is built or has build a house (detected as having max space)
         # go to the best cluster biased towards being far
         if is_unit_alone and (unit.get_cargo_space_left() == 100 or unit.cargo.wood >= 60):
-            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, 1.0)
+            best_position, best_cell_value = find_best_cluster(game_state, unit, 1.0)
             # [TODO] what if best_cell_value is zero
-            print("plan mission for far exploration", unit.id, best_position)
+            print("plan mission for far exploration", unit.id, unit.pos, "->", best_position)
             mission = Mission(unit.id, best_position)
             missions.add(mission)
             continue
 
         # move to a place with resources biased towards being near
         if True:
-            best_position, best_cell_value = find_best_cluster(game_state, unit.pos, -0.5)
+            best_position, best_cell_value = find_best_cluster(game_state, unit, -0.5)
             # [TODO] what if best_cell_value is zero
-            print("plan mission for near exploration", unit.id, best_position)
+            print("plan mission for near exploration", unit.id, unit.pos, "->", best_position)
             mission = Mission(unit.id, best_position, None)
             missions.add(mission)
             continue

@@ -43,6 +43,7 @@
       "URANIUM": 40
     },
     "RESEARCH_REQUIREMENTS": {
+      "WOOD": 0,
       "COAL": 50,
       "URANIUM": 200
     },
