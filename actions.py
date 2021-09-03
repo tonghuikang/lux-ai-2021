@@ -99,14 +99,24 @@ class Missions(collections.defaultdict):
 
     def cleanup(self, player: Player):
         for unit_id in list(self.keys()):
+            mission: Mission = self[unit_id]
+
+            # if dead, delete from list
             if unit_id not in player.units_by_id:
                 del self[unit_id]
+                continue
+
+            # if you want to build city without resource, delete from list
+            if mission.target_action and mission.target_action[:5] == "bcity":
+                if player.units_by_id[unit_id].cargo == 0:
+                    del self[unit_id]
+
 
     def __str__(self):
         return " ".join([unit_id + " " + str(x) for unit_id,x in self.items()])
 
     def get_targets(self):
-        return [mission.target_position for mission in self.values()]
+        return [mission.target_position for unit_id, mission in self.items()]
 
 
 

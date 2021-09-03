@@ -72,8 +72,10 @@ def print_and_annotate_missions(game_state: Game, missions: Missions, DEBUG=Fals
             annotation = annotate.x(mission.target_position.x, mission.target_position.y)
             annotations.append(annotation)
 
-    annotation = annotate.sidetext("U:{} C:{}".format(len(game_state.player_units_xy_set),
-                                                      len(game_state.player_city_tile_xy_set)))
+    annotation = annotate.sidetext("U:{} C:{} L:{}/{}".format(len(game_state.player_units_xy_set),
+                                                              len(game_state.player_city_tile_xy_set),
+                                                              len(game_state.targeted_leaders),
+                                                              game_state.xy_to_resource_group_id.get_group_count()))
     annotations.append(annotation)
 
     return annotations
