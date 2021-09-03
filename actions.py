@@ -47,8 +47,7 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
     if not city_tiles:
         return []
 
-    for city_tile in city_tiles:
-        print("check city", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, units_cnt, units_cap)
+    for city_tile in city_tiles[::-1]:
         if not city_tile.can_act():
             continue
 
@@ -67,15 +66,12 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
         travel_range = game_state.turns_to_night // GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
         resource_in_travel_range = nearest_resource_distance < travel_range
 
-        print("check city", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
-
         if resource_in_travel_range and not unit_limit_exceeded:
             print("build_worker", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
             build_workers(city_tile)
             continue
 
         if not player.researched_uranium():
-            # [TODO] dont bother researching uranium for maps with little uranium
             print("research", city_tile.pos.x, city_tile.pos.y)
             do_research(city_tile)
             continue
@@ -96,7 +92,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
     unit_ids_with_missions_assigned_this_turn = set()
 
-    for distance_threshold in [2,5,10,22,30,100]:
+    for distance_threshold in [1,2,3,4,10,22,30,100]:
       for unit in player.units:
         # mission is planned regardless whether the unit can act
 
@@ -106,21 +102,25 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # avoid sharing the same target
         game_state.repopulate_targets(missions)
 
+        # if the unit is waiting for dawn at the side of resource
+        stay_up_till_dawn = (unit.get_cargo_space_left() <= 4 and (not game_state.is_day_time or game_state.turn%40 == 0))
         # if the unit is full and it is going to be day the next few days
         # go to an empty tile and build a citytile
         # print(unit.id, unit.get_cargo_space_left())
-        if unit.get_cargo_space_left() == 0:
+        if unit.get_cargo_space_left() == 0 or stay_up_till_dawn:
             nearest_position, nearest_distance = game_state.get_nearest_empty_tile_and_distance(unit.pos)
-            if nearest_distance * 2 < game_state.turns_to_night - 2:
-                print("plan mission to build citytile", unit.id, nearest_position)
+            if stay_up_till_dawn or nearest_distance * 2 <= game_state.turns_to_night - 2:
+                print("plan mission to build citytile", unit.id, unit.pos, "->", nearest_position)
                 mission = Mission(unit.id, nearest_position, unit.build_city())
                 missions.add(mission)
                 unit_ids_with_missions_assigned_this_turn.add(unit.id)
                 continue
 
-        if unit.id in missions and missions[unit.id].target_position == unit.pos:
-            # take action and not make missions if already at position
-            continue
+        if unit.id in missions:
+            mission: Mission = missions[unit.id]
+            if mission.target_position == unit.pos:
+                # take action and not make missions if already at position
+                continue
 
         if unit.id in missions:
             # the mission will be recaluated if the unit fails to make a move

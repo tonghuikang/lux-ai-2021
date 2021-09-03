@@ -223,6 +223,7 @@ class Game:
         self.wood_amount_matrix = self.init_zero_matrix()
         self.coal_amount_matrix = self.init_zero_matrix()
         self.uranium_amount_matrix = self.init_zero_matrix()
+        self.all_resource_amount_matrix = self.init_zero_matrix()
 
         self.player_city_tile_matrix = self.init_zero_matrix()
         self.opponent_city_tile_matrix = self.init_zero_matrix()
@@ -253,6 +254,7 @@ class Game:
                         self.coal_amount_matrix[y,x] += cell.resource.amount
                     if cell.resource.type == RESOURCE_TYPES.URANIUM:
                         self.uranium_amount_matrix[y,x] += cell.resource.amount
+                    self.all_resource_amount_matrix[y,x] += cell.resource.amount
 
                 elif cell.citytile:
                     is_empty = False
@@ -416,7 +418,7 @@ class Game:
 
 
     def get_nearest_empty_tile_and_distance(self, current_position: Position) -> Tuple[Position, int]:
-        if self.resource_rate_matrix[current_position.y, current_position.x] == 0:
+        if self.all_resource_amount_matrix[current_position.y, current_position.x] == 0:
             if tuple(current_position) not in self.player_city_tile_xy_set:
                 return current_position, 0
 
@@ -428,8 +430,6 @@ class Game:
         for y in range(height):
             for x in range(width):
                 if self.empty_tile_matrix[y,x] == 0:  # not empty
-                    continue
-                if (x,y) in self.targeted_xy_set:
                     continue
 
                 position = Position(x, y)
