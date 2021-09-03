@@ -81,8 +81,6 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
     return actions
 
 
-
-
 def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Missions:
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
@@ -126,7 +124,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
             # the mission will be recaluated if the unit fails to make a move
             continue
 
-        best_position, best_cell_value = find_best_cluster(game_state, unit, -0.5, DEBUG=DEBUG)
+        best_position, best_cell_value = find_best_cluster(game_state, unit, DEBUG=DEBUG)
         # [TODO] what if best_cell_value is zero
         if unit.pos - best_position > distance_threshold:
             continue
@@ -137,9 +135,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
         # [TODO] when you can secure a city all the way to the end of time, do it
 
-        # [TODO] avoid overlapping missions
-
-        # [TODO] abort mission if block for multiple turns
+        # [TODO] just let units die perhaps
 
     return missions
 
@@ -201,6 +197,8 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
 
 
 def calculate_path_distance(game_state: Game, start_pos: Position, target_pos: Position, ignored_set: Set):
+    # [TODO] to calculate this only once per turn
+
     if start_pos == target_pos:
         return 0
 
@@ -210,10 +208,11 @@ def calculate_path_distance(game_state: Game, start_pos: Position, target_pos: P
     d4 = [(1,0),(0,1),(-1,0),(0,-1)]
     stack = collections.deque([tuple(start_pos)])
     while stack:
+        # [TODO] use dijkstra
         x,y = stack.popleft()
         for dx,dy in d4:
             xx,yy = x+dx,y+dy
-            if (xx,yy) in xy_to_distance or (xx,yy) in game_state.occupied_xy_set:# or (xx,yy) in ignored_set:
+            if (xx,yy) in xy_to_distance or (xx,yy) in game_state.occupied_xy_set:
                 continue
             xy_to_distance[xx,yy] = xy_to_distance[x,y] + 1
             stack.append((xx,yy))
@@ -242,11 +241,10 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
         if tuple(newpos) in game_state.occupied_xy_set:
             continue
 
-        # [TODO] do not go into a city tile if you are carry substantial max wood
+        # do not go into a city tile if you are carry substantial wood
         if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood >= 60:
             continue
 
-        # dist = calculate_path_distance(game_state, newpos, target_pos)
         dist = calculate_path_distance(game_state, newpos, target_pos, game_state.player_city_tile_xy_set)
 
         if dist < closest_dist:

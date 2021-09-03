@@ -166,10 +166,22 @@ class Unit:
         """
         return "p {}".format(self.id)
 
-    def compute_travel_range(self) -> None:
+    def compute_travel_range(self, turn_info=None) -> None:
         fuel_per_turn = GAME_CONSTANTS["PARAMETERS"]["LIGHT_UPKEEP"]["WORKER"]
-        cooldown = GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
+        cooldown_required = GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
+        day_length = GAME_CONSTANTS["PARAMETERS"]["DAY_LENGTH"]
+        night_length = GAME_CONSTANTS["PARAMETERS"]["NIGHT_LENGTH"]
+
         turn_survivable = (self.cargo.wood // GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"]["WOOD"]) // fuel_per_turn
         turn_survivable += self.cargo.coal + self.cargo.uranium  # assumed RESOURCE_TO_FUEL_RATE > fuel_per_turn
         self.night_turn_survivable = turn_survivable
-        self.night_travel_range = turn_survivable // cooldown  # plus one perhaps
+        self.night_travel_range = turn_survivable // cooldown_required  # plus one perhaps
+
+        if turn_info:
+            turns_to_night, turns_to_dawn, is_day_time = turn_info
+            travel_range = max(1, turns_to_night // cooldown_required + self.night_travel_range - cooldown_required)
+            if self.night_turn_survivable > turns_to_dawn and not is_day_time:
+                travel_range = day_length // cooldown_required + self.night_travel_range
+            if self.night_turn_survivable > night_length:
+                travel_range = day_length // cooldown_required + self.night_travel_range
+            self.travel_range = travel_range
