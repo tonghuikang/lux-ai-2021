@@ -6,9 +6,10 @@ from typing import Tuple, Dict, Set, DefaultDict
 
 from lux import game
 
-from lux.game import Game, Player
-from lux.game_map import Cell, RESOURCE_TYPES, Position
+from lux.game import Game, Player, Mission, Missions
+from lux.game_map import Cell, RESOURCE_TYPES
 from lux.game_objects import City, CityTile, Unit
+from lux.game_position import Position
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
 
@@ -61,6 +62,7 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
             continue
 
         unit = Unit(game_state.player_id, 0, "tmp", city_tile.pos.x, city_tile.pos.y, 1, 0, 0, 0)
+        game_state.repopulate_targets(Missions())
         best_position, best_cell_value = find_best_cluster(game_state, unit)
         if not unit_limit_exceeded and best_cell_value > 0:
             print("build_worker", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, best_cell_value)
@@ -78,46 +80,6 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
     return actions
 
 
-class Mission:
-    def __init__(self, unit_id: str, target_position: Position, target_action: str = ""):
-        self.target_position: Position = target_position
-        self.target_action: str = target_action
-        self.unit_id: str = unit_id
-        self.delays: int = 0
-        # [TODO] some expiry date for each mission
-
-    def __str__(self):
-        return " ".join([str(self.target_position), self.target_action])
-
-
-class Missions(collections.defaultdict):
-    def __init__(self):
-        self: DefaultDict[str, Mission] = collections.defaultdict(Mission)
-
-    def add(self, mission: Mission):
-        self[mission.unit_id] = mission
-
-    def cleanup(self, player: Player):
-        for unit_id in list(self.keys()):
-            mission: Mission = self[unit_id]
-
-            # if dead, delete from list
-            if unit_id not in player.units_by_id:
-                del self[unit_id]
-                continue
-
-            # if you want to build city without resource, delete from list
-            if mission.target_action and mission.target_action[:5] == "bcity":
-                if player.units_by_id[unit_id].cargo == 0:
-                    del self[unit_id]
-
-
-    def __str__(self):
-        return " ".join([unit_id + " " + str(x) for unit_id,x in self.items()])
-
-    def get_targets(self):
-        return [mission.target_position for unit_id, mission in self.items()]
-
 
 
 def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Missions:
@@ -132,14 +94,14 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # mission is planned regardless whether the unit can act
 
         # avoid sharing the same target
-        game_state.repopulate_targets(missions.get_targets())
+        game_state.repopulate_targets(missions)
 
         # if the unit is full and it is going to be day the next few days
         # go to an empty tile and build a citytile
         # print(unit.id, unit.get_cargo_space_left())
         if unit.get_cargo_space_left() == 0:
             nearest_position, nearest_distance = game_state.get_nearest_empty_tile_and_distance(unit.pos)
-            if nearest_distance < game_state.turns_to_night - 5:
+            if nearest_distance * 2 < game_state.turns_to_night - 2:
                 print("plan mission to build citytile", unit.id, nearest_position)
                 mission = Mission(unit.id, nearest_position, unit.build_city())
                 missions.add(mission)
@@ -151,6 +113,14 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
         if unit.id in missions:
             # the mission will be recaluated if the unit fails to make a move
+            continue
+
+        if True:
+            best_position, best_cell_value = find_best_cluster(game_state, unit, -0.5)
+            # [TODO] what if best_cell_value is zero
+            print("plan mission adaptative", unit.id, unit.pos, "->", best_position)
+            mission = Mission(unit.id, best_position, None)
+            missions.add(mission)
             continue
 
         is_unit_alone = convolved_player_unit_matrix[unit.pos.y, unit.pos.x] > 1

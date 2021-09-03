@@ -5,10 +5,52 @@ import numpy as np
 
 from .constants import Constants
 from .game_map import GameMap, RESOURCE_TYPES
-from .game_objects import Player, Unit, City, CityTile, Position
+from .game_objects import Player, Unit, City, CityTile
+from .game_position import Position
 from .game_constants import GAME_CONSTANTS
 
 INPUT_CONSTANTS = Constants.INPUT_CONSTANTS
+
+
+class Mission:
+    def __init__(self, unit_id: str, target_position: Position, target_action: str = ""):
+        self.target_position: Position = target_position
+        self.target_action: str = target_action
+        self.unit_id: str = unit_id
+        self.delays: int = 0
+        # [TODO] some expiry date for each mission
+
+    def __str__(self):
+        return " ".join([str(self.target_position), self.target_action])
+
+
+class Missions(defaultdict):
+    def __init__(self):
+        self: DefaultDict[str, Mission] = defaultdict(Mission)
+
+    def add(self, mission: Mission):
+        self[mission.unit_id] = mission
+
+    def cleanup(self, player: Player):
+        for unit_id in list(self.keys()):
+            mission: Mission = self[unit_id]
+
+            # if dead, delete from list
+            if unit_id not in player.units_by_id:
+                del self[unit_id]
+                continue
+
+            # if you want to build city without resource, delete from list
+            if mission.target_action and mission.target_action[:5] == "bcity":
+                if player.units_by_id[unit_id].cargo == 0:
+                    del self[unit_id]
+
+
+    def __str__(self):
+        return " ".join([unit_id + " " + str(x) for unit_id,x in self.items()])
+
+    def get_targets(self):
+        return [mission.target_position for unit_id, mission in self.items()]
 
 
 class DisjointSet:
@@ -337,16 +379,33 @@ class Game:
                         xx, yy = x+dx, y+dy
                         if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
                             self.xy_to_resource_group_id.union((x,y), (xx,yy))
-        self.resource_leader_to_targeting_units: DefaultDict[Tuple, str] = defaultdict(list)
-        self.resource_leader_to_locating_units: DefaultDict[Tuple, str] = defaultdict(list)
 
 
-    def repopulate_targets(self, pos_list: List[Position]):
+    def repopulate_targets(self, missions: Missions):
+        pos_list = missions.get_targets()
         self.targeted_leaders: Set = set(self.xy_to_resource_group_id.find(tuple(pos)) for pos in pos_list)
         self.targeted_xy_set: Set = set(tuple(pos) for pos in pos_list) - self.player_city_tile_xy_set
 
+        self.resource_leader_to_locating_units: DefaultDict[Tuple, Set[str]] = defaultdict(set)
+        self.resource_leader_to_targeting_units: DefaultDict[Tuple, Set[str]] = defaultdict(set)
+
+        for unit_id in missions:
+
+            unit: Unit = self.player.units_by_id[unit_id]
+            current_position = tuple(unit.pos)
+            leader = self.xy_to_resource_group_id.find(current_position)
+            if leader:
+                self.resource_leader_to_locating_units[leader].add(unit_id)
+
+            mission: Mission = missions[unit_id]
+            target_position = tuple(mission.target_position)
+            leader = self.xy_to_resource_group_id.find(target_position)
+            if leader:
+                self.resource_leader_to_targeting_units[leader].add(unit_id)
+
 
     def calculate_dominance_matrix(self, feature_matrix, masking_factor = 0.5, exempted=(-1,-1)):
+        # [TODO] marked for deletion
         mask = (1 - masking_factor * self.player_units_matrix)
         feature_matrix = self.convolve(feature_matrix)
         masked_matrix = mask * feature_matrix
