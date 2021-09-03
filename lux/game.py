@@ -429,6 +429,8 @@ class Game:
             for x in range(width):
                 if self.empty_tile_matrix[y,x] == 0:  # not empty
                     continue
+                if (x,y) in self.targeted_xy_set:
+                    continue
 
                 position = Position(x, y)
                 distance = position - current_position

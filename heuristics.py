@@ -20,6 +20,7 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.1, 
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
+    # [TODO] put logic in units
     cooldown = GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
     travel_range = max(1, game_state.turns_to_night // cooldown + unit.night_travel_range - 2)
     if unit.night_turn_survivable > game_state.turns_to_dawn and not game_state.is_day_time:
@@ -70,10 +71,6 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.1, 
                     if len(units_targeting_or_mining_on_target_cluster) == 0:
                         target_bonus = 10
 
-            # if distance_multiplier > 0:
-            #     if game_state.xy_to_resource_group_id.find((x,y),) in game_state.targeted_leaders:
-            #         target_bonus = 1
-
             empty_tile_bonus = 1
             if game_state.distance_from_resource[y,x] == 1:
                 empty_tile_bonus = 4
@@ -92,7 +89,7 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.1, 
                         best_cell_value = cell_value
                         best_position = Position(x,y)
 
-    print(travel_range)
-    print(score_matrix_wrt_pos)
+    # print(travel_range)
+    # print(score_matrix_wrt_pos)
 
     return best_position, best_cell_value
