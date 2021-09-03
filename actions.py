@@ -173,6 +173,12 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             units_with_mission_but_no_action.discard(unit.id)
             print("location reached and make action", unit.id, unit.pos)
             action = mission.target_action
+
+            # do not build city at last light
+            if action and action[:5] == "bcity" and game_state.turn%40 == 30:
+                del missions[unit.id]
+                continue
+
             if action:
                 actions.append(action)
             del missions[unit.id]

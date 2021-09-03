@@ -56,7 +56,7 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
                         game_state.resource_leader_to_locating_units[target_leader] | \
                         game_state.resource_leader_to_targeting_units[target_leader]
                     if len(units_targeting_or_mining_on_target_cluster) == 0:
-                        target_bonus = 10
+                        target_bonus = 50
 
             # prefer empty tile because you can build afterwards
             empty_tile_bonus = 1

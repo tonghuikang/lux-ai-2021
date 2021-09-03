@@ -5,6 +5,7 @@ import numpy as np
 import builtins as __builtin__
 
 from lux.game import Game, Mission, Missions
+import lux.annotate as annotate
 
 from actions import *
 from heuristics import *
