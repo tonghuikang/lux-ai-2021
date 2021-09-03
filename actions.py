@@ -86,11 +86,11 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
     else: print = lambda *args: None
 
     player = game_state.player
-    missions.cleanup(player)  # remove dead units
+    missions.cleanup(player, game_state.player_city_tile_xy_set, game_state.opponent_city_tile_xy_set)  # remove dead units
 
     unit_ids_with_missions_assigned_this_turn = set()
 
-    for distance_threshold in [1,2,3,4,10,22,30,100]:
+    for distance_threshold in [0,1,2,3,4,10,22,30,100,1000,10**9+7]:
       for unit in player.units:
         # mission is planned regardless whether the unit can act
 
@@ -108,6 +108,8 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         if unit.get_cargo_space_left() == 0 or stay_up_till_dawn:
             nearest_position, nearest_distance = game_state.get_nearest_empty_tile_and_distance(unit.pos)
             if stay_up_till_dawn or nearest_distance * 2 <= game_state.turns_to_night - 2:
+                if unit.pos - nearest_position > distance_threshold:
+                    continue
                 print("plan mission to build citytile", unit.id, unit.pos, "->", nearest_position)
                 mission = Mission(unit.id, nearest_position, unit.build_city())
                 missions.add(mission)
@@ -196,33 +198,6 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
     return missions, actions
 
 
-def calculate_path_distance(game_state: Game, start_pos: Position, target_pos: Position, ignored_set: Set):
-    # [TODO] to calculate this only once per turn
-
-    if start_pos == target_pos:
-        return 0
-
-    xy_to_distance = {}
-    xy_to_distance[tuple(start_pos)] = 0
-
-    d4 = [(1,0),(0,1),(-1,0),(0,-1)]
-    stack = collections.deque([tuple(start_pos)])
-    while stack:
-        # [TODO] use dijkstra
-        x,y = stack.popleft()
-        for dx,dy in d4:
-            xx,yy = x+dx,y+dy
-            if (xx,yy) in xy_to_distance or (xx,yy) in game_state.occupied_xy_set:
-                continue
-            xy_to_distance[xx,yy] = xy_to_distance[x,y] + 1
-            stack.append((xx,yy))
-
-            if (xx,yy) == tuple(target_pos):
-                return xy_to_distance[xx,yy]
-
-    return 1001
-
-
 def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> DIRECTIONS:
     check_dirs = [
         DIRECTIONS.NORTH,
@@ -231,7 +206,7 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
         DIRECTIONS.WEST,
     ]
     random.shuffle(check_dirs)
-    closest_dist = 1000
+    closest_dist = 10**9+7
     closest_dir = DIRECTIONS.CENTER
     closest_pos = unit.pos
 
@@ -241,11 +216,11 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
         if tuple(newpos) in game_state.occupied_xy_set:
             continue
 
-        # do not go into a city tile if you are carry substantial wood
+        # do not go into a city tile if you are carrying substantial wood
         if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood >= 60:
             continue
 
-        dist = calculate_path_distance(game_state, newpos, target_pos, game_state.player_city_tile_xy_set)
+        dist = game_state.retrieve_distance(newpos.x, newpos.y, target_pos.x, target_pos.y)
 
         if dist < closest_dist:
             closest_dir = direction

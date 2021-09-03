@@ -1,19 +1,17 @@
 # contains designed heuristics
 # which could be fine tuned
 
-import math, random
 import numpy as np
 import builtins as __builtin__
 
 from typing import List
 from lux import game
 
-from lux.game import Game, Player, Unit, Mission, Missions
+from lux.game import Game, Unit
 from lux.game_map import Cell, RESOURCE_TYPES
 from lux.constants import Constants
 from lux.game_position import Position
 from lux.game_constants import GAME_CONSTANTS
-from lux import annotate
 
 
 def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, DEBUG=False):
@@ -67,8 +65,10 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
 
             # scoring function
             if matrix[y,x] > 0:
-                dx, dy = abs(unit.pos.x - x), abs(unit.pos.y - y)
-                distance = max(1, dx + dy)
+                # using simple distance
+                distance = abs(unit.pos.x - x) + abs(unit.pos.y - y)
+                distance = max(0.9, distance)  # prevent zero error
+
                 if distance <= unit.travel_range:
                     cell_value = empty_tile_bonus * target_bonus * matrix[y,x] * distance ** distance_multiplier
                     score_matrix_wrt_pos[y,x] = int(cell_value)

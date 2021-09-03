@@ -1,5 +1,6 @@
 from typing import DefaultDict, Dict, List, Tuple, Set
 from collections import defaultdict, deque
+import heapq
 
 import numpy as np
 
@@ -10,6 +11,7 @@ from .game_position import Position
 from .game_constants import GAME_CONSTANTS
 
 INPUT_CONSTANTS = Constants.INPUT_CONSTANTS
+DISTANCE_TRANSITION_VALUE = 12
 
 
 class Mission:
@@ -31,7 +33,7 @@ class Missions(defaultdict):
     def add(self, mission: Mission):
         self[mission.unit_id] = mission
 
-    def cleanup(self, player: Player):
+    def cleanup(self, player: Player, player_city_tile_xy_set: Set[Tuple], opponent_city_tile_xy_set: Set[Tuple]):
         for unit_id in list(self.keys()):
             mission: Mission = self[unit_id]
 
@@ -40,10 +42,22 @@ class Missions(defaultdict):
                 del self[unit_id]
                 continue
 
+            unit: Unit = player.units_by_id[unit_id]
             # if you want to build city without resource, delete from list
             if mission.target_action and mission.target_action[:5] == "bcity":
-                if player.units_by_id[unit_id].cargo == 0:
+                if unit.cargo == 0:
                     del self[unit_id]
+                    continue
+
+            # if opponent has already built a base, reconsider your mission
+            if tuple(mission.target_position) in opponent_city_tile_xy_set:
+                del self[unit_id]
+                continue
+
+            # if you are in a base, reconsider your mission
+            if tuple(unit.pos) in player_city_tile_xy_set:
+                del self[unit_id]
+                continue
 
 
     def __str__(self):
@@ -108,6 +122,8 @@ class Game:
 
         self.targeted_xy_set: Set = set()
         self.targeted_leaders: Set = set()
+
+        self.distance_transition_value = 8
 
     def _end_turn(self):
         print("D_FINISH")
@@ -303,12 +319,12 @@ class Game:
             for x in [-1, self.map_width]:
                 out_of_map.add((x,y))
 
-        self.occupied_xy_set = (self.player_units_xy_set | self.opponent_units_xy_set | self.player_city_tile_xy_set | out_of_map) \
+        self.occupied_xy_set = (self.player_units_xy_set | self.opponent_units_xy_set | self.opponent_city_tile_xy_set | out_of_map) \
                                 - self.player_city_tile_xy_set
 
 
-    def calculate_distance_matrix(self):
-        # calculate distance from resource
+    def calculate_distance_matrix(self, distance_transition_value=DISTANCE_TRANSITION_VALUE, blockade_multiplier_value=5):
+        # calculate distance from resource (with fulfilled research requirements)
         visited = set()
         self.distance_from_resource = self.init_zero_matrix(self.map_height + self.map_width)
         for y in range(self.map_height):
@@ -328,6 +344,61 @@ class Game:
                     self.distance_from_resource[yy,xx] = self.distance_from_resource[y,x] + 1
                     queue.append((xx,yy))
                     visited.add((xx,yy))
+
+        # calculating the full matrix takes too much time
+        self.positions_to_calculate_distances_from = set()
+        for x,y in self.player_units_xy_set:
+            self.positions_to_calculate_distances_from.add((x,y),)
+            self.positions_to_calculate_distances_from.add((x+1,y),)
+            self.positions_to_calculate_distances_from.add((x-1,y),)
+            self.positions_to_calculate_distances_from.add((x,y+1),)
+            self.positions_to_calculate_distances_from.add((x,y-1),)
+
+        self.distance_matrix = np.full((self.map_height,self.map_width,self.map_height,self.map_width), 1001)
+
+        for sy in range(self.map_height):
+            for sx in range(self.map_width):
+                if (sx,sy) not in self.positions_to_calculate_distances_from:
+                    continue
+
+                start_pos = (sx,sy)
+                xy_processed = set()
+
+                d4 = [(1,0),(0,1),(-1,0),(0,-1)]
+                heap = [(0, start_pos),]
+                while heap:
+                    curdist, (x,y) = heapq.heappop(heap)
+                    if (x,y) in xy_processed:
+                        continue
+                    xy_processed.add((x,y),)
+                    self.distance_matrix[sy,sx,y,x] = curdist
+
+                    for dx,dy in d4:
+                        xx,yy = x+dx,y+dy
+                        if not (0 <= xx < self.map_width and 0 <= yy < self.map_height):
+                            continue
+                        if (xx,yy) in xy_processed:
+                            continue
+
+                        # lazy_processing
+                        if abs(sx-xx) + abs(sy-yy) > distance_transition_value:
+                            continue
+
+                        edge_length = 1
+                        if (xx,yy) in self.occupied_xy_set:
+                            edge_length = blockade_multiplier_value
+                        heapq.heappush(heap, (curdist + edge_length, (xx,yy)))
+
+
+    def retrieve_distance(self, sx, sy, ex, ey, distance_transition_value=DISTANCE_TRANSITION_VALUE, long_range_multiplier_value=5):
+
+        if abs(sx-ex) + abs(sy-ey) > distance_transition_value:
+            return (abs(sx-ex) + abs(sy-ey)) * long_range_multiplier_value
+
+        if (sx, sy) not in self.positions_to_calculate_distances_from:
+            return (abs(sx-ex) + abs(sy-ey)) * long_range_multiplier_value
+
+        return self.distance_matrix[sy,sx,ey,ex]
 
 
     def convolve(self, matrix):
