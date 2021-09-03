@@ -14,7 +14,7 @@ I hope this can be a useful template for you to work on your bot on.
 You are strongly recommended to edit on a clone/fork of [my repository](https://github.com/tonghuikang/lux-ai-2021) with your favorite IDE.
 You can submit the zip the repository to the competition. This notebook is generated with `generate_notebook.py`.
 
-Regardless, do feel free to clone this notebook and submit `submission.tar.gz`. I hope this can be my first notebook gold medal.
+Regardless, do feel free to clone this notebook and submit `submission.tar.gz`.
 """
 
 cells.append(nbf.new_text_cell('markdown', preamble_intro))
@@ -72,7 +72,9 @@ cells.append(nbf.new_code_cell(runner_code))
 preamble_rendering = """\
 # Game Rendering
 Annotations has been made.
+
 `X` and `O` indicates target position for the unit to move to.
+
 In addition, `O` indicates that the unit will build a citytile upon arrival at the tile.
 """
 
@@ -90,7 +92,9 @@ cells.append(nbf.new_code_cell(render_code))
 preamble_debugging = """\
 # Debugging
 You are also able to observe the game state and missions that have been saved as Python pickle files.
+
 The mission plans and the actions has been printed.
+
 The `convolved_rate_matrix`, which is used for estimating the best target position of a mission, is also printed. You could also print other attributes of `game_state`.
 """
 
