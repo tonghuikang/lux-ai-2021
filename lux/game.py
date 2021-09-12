@@ -11,7 +11,6 @@ from .game_position import Position
 from .game_constants import GAME_CONSTANTS
 
 INPUT_CONSTANTS = Constants.INPUT_CONSTANTS
-DISTANCE_TRANSITION_VALUE = 12
 
 
 class Mission:
@@ -122,8 +121,6 @@ class Game:
 
         self.targeted_xy_set: Set = set()
         self.targeted_leaders: Set = set()
-
-        self.distance_transition_value = 8
 
     def _end_turn(self):
         print("D_FINISH")
@@ -323,7 +320,7 @@ class Game:
                                 - self.player_city_tile_xy_set
 
 
-    def calculate_distance_matrix(self, distance_transition_value=DISTANCE_TRANSITION_VALUE, blockade_multiplier_value=5):
+    def calculate_distance_matrix(self, blockade_multiplier_value=100):
         # calculate distance from resource (with fulfilled research requirements)
         visited = set()
         self.distance_from_resource = self.init_zero_matrix(self.map_height + self.map_width)
@@ -345,7 +342,8 @@ class Game:
                     queue.append((xx,yy))
                     visited.add((xx,yy))
 
-        # calculating the full matrix takes too much time
+        # calculating distances from every unit positions and its adjacent positions
+        # avoid blocked places as much as possible
         self.positions_to_calculate_distances_from = set()
         for x,y in self.player_units_xy_set:
             self.positions_to_calculate_distances_from.add((x,y),)
@@ -380,24 +378,15 @@ class Game:
                         if (xx,yy) in xy_processed:
                             continue
 
-                        # lazy_processing
-                        if abs(sx-xx) + abs(sy-yy) > distance_transition_value:
-                            continue
-
                         edge_length = 1
                         if (xx,yy) in self.occupied_xy_set:
+                            edge_length = blockade_multiplier_value
+                        if (xx,yy) in self.player_city_tile_xy_set:
                             edge_length = blockade_multiplier_value
                         heapq.heappush(heap, (curdist + edge_length, (xx,yy)))
 
 
-    def retrieve_distance(self, sx, sy, ex, ey, distance_transition_value=DISTANCE_TRANSITION_VALUE, long_range_multiplier_value=5):
-
-        if abs(sx-ex) + abs(sy-ey) > distance_transition_value:
-            return (abs(sx-ex) + abs(sy-ey)) * long_range_multiplier_value
-
-        if (sx, sy) not in self.positions_to_calculate_distances_from:
-            return (abs(sx-ex) + abs(sy-ey)) * long_range_multiplier_value
-
+    def retrieve_distance(self, sx, sy, ex, ey):
         return self.distance_matrix[sy,sx,ey,ex]
 
 
