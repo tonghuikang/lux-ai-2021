@@ -90,9 +90,9 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
     unit_ids_with_missions_assigned_this_turn = set()
 
-    for distance_threshold in [0,1,2,3,4,10,22,30,100,1000,10**9+7]:
+    for distance_threshold in [0,1,2,3,4,10,22,30,100]:
       for unit in player.units:
-        # mission is planned regardless whether the unit can act
+        # mission is planned regardless whether the unit can åact
 
         if unit.id in unit_ids_with_missions_assigned_this_turn:
             continue
@@ -123,12 +123,13 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
                 continue
 
         if unit.id in missions:
-            # the mission will be recaluated if the unit fails to make a move
+            # the mission will be recaluated if the unit fails to make a move after make_unit_actions
             continue
 
         best_position, best_cell_value = find_best_cluster(game_state, unit, DEBUG=DEBUG)
         # [TODO] what if best_cell_value is zero
-        if unit.pos - best_position > distance_threshold:
+        distance_from_best_position = game_state.retrieve_distance(unit.pos.x, unit.pos.y, best_position.x, best_position.y)
+        if distance_from_best_position > distance_threshold:
             continue
         print("plan mission adaptative", unit.id, unit.pos, "->", best_position)
         mission = Mission(unit.id, best_position, None)
