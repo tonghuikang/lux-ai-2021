@@ -19,7 +19,7 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
-    actions_by_cities = make_city_actions(game_state, DEBUG=DEBUG)
+    actions_by_cities = make_city_actions(game_state, missions, DEBUG=DEBUG)
     missions = make_unit_missions(game_state, missions, DEBUG=DEBUG)
     mission_annotations = print_and_annotate_missions(game_state, missions)
     missions, actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)

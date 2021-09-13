@@ -18,11 +18,13 @@ from heuristics import *
 DIRECTIONS = Constants.DIRECTIONS
 
 
-def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
+def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List[str]:
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
     player = game_state.player
+    missions.cleanup(player, game_state.player_city_tile_xy_set, game_state.opponent_city_tile_xy_set)  # remove dead units
+    game_state.repopulate_targets(missions)
 
     units_cap = sum([len(x.citytiles) for x in player.cities.values()])
     units_cnt = len(player.units)  # current number of units
@@ -47,18 +49,23 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
     if not city_tiles:
         return []
 
-    for city_tile in city_tiles[::-1]:
+    for city_tile in city_tiles:
         if not city_tile.can_act():
             continue
 
         unit_limit_exceeded = (units_cnt >= units_cap)  # recompute every time
+        cluster_leader = game_state.xy_to_resource_group_id.find(tuple(city_tile.pos))
+        cluster_unit_limit_exceeded = \
+            game_state.xy_to_resource_group_id.get_size(tuple(city_tile.pos)) // 2.5 < len(game_state.resource_leader_to_locating_units[cluster_leader])
+        if cluster_unit_limit_exceeded:
+            print("unit_limit_exceeded", city_tile.cityid, tuple(city_tile.pos))
 
         if player.researched_uranium() and unit_limit_exceeded:
-            print("skip city", city_tile.cityid, city_tile.pos.x, city_tile.pos.y)
+            print("skip city", city_tile.cityid, tuple(city_tile.pos))
             continue
 
         if not player.researched_uranium() and game_state.turns_to_night < 3:
-            print("research and dont build units at night", city_tile.pos.x, city_tile.pos.y)
+            print("research and dont build units at night", tuple(city_tile.pos))
             do_research(city_tile)
             continue
 
@@ -66,13 +73,13 @@ def make_city_actions(game_state: Game, DEBUG=False) -> List[str]:
         travel_range = game_state.turns_to_night // GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
         resource_in_travel_range = nearest_resource_distance < travel_range
 
-        if resource_in_travel_range and not unit_limit_exceeded:
+        if resource_in_travel_range and not unit_limit_exceeded and not cluster_unit_limit_exceeded:
             print("build_worker", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
             build_workers(city_tile)
             continue
 
         if not player.researched_uranium():
-            print("research", city_tile.pos.x, city_tile.pos.y)
+            print("research", tuple(city_tile.pos))
             do_research(city_tile)
             continue
 
@@ -90,7 +97,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
     unit_ids_with_missions_assigned_this_turn = set()
 
-    for distance_threshold in [0,1,2,3,4,10,22,30,100]:
+    for distance_threshold in [0,1,2,3,4,5,10,20,30,100]:
       for unit in player.units:
         # mission is planned regardless whether the unit can åact
 
