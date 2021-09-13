@@ -69,28 +69,33 @@ class Missions(defaultdict):
 class DisjointSet:
     def __init__(self):
         self.parent = {}
+        self.size = defaultdict(int)
+        self.num_sets = 0
 
-    def find(self, item, index=False):
-        if item not in self.parent:
-            if not index:
-                return None
-        return self._index(item)
+    def find(self, a):
+        if a not in self.parent:
+            self.parent[a] = a
+            self.size[a] += 1
+            self.num_sets += 1
+        acopy = a
+        while a != self.parent[a]:
+            a = self.parent[a]
+        while acopy != a:
+            self.parent[acopy], acopy = a, self.parent[acopy]
+        return a
 
-    def _index(self, item):
-        if item not in self.parent:
-            self.parent[item] = item
-            return item
-        elif self.parent[item] == item:
-            return item
-        else:
-            res = self.find(self.parent[item])
-            self.parent[item] = res
-            return res
+    def union(self, a, b):
+        a, b = self.find(a), self.find(b)
+        if a != b:
+            if self.size[a] < self.size[b]:
+                a, b = b, a
 
-    def union(self, set1, set2):
-        root1 = self._index(set1)
-        root2 = self._index(set2)
-        self.parent[root1] = root2
+            self.num_sets -= 1
+            self.parent[b] = a
+            self.size[a] += self.size[b]
+
+    def get_size(self, a):
+        return self.size[self.find(a)]
 
     def get_groups(self):
         groups = defaultdict(list)
@@ -321,6 +326,13 @@ class Game:
 
 
     def calculate_distance_matrix(self, blockade_multiplier_value=100):
+        self.distance_from_edge = self.init_zero_matrix(self.map_height + self.map_width)
+        for y in range(self.map_height):
+            y_distance_from_edge = min(y, self.map_height-y-1)
+            for x in range(self.map_width):
+                x_distance_from_edge = min(x, self.map_height-x-1)
+                self.distance_from_edge[y,x] = y_distance_from_edge + x_distance_from_edge
+
         # calculate distance from resource (with fulfilled research requirements)
         visited = set()
         self.distance_from_resource = self.init_zero_matrix(self.map_height + self.map_width)
@@ -466,17 +478,6 @@ class Game:
                 self.resource_leader_to_targeting_units[leader].add(unit_id)
 
 
-    def calculate_dominance_matrix(self, feature_matrix, masking_factor = 0.5, exempted=(-1,-1)):
-        # [TODO] marked for deletion
-        mask = (1 - masking_factor * self.player_units_matrix)
-        feature_matrix = self.convolve(feature_matrix)
-        masked_matrix = mask * feature_matrix
-        if exempted != (-1,-1):
-            # the exempted cell is the position of the unit
-            masked_matrix[exempted[0],exempted[1]] = feature_matrix[exempted[0],exempted[1]]
-        return masked_matrix
-
-
     def get_nearest_empty_tile_and_distance(self, current_position: Position) -> Tuple[Position, int]:
         if self.all_resource_amount_matrix[current_position.y, current_position.x] == 0:
             if tuple(current_position) not in self.player_city_tile_xy_set:
@@ -484,8 +485,8 @@ class Game:
 
         width, height = self.map_width, self.map_height
 
-        nearest_distance = width + height
-        nearest_position: Position = None
+        nearest_distance = 10**9+7
+        nearest_position: Position = current_position
 
         for y in range(height):
             for x in range(width):
@@ -493,7 +494,7 @@ class Game:
                     continue
 
                 position = Position(x, y)
-                distance = position - current_position
+                distance = self.retrieve_distance(position.x, position.y, current_position.x, current_position.y)
 
                 if self.distance_from_resource[y,x] != 1:
                     distance += 10
