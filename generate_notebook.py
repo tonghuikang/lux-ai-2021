@@ -115,7 +115,7 @@ with open('snapshots/missions-{}.pkl'.format(str_step), 'rb') as handle:
     missions = pickle.load(handle)
 
 game_logic(game_state, missions, DEBUG=True)
-print(game_state.convolved_rate_matrix)\
+print(game_state.convolved_collectable_tiles_matrix)\
 """
 
 cells.append(nbf.new_code_cell(debugging_code))
