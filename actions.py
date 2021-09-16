@@ -53,10 +53,11 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         if not city_tile.can_act():
             continue
 
-        unit_limit_exceeded = (units_cnt >= units_cap)  # recompute every time
+        unit_limit_exceeded = (units_cnt >= units_cap)
+
         cluster_leader = game_state.xy_to_resource_group_id.find(tuple(city_tile.pos))
         cluster_unit_limit_exceeded = \
-            game_state.xy_to_resource_group_id.get_size(tuple(city_tile.pos)) // 2.5 < len(game_state.resource_leader_to_locating_units[cluster_leader])
+            game_state.xy_to_resource_group_id.get_point(tuple(city_tile.pos)) <= len(game_state.resource_leader_to_locating_units[cluster_leader])
         if cluster_unit_limit_exceeded:
             print("unit_limit_exceeded", city_tile.cityid, tuple(city_tile.pos))
 
@@ -69,7 +70,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
             do_research(city_tile)
             continue
 
-        nearest_resource_distance = game_state.distance_from_resource[city_tile.pos.y, city_tile.pos.x]
+        nearest_resource_distance = game_state.distance_from_collectable_resource[city_tile.pos.y, city_tile.pos.x]
         travel_range = game_state.turns_to_night // GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
         resource_in_travel_range = nearest_resource_distance < travel_range
 
@@ -97,7 +98,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
     unit_ids_with_missions_assigned_this_turn = set()
 
-    for distance_threshold in [0,1,2,3,4,5,10,20,30,100]:
+    for distance_threshold in [10**9+7]:
       for unit in player.units:
         # mission is planned regardless whether the unit can åact
 
@@ -203,6 +204,7 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
 
         # [TODO] make it possible for units to swap positions
 
+    # if the unit is not able to make an action, delete the mission
     for unit_id in units_with_mission_but_no_action:
         mission: Mission = missions[unit_id]
         mission.delays += 1
@@ -218,6 +220,7 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
         DIRECTIONS.EAST,
         DIRECTIONS.SOUTH,
         DIRECTIONS.WEST,
+        DIRECTIONS.CENTER,
     ]
     random.shuffle(check_dirs)
     closest_dist = 10**9+7
@@ -235,6 +238,12 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
             continue
 
         dist = game_state.retrieve_distance(newpos.x, newpos.y, target_pos.x, target_pos.y)
+
+        # prefer to walk towards
+        dist -= 0.01 * (newpos - target_pos)
+
+        # prefer to walk on tiles with resources
+        dist -= 0.0001 * game_state.convolved_collectable_tiles_matrix[newpos.y, newpos.x]
 
         if dist < closest_dist:
             closest_dir = direction
