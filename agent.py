@@ -85,14 +85,8 @@ def print_and_annotate_missions(game_state: Game, missions: Missions, DEBUG=Fals
 
 def annotate_movements(game_state: Game, actions_by_units: List[str]):
     annotations = []
-    dirs = [
-        DIRECTIONS.NORTH,
-        DIRECTIONS.EAST,
-        DIRECTIONS.SOUTH,
-        DIRECTIONS.WEST,
-        DIRECTIONS.CENTER
-    ]
-    d5 = [(0,-1), (1,0), (0,1), (-1,0), (0,0)]
+    dirs = game_state.dirs
+    d5 = game_state.dirs_dxdy
 
     for action_by_units in actions_by_units:
         if action_by_units[:2] != "m ":
@@ -119,6 +113,7 @@ def agent(observation, configuration, DEBUG=False):
         game_state._initialize(observation["updates"])
         game_state.player_id = observation.player
         game_state._update(observation["updates"][2:])
+        game_state.fix_iteration_order()
     else:
         # actually rebuilt and recomputed from scratch
         game_state._update(observation["updates"])
@@ -127,9 +122,9 @@ def agent(observation, configuration, DEBUG=False):
         str_step = str(observation["step"]).zfill(3)
         with open('snapshots/observation-{}.pkl'.format(str_step), 'wb') as handle:
             pickle.dump(observation, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        with open('snapshots/game_state-{}.pkl'.format(str_step), 'wb') as handle:
+        with open('snapshots/game_state-{}-{}.pkl'.format(str_step, game_state.player_id), 'wb') as handle:
             pickle.dump(game_state, handle, protocol=pickle.HIGHEST_PROTOCOL)
-        with open('snapshots/missions-{}.pkl'.format(str_step), 'wb') as handle:
+        with open('snapshots/missions-{}-{}.pkl'.format(str_step, game_state.player_id), 'wb') as handle:
             pickle.dump(missions, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
     actions, game_state, missions = game_logic(game_state, missions)

@@ -133,6 +133,51 @@ class Game:
         self.map: GameMap = GameMap(self.map_width, self.map_height)
         self.players: List[Player] = [Player(0), Player(1)]
 
+        self.x_iteration_order = list(range(self.map_width))
+        self.y_iteration_order = list(range(self.map_height))
+        self.dirs: List = [
+            Constants.DIRECTIONS.NORTH,
+            Constants.DIRECTIONS.EAST,
+            Constants.DIRECTIONS.SOUTH,
+            Constants.DIRECTIONS.WEST,
+            Constants.DIRECTIONS.CENTER
+        ]
+        self.dirs_dxdy: List = [(0,-1), (1,0), (0,1), (-1,0), (0,0)]
+
+
+    def fix_iteration_order(self):
+        '''
+        Fix iteration order at initisation to allow moves to be symmetric
+        '''
+        assert len(self.player.cities) == 1
+        assert len(self.opponent.cities) == 1
+        px,py = tuple(list(self.player.cities.values())[0].citytiles[0].pos)
+        ox,oy = tuple(list(self.opponent.cities.values())[0].citytiles[0].pos)
+
+        flipping = False
+        self.y_order_coefficient = 1
+        self.x_order_coefficient = 1
+
+        if px == ox:
+            if py < oy:
+                flipping = True
+                self.y_iteration_order = self.y_iteration_order[::-1]
+                self.y_order_coefficient = -1
+                idx1, idx2 = 0,2
+        elif py == oy:
+            if px < ox:
+                flipping = True
+                self.x_iteration_order = self.x_iteration_order[::-1]
+                self.x_order_coefficient = -1
+                idx1, idx2 = 1,3
+        else:
+            assert False
+
+        if flipping:
+            self.dirs[idx1], self.dirs[idx2] = self.dirs[idx2], self.dirs[idx1]
+            self.dirs_dxdy[idx1], self.dirs_dxdy[idx2] = self.dirs_dxdy[idx2], self.dirs_dxdy[idx1]
+
+
     def _end_turn(self):
         print("D_FINISH")
 
@@ -275,8 +320,8 @@ class Game:
         # if you can build on tile (a unit may be on the tile)
         self.buildable_tile_matrix = self.init_matrix()
 
-        for y in range(self.map_height):
-            for x in range(self.map_width):
+        for y in self.y_iteration_order:
+            for x in self.x_iteration_order:
                 cell = self.map.get_cell(x, y)
 
                 is_empty = True
@@ -330,8 +375,8 @@ class Game:
 
     def populate_set(self, matrix, set_object):
         # modifies the set_object in place and add nonzero items in the matrix
-        for y in range(self.map.height):
-            for x in range(self.map.width):
+        for y in self.y_iteration_order:
+            for x in self.x_iteration_order:
                 if matrix[y,x] > 0:
                     set_object.add((x,y))
 
@@ -388,8 +433,8 @@ class Game:
         def calculate_distance_from_set(relevant_set):
             visited = set()
             matrix = self.init_matrix(default_value=-1)
-            for y in range(self.map_height):
-                for x in range(self.map_width):
+            for y in self.y_iteration_order:
+                for x in self.x_iteration_order:
                     if (x,y) in relevant_set:
                         visited.add((x,y))
                         matrix[y,x] = 0
@@ -505,8 +550,8 @@ class Game:
                     else:
                         self.xy_to_resource_group_id.find((x,y), point=1)
 
-        for y in range(self.map_height):
-            for x in range(self.map_width):
+        for y in self.y_iteration_order:
+            for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
                     for dy,dx in [(1,0),(0,1),(-1,0),(0,-1)]:
                         xx, yy = x+dx, y+dy
@@ -546,13 +591,11 @@ class Game:
             if tuple(current_position) not in self.player_city_tile_xy_set:
                 return current_position, 0
 
-        width, height = self.map_width, self.map_height
-
         nearest_distance = 10**9+7
         nearest_position: Position = current_position
 
-        for y in range(height):
-            for x in range(width):
+        for y in self.y_iteration_order:
+            for x in self.x_iteration_order:
                 if (x,y) not in self.buildable_tile_xy_set:
                     continue
                 if self.distance_from_collectable_resource[y,x] != 1:
