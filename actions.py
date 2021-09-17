@@ -101,15 +101,13 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
     unit_ids_with_missions_assigned_this_turn = set()
 
-    distance_threshold = 10**9+7
     player.units.sort(key=lambda unit:
         (unit.pos.x*game_state.x_order_coefficient, unit.pos.y*game_state.y_order_coefficient, unit.encode_tuple_for_cmp()))
 
     for unit in player.units:
         # mission is planned regardless whether the unit can act
-
-        if unit.id in unit_ids_with_missions_assigned_this_turn:
-            continue
+        current_mission: Mission = missions[unit.id] if unit.id in missions else None
+        current_target_position = current_mission.target_position if current_mission else None
 
         # avoid sharing the same target
         game_state.repopulate_targets(missions)
@@ -120,14 +118,11 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # go to an empty tile and build a citytile
         # print(unit.id, unit.get_cargo_space_left())
         if unit.get_cargo_space_left() == 0 or stay_up_till_dawn:
-            nearest_position, nearest_distance = game_state.get_nearest_empty_tile_and_distance(unit.pos)
+            nearest_position, nearest_distance = game_state.get_nearest_empty_tile_and_distance(unit.pos, current_target_position)
             if stay_up_till_dawn or nearest_distance * 2 <= game_state.turns_to_night - 2:
-                if unit.pos - nearest_position > distance_threshold:
-                    continue
                 print("plan mission to build citytile", unit.id, unit.pos, "->", nearest_position)
                 mission = Mission(unit.id, nearest_position, unit.build_city())
                 missions.add(mission)
-                unit_ids_with_missions_assigned_this_turn.add(unit.id)
                 continue
 
         if unit.id in missions:
@@ -143,8 +138,6 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         best_position, best_cell_value = find_best_cluster(game_state, unit, DEBUG=DEBUG)
         # [TODO] what if best_cell_value is zero
         distance_from_best_position = game_state.retrieve_distance(unit.pos.x, unit.pos.y, best_position.x, best_position.y)
-        if distance_from_best_position > distance_threshold:
-            continue
         print("plan mission adaptative", unit.id, unit.pos, "->", best_position)
         mission = Mission(unit.id, best_position, None)
         missions.add(mission)
@@ -221,32 +214,40 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
 
 
 def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> DIRECTIONS:
-    check_dirs = game_state.dirs
-    closest_dist = 10**9+7
+
+    smallest_cost = [2,2,2,2]
     closest_dir = DIRECTIONS.CENTER
     closest_pos = unit.pos
 
-    for direction in check_dirs:
+    for direction in game_state.dirs:
         newpos = unit.pos.translate(direction, 1)
 
-        if tuple(newpos) in game_state.occupied_xy_set:
+        cost = [0,0,0,0]
+
+        if tuple(newpos) in game_state.xy_out_of_map:
             continue
+
+        if tuple(newpos) in game_state.occupied_xy_set:
+            cost[0] = 1
 
         # do not go into a city tile if you are carrying substantial wood
         if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood >= 60:
-            continue
+            cost[0] = 2
 
-        dist = game_state.retrieve_distance(newpos.x, newpos.y, target_pos.x, target_pos.y)
+        path_dist = game_state.retrieve_distance(newpos.x, newpos.y, target_pos.x, target_pos.y)
+        cost[1] = path_dist
 
         # prefer to walk towards
-        dist -= 0.01 * (newpos - target_pos)
+        manhattan_dist = (newpos - target_pos)
+        cost[2] = manhattan_dist
 
         # prefer to walk on tiles with resources
-        dist -= 0.0001 * game_state.convolved_collectable_tiles_matrix[newpos.y, newpos.x]
+        aux_cost = game_state.convolved_collectable_tiles_matrix[newpos.y, newpos.x]
+        cost[3] = -aux_cost
 
-        if dist < closest_dist:
+        if cost < smallest_cost:
+            smallest_cost = cost
             closest_dir = direction
-            closest_dist = dist
             closest_pos = newpos
 
     if closest_dir != DIRECTIONS.CENTER:

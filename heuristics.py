@@ -46,6 +46,8 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
         for x in game_state.x_iteration_order:
             if (x,y) in game_state.targeted_xy_set:
                 continue
+            if (x,y) in game_state.targeted_for_building_xy_set:
+                continue
             if (x,y) in game_state.opponent_city_tile_xy_set:
                 continue
             if (x,y) in game_state.player_city_tile_xy_set:

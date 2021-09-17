@@ -2,14 +2,15 @@ rm -rf errorlogs
 rm -rf replays
 
 # locally
+lux-ai-2021 --loglevel 1 --maxtime 30000 ./main.py ../v4a/main.py
 # lux-ai-2021 --rankSystem="wins" --tournament --storeReplay=false --storeLogs=false --maxtime 30000 $(find . -type f -name "main.py")
 # lux-ai-2021 --rankSystem="wins" --tournament --storeReplay=false --storeLogs=false --maxtime 30000 ./main.py ../v3/main.py
 # lux-ai-2021 --tournament --storeReplay=false --storeLogs=false ./main.py ../v2/main.py ../v3/main.py
-lux-ai-2021 --loglevel 1 --maxtime 30000 ./main.py ../v3/main.py
 
 # on GCP with more CPUs
 # export GFOOTBALL_DATA_DIR=C  # to disable saving pickle files
-# lux-ai-2021 --rankSystem="wins" --tournament --storeReplay=false --storeLogs=false --maxConcurrentMatches=16 --maxtime 10000 ./main.py ../v2/main.py ../v3/main.py
+# lux-ai-2021 --rankSystem="wins" --tournament --storeReplay=false --storeLogs=false --maxConcurrentMatches=16 --maxtime 10000 ./main.py ../v3/main.py ../v4a/main.py
+# lux-ai-2021 --tournament --storeReplay=false --storeLogs=false --maxConcurrentMatches=16 --maxtime 10000 ./main.py ../v3/main.py ../v4a/main.py
 # lux-ai-2021 --tournament --storeReplay=false --storeLogs=false --maxConcurrentMatches=16 --maxtime 10000 $(find . -type f -name "main.py")
 
 # Test whether your agent prefers one direction
