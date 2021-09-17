@@ -33,7 +33,12 @@ class Missions(defaultdict):
     def add(self, mission: Mission):
         self[mission.unit_id] = mission
 
-    def cleanup(self, player: Player, player_city_tile_xy_set: Set[Tuple], opponent_city_tile_xy_set: Set[Tuple]):
+    def cleanup(self, player: Player,
+                player_city_tile_xy_set: Set[Tuple],
+                opponent_city_tile_xy_set: Set[Tuple],
+                convolved_collectable_tiles_xy_set: Set[Tuple]):
+        # probably should be a standalone function instead of a method
+
         for unit_id in list(self.keys()):
             mission: Mission = self[unit_id]
 
@@ -56,6 +61,11 @@ class Missions(defaultdict):
 
             # if you are in a base, reconsider your mission
             if tuple(unit.pos) in player_city_tile_xy_set:
+                del self[unit_id]
+                continue
+
+            # if your target no longer have resource, reconsider your mission
+            if tuple(mission.target_position) not in convolved_collectable_tiles_xy_set:
                 del self[unit_id]
                 continue
 
@@ -119,6 +129,9 @@ class DisjointSet:
 
 
 class Game:
+
+    # counted from the time after the objects are saved to disk
+    compute_start_time = -1
 
     def _initialize(self, messages):
         """
@@ -200,7 +213,6 @@ class Game:
         """
         self.map = GameMap(self.map_width, self.map_height)
         self.turn += 1
-        self.compute_start_time = time.time()
         self._reset_player_states()
 
         for update in messages:
@@ -506,6 +518,7 @@ class Game:
                             edge_length = blockade_multiplier_value_for_syx
                         if (xx,yy) in self.player_city_tile_xy_set:
                             edge_length = blockade_multiplier_value_for_syx
+
                         heapq.heappush(heap, (curdist + edge_length, (xx,yy)))
 
 
