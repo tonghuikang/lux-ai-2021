@@ -270,7 +270,7 @@ class Game:
                 road = float(strs[3])
                 self.map.get_cell(x, y).road = road
 
-        # make indexes
+        # create indexes to refer to unit by id
         self.player.make_index_units_by_id()
         self.opponent.make_index_units_by_id()
 
@@ -477,12 +477,15 @@ class Game:
         # calculating distances from every unit positions and its adjacent positions
         # avoid blocked places as much as possible
         self.positions_to_calculate_distances_from = set()
-        for x,y in self.player_units_xy_set | self.player_city_tile_xy_set:
+
+        for unit in self.player.units:
+            x,y = tuple(unit.pos)
             self.positions_to_calculate_distances_from.add((x,y),)
-            self.positions_to_calculate_distances_from.add((x+1,y),)
-            self.positions_to_calculate_distances_from.add((x-1,y),)
-            self.positions_to_calculate_distances_from.add((x,y+1),)
-            self.positions_to_calculate_distances_from.add((x,y-1),)
+            if unit.can_act():
+                self.positions_to_calculate_distances_from.add((x+1,y),)
+                self.positions_to_calculate_distances_from.add((x-1,y),)
+                self.positions_to_calculate_distances_from.add((x,y+1),)
+                self.positions_to_calculate_distances_from.add((x,y-1),)
 
         self.distance_matrix = np.full((self.map_height,self.map_width,self.map_height,self.map_width), 1001)
 
@@ -527,6 +530,7 @@ class Game:
 
 
     def convolve(self, matrix):
+        # each worker gets resources from (up to) five tiles
         new_matrix = matrix.copy()
         new_matrix[:-1,:] += matrix[1:,:]
         new_matrix[:,:-1] += matrix[:,1:]
@@ -536,7 +540,7 @@ class Game:
 
 
     def calculate_resource_matrix(self):
-
+        # calculate value of the resource considering the reasearch level
         self.collectable_tiles_matrix = self.wood_exist_matrix
 
         if self.player.researched_coal():
@@ -555,9 +559,10 @@ class Game:
 
 
     def calculate_resource_groups(self):
+        # compute join the resource cluster and calculate the amount of resource
         self.xy_to_resource_group_id: DisjointSet = DisjointSet()
-        for y in range(self.map_height):
-            for x in range(self.map_width):
+        for y in self.y_iteration_order:
+            for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
                     if (x,y) in self.wood_exist_xy_set or (x,y) in self.uranium_exist_xy_set:
                         self.xy_to_resource_group_id.find((x,y), point=5)
@@ -574,6 +579,8 @@ class Game:
 
 
     def repopulate_targets(self, missions: Missions):
+        # with missions, populate the following objects for use
+        # probably these attributes belong to missions, but left it here to avoid circular imports
         pos_list = missions.get_targets()
         self.targeted_leaders: Set = set(self.xy_to_resource_group_id.find(tuple(pos)) for pos in pos_list)
         self.targeted_cluster_count = sum(self.xy_to_resource_group_id.get_point((x,y)) > 0 for x,y in self.targeted_leaders)
@@ -612,15 +619,20 @@ class Game:
             for x in self.x_iteration_order:
                 if (x,y) not in self.buildable_tile_xy_set:
                     continue
+
                 if (x,y) in self.targeted_for_building_xy_set:
+                    # we allow units to build at a tile that is targeted but not for building
                     if current_target and (x,y) != tuple(current_target):
                         continue
+
+                # only build beside a collectable resource
                 if self.distance_from_collectable_resource[y,x] != 1:
                     continue
 
                 position = Position(x, y)
                 distance = self.retrieve_distance(current_position.x, current_position.y, position.x, position.y)
 
+                # update best location
                 if distance < nearest_distance:
                     nearest_distance = distance
                     nearest_position = position
