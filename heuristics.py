@@ -42,15 +42,14 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
     # value heuristic
     matrix = game_state.convolved_collectable_tiles_matrix
 
-    for y in range(game_state.map_height):
-        for x in range(game_state.map_width):
+    for y in game_state.y_iteration_order:
+        for x in game_state.x_iteration_order:
             if (x,y) in game_state.targeted_xy_set:
                 continue
             if (x,y) in game_state.opponent_city_tile_xy_set:
                 continue
             if (x,y) in game_state.player_city_tile_xy_set:
                 continue
-            target_is_current_position = tuple(unit.pos) == (x,y)
 
             # if the targeted cluster is not targeted and mined
             # prefer to target the other cluster

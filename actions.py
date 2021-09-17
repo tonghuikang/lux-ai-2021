@@ -49,6 +49,9 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
     if not city_tiles:
         return []
 
+    city_tiles.sort(key=lambda city_tile:
+        (city_tile.pos.x*game_state.x_order_coefficient, city_tile.pos.y*game_state.y_order_coefficient))
+
     for city_tile in city_tiles:
         if not city_tile.can_act():
             continue
@@ -98,9 +101,12 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
     unit_ids_with_missions_assigned_this_turn = set()
 
-    for distance_threshold in [10**9+7]:
-      for unit in player.units:
-        # mission is planned regardless whether the unit can åact
+    distance_threshold = 10**9+7
+    player.units.sort(key=lambda unit:
+        (unit.pos.x*game_state.x_order_coefficient, unit.pos.y*game_state.y_order_coefficient, unit.encode_tuple_for_cmp()))
+
+    for unit in player.units:
+        # mission is planned regardless whether the unit can act
 
         if unit.id in unit_ids_with_missions_assigned_this_turn:
             continue
@@ -215,14 +221,7 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
 
 
 def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> DIRECTIONS:
-    check_dirs = [
-        DIRECTIONS.NORTH,
-        DIRECTIONS.EAST,
-        DIRECTIONS.SOUTH,
-        DIRECTIONS.WEST,
-        DIRECTIONS.CENTER,
-    ]
-    random.shuffle(check_dirs)
+    check_dirs = game_state.dirs
     closest_dist = 10**9+7
     closest_dir = DIRECTIONS.CENTER
     closest_pos = unit.pos
