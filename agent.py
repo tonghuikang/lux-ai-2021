@@ -120,12 +120,13 @@ def agent(observation, configuration, DEBUG=False):
 
     if not os.environ.get('GFOOTBALL_DATA_DIR', ''):  # on Kaggle compete, do not save items
         str_step = str(observation["step"]).zfill(3)
-        with open('snapshots/observation-{}.pkl'.format(str_step), 'wb') as handle:
+        with open('snapshots/observation-{}-{}.pkl'.format(str_step, game_state.player_id), 'wb') as handle:
             pickle.dump(observation, handle, protocol=pickle.HIGHEST_PROTOCOL)
         with open('snapshots/game_state-{}-{}.pkl'.format(str_step, game_state.player_id), 'wb') as handle:
             pickle.dump(game_state, handle, protocol=pickle.HIGHEST_PROTOCOL)
         with open('snapshots/missions-{}-{}.pkl'.format(str_step, game_state.player_id), 'wb') as handle:
             pickle.dump(missions, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+    game_state.compute_start_time = time.time()
     actions, game_state, missions = game_logic(game_state, missions)
     return actions

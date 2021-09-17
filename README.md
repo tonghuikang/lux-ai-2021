@@ -10,6 +10,8 @@ This README will explain how to use this repository.
 
 Run `./setup.sh` to install the required components.
 
+You will need Node version 12 or above, and conda, to install the script.
+
 
 
 #### Make submission files
@@ -29,13 +31,16 @@ You can run a game with `notebook_test.ipynb`
 
 You may define the width and height of the board, as well as the seed. Annotations are shown on the board.
 
-This code [snippet](https://www.kaggle.com/huikang/lux-ai-working-title-bot?scriptVersionId=73552476#Game-Rendering) is also run in the generated notebook.
+This code snippet is also run in the [generated notebook](https://www.kaggle.com/huikang/lux-ai-working-title-bot#Game-Rendering).
+
+If you want to compare between the bots, it is recommended that you use the contest command line interface `lux-ai-2021`.
+`make_tournament.sh` contains some scripts that I use to test my bots against its earlier versions.
 
 
 
 #### Analysing Game State and Missions
 
-You may run the game logic on a specific turn with `notebook_debug.ipynb` to understand why the agent made a certain decision.
+You may run the game logic on a specific turn with `notebook_debug.ipynb` to understand why the agent has made a certain decision.
 
 ![debug-screenshot](assets/debug-screenshot.png)
 

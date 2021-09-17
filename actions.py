@@ -23,7 +23,10 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
     else: print = lambda *args: None
 
     player = game_state.player
-    missions.cleanup(player, game_state.player_city_tile_xy_set, game_state.opponent_city_tile_xy_set)  # remove dead units
+    missions.cleanup(player,
+                     game_state.player_city_tile_xy_set,
+                     game_state.opponent_city_tile_xy_set,
+                     game_state.convolved_collectable_tiles_xy_set)
     game_state.repopulate_targets(missions)
 
     units_cap = sum([len(x.citytiles) for x in player.cities.values()])
@@ -97,7 +100,10 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
     else: print = lambda *args: None
 
     player = game_state.player
-    missions.cleanup(player, game_state.player_city_tile_xy_set, game_state.opponent_city_tile_xy_set)  # remove dead units
+    missions.cleanup(player,
+                     game_state.player_city_tile_xy_set,
+                     game_state.opponent_city_tile_xy_set,
+                     game_state.convolved_collectable_tiles_xy_set)
 
     unit_ids_with_missions_assigned_this_turn = set()
 
@@ -159,6 +165,8 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
 
     units_with_mission_but_no_action = set(missions.keys())
     prev_actions_len = -1
+
+    # repeat attempting movements for the units until no additional movements can be added
     while prev_actions_len < len(actions):
       prev_actions_len = len(actions)
 
@@ -173,8 +181,7 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             continue
 
         mission: Mission = missions[unit.id]
-
-        print("attempting action for", unit.id, unit.pos)
+        print("attempting action for", unit.id, unit.pos, "->", mission.target_position)
 
         # if the location is reached, take action
         if unit.pos == mission.target_position:
@@ -192,7 +199,7 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             del missions[unit.id]
             continue
 
-        # the unit will need to move
+        # attempt to move the unit
         direction = attempt_direction_to(game_state, unit, mission.target_position)
         if direction != "c":
             units_with_mission_but_no_action.discard(unit.id)
@@ -224,20 +231,24 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
 
         cost = [0,0,0,0]
 
+        # do not go out of map
         if tuple(newpos) in game_state.xy_out_of_map:
             continue
 
+        # discourage if new position is occupied
         if tuple(newpos) in game_state.occupied_xy_set:
+            if tuple(newpos) not in game_state.player_city_tile_xy_set:
+                cost[0] = 2
+
+        # discourage going into a city tile if you are carrying substantial wood
+        if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood >= 60:
             cost[0] = 1
 
-        # do not go into a city tile if you are carrying substantial wood
-        if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood >= 60:
-            cost[0] = 2
-
+        # path distance as main differentiator
         path_dist = game_state.retrieve_distance(newpos.x, newpos.y, target_pos.x, target_pos.y)
         cost[1] = path_dist
 
-        # prefer to walk towards
+        # manhattan distance to tie break
         manhattan_dist = (newpos - target_pos)
         cost[2] = manhattan_dist
 
@@ -245,6 +256,11 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
         aux_cost = game_state.convolved_collectable_tiles_matrix[newpos.y, newpos.x]
         cost[3] = -aux_cost
 
+        # if starting from the city, consider manhattan distance instead of path distance
+        if tuple(unit.pos) in game_state.player_city_tile_xy_set:
+            cost[1] = manhattan_dist
+
+        # update decision
         if cost < smallest_cost:
             smallest_cost = cost
             closest_dir = direction
