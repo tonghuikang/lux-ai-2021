@@ -19,5 +19,5 @@ ref/
 # replays
 errorlogs/
 replays/
-game_play.json
+replay.json
 logs.txt

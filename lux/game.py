@@ -7,7 +7,7 @@ import numpy as np
 
 from .constants import Constants
 from .game_map import GameMap, RESOURCE_TYPES
-from .game_objects import Player, Unit, City, CityTile
+from .game_objects import Player, Unit, City
 from .game_position import Position
 from .game_constants import GAME_CONSTANTS
 
