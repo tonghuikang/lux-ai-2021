@@ -1,19 +1,15 @@
 # functions executing the actions
 
-import os, random, collections
 import builtins as __builtin__
-from typing import Tuple, Dict, Set, DefaultDict
+from typing import Tuple, List
 
-from lux import game
-
-from lux.game import Game, Player, Mission, Missions
-from lux.game_map import Cell, RESOURCE_TYPES
-from lux.game_objects import City, CityTile, Unit
+from lux.game import Game, Mission, Missions
+from lux.game_objects import CityTile, Unit
 from lux.game_position import Position
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
 
-from heuristics import *
+from heuristics import find_best_cluster
 
 DIRECTIONS = Constants.DIRECTIONS
 

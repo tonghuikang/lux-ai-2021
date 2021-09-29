@@ -1,6 +1,6 @@
 ## Lux AI Working Title Bot
 
-Please refer to the [Kaggle notebook](https://www.kaggle.com/huikang/lux-ai-working-title-bot) for the comment section. The comment section contains my explanation on my code structure and logic.
+Please refer to the [Kaggle notebook](https://www.kaggle.com/huikang/lux-ai-working-title-bot) for questions about the code structure and agent logic.
 
 This README will explain how to use this repository.
 
@@ -8,9 +8,9 @@ This README will explain how to use this repository.
 
 #### Setup
 
-Run `./setup.sh` to install the required components.
+See `./setup.sh` for the scripts and comments to install the required components.
 
-You will need Node version 12 or above, and conda, to install the script.
+You will need Node version 12 or above.
 
 
 

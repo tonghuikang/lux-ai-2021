@@ -15,6 +15,7 @@
 
 # sudo may be required
 npm install -g @lux-ai/2021-challenge@latest
+npm install -g lux-ai-vis
 
 # to install conda
 # https://stackoverflow.com/a/28853163
