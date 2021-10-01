@@ -38,7 +38,7 @@ class City:
         self.fuel = fuel
         self.citytiles: list[CityTile] = []
         self.light_upkeep = light_upkeep
-        self.fuel_needed_for_remaining_nights = -1  # [TODO]
+        self.night_fuel_duration = int(self.fuel // self.light_upkeep)
 
     def _add_city_tile(self, x, y, cooldown):
         ct = CityTile(self.team, self.cityid, x, y, cooldown)
@@ -83,12 +83,29 @@ class CityTile:
 
 class Cargo:
     def __init__(self):
-        self.wood = 0
-        self.coal = 0
-        self.uranium = 0
+        self.wood: int = 0
+        self.coal: int = 0
+        self.uranium: int = 0
 
     def __str__(self) -> str:
         return f"Cargo | Wood: {self.wood}, Coal: {self.coal}, Uranium: {self.uranium}"
+
+    def get_shorthand(self) -> str:
+        total_resources = self.wood + self.coal + self.uranium
+        if total_resources >= 100:
+            total_resources_string = "F"
+        else:
+            total_resources_string = str(total_resources)
+
+        if self.wood > total_resources//2:
+            return f"{total_resources_string}W"
+        if self.coal > total_resources//2:
+            return f"{total_resources_string}C"
+        if self.uranium > total_resources//2:
+            return f"{total_resources_string}U"
+        if total_resources:
+            return f"{total_resources_string}"
+        return ""
 
 
 class Unit:

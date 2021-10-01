@@ -1,4 +1,5 @@
 import time
+from itertools import chain
 from typing import List
 
 import builtins as __builtin__
@@ -15,8 +16,29 @@ def annotate_game_state(game_state: Game, DEBUG=False):
     print("Citytile count: ", game_state.player.city_tile_count)
     print("Unit count: ", len(game_state.player.units))
 
+    if game_state.player_id == 1:
+        # reduce clutter for mirror matchup
+        return []
+
+    annotations = []
+
+    for city in chain(game_state.player.cities.values(), game_state.opponent.cities.values()):
+        for citytile in city.citytiles:
+            if city.night_fuel_duration >= game_state.night_turns_left:
+                annotation = annotate.circle(citytile.pos.x, citytile.pos.y)
+                annotations.append(annotation)
+            else:
+                annotation = annotate.text(citytile.pos.x, citytile.pos.y, str(city.night_fuel_duration), 50)
+                annotations.append(annotation)
+
+
+    for unit in chain(game_state.player.units, game_state.opponent.units):
+        if unit.cargo.get_shorthand():
+            annotation = annotate.text(unit.pos.x, unit.pos.y, unit.cargo.get_shorthand(), 50)
+            annotations.append(annotation)
+
     # you can also read the pickled game_state and print its attributes
-    return []
+    return annotations
 
 
 def annotate_missions(game_state: Game, missions: Missions, DEBUG=False):
@@ -44,7 +66,7 @@ def annotate_missions(game_state: Game, missions: Missions, DEBUG=False):
             annotation = annotate.x(mission.target_position.x, mission.target_position.y)
             annotations.append(annotation)
 
-    annotation = annotate.sidetext("U:{}-{} C:{}-{} G:{}/{} T:{:.3f}".format(
+    annotation = annotate.sidetext("Unit Count: {}-{} Citytiles: {}-{} Groups: {}/{} Runtime: {:.3f}".format(
         len(game_state.player.units), len(game_state.opponent.units),
         len(game_state.player_city_tile_xy_set), len(game_state.opponent_city_tile_xy_set),
         game_state.targeted_cluster_count, game_state.xy_to_resource_group_id.get_group_count(),
