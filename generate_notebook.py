@@ -44,7 +44,8 @@ cells.append(nbf.new_markdown_cell(preamble_agent))
 
 filenames = [
     "agent.py",
-    "actions.py",
+    "make_actions.py",
+    "make_annotations.py",
     "heuristics.py",
     "main.py",
 ]
@@ -93,6 +94,12 @@ This is a replay of the agent fighting against itself.
 The missions of each unit is annotated.
 `X` and `O` indicates target position for the unit to move to.
 In addition, `O` indicates that the unit will build a citytile upon arrival at the tile.
+
+`O` on the city tile indicates that the citytile have enough fuel to last to the end of the game.
+Otherwise, the number of nights it can endure will be indicated on the tile.
+
+The inscription on the unit indicates the amount of total resources it has, and the majority type of resource.
+`F` indicates that it has at least 100 resources. If the unit has moved in the turn, the inscription is annotated on the previous location.
 """
 
 cells.append(nbf.new_markdown_cell(preamble_rendering))

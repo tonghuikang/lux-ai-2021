@@ -120,8 +120,8 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # go to an empty tile and build a citytile
         # print(unit.id, unit.get_cargo_space_left())
         if unit.get_cargo_space_left() == 0 or stay_up_till_dawn:
-            nearest_position, nearest_distance = game_state.get_nearest_empty_tile_and_distance(unit.pos, current_target_position)
-            if stay_up_till_dawn or nearest_distance * 2 <= game_state.turns_to_night - 2:
+            nearest_position, distance_with_features = game_state.get_nearest_empty_tile_and_distance(unit.pos, current_target_position)
+            if stay_up_till_dawn or distance_with_features[0] * 2 <= game_state.turns_to_night - 2:
                 print("plan mission to build citytile", unit.id, unit.pos, "->", nearest_position)
                 mission = Mission(unit.id, nearest_position, unit.build_city())
                 missions.add(mission)
@@ -200,7 +200,7 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
         if direction != "c":
             units_with_mission_but_no_action.discard(unit.id)
             action = unit.move(direction)
-            print("make move", unit.id, unit.pos, direction)
+            print("make move", unit.id, unit.pos, direction, unit.pos.translate(direction, 1))
             actions.append(action)
             continue
 
@@ -231,10 +231,11 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
         if tuple(newpos) in game_state.xy_out_of_map:
             continue
 
-        # discourage if new position is occupied
+        # discourage if new position is occupied, not your city tile and not your current position
         if tuple(newpos) in game_state.occupied_xy_set:
             if tuple(newpos) not in game_state.player_city_tile_xy_set:
-                cost[0] = 2
+                if tuple(newpos) != tuple(unit.pos):
+                    cost[0] = 3
 
         # discourage going into a city tile if you are carrying substantial wood
         if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood >= 60:

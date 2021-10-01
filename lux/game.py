@@ -434,6 +434,10 @@ class Game:
                                 self.opponent_city_tile_xy_set | self.xy_out_of_map) \
                                 - self.player_city_tile_xy_set
 
+        for unit in self.opponent.units:
+            if unit.can_act() and unit.get_cargo_space_left() > 4:
+                # expect opponent unit to move and not occupy the space
+                self.occupied_xy_set.discard(tuple(unit.pos))
 
     def calculate_distance_matrix(self, blockade_multiplier_value=100):
         self.distance_from_edge = self.init_matrix(self.map_height + self.map_width)
@@ -494,8 +498,8 @@ class Game:
                 if (sx,sy) not in self.positions_to_calculate_distances_from:
                     continue
                 blockade_multiplier_value_for_syx = blockade_multiplier_value
-                if (sx,sy) in self.player_units_xy_set:
-                    blockade_multiplier_value_for_syx = 1
+                if (sx,sy) in self.player_city_tile_xy_set:
+                    blockade_multiplier_value_for_syx = 2
 
                 start_pos = (sx,sy)
                 xy_processed = set()
@@ -520,7 +524,7 @@ class Game:
                         if (xx,yy) in self.occupied_xy_set:
                             edge_length = blockade_multiplier_value_for_syx
                         if (xx,yy) in self.player_city_tile_xy_set:
-                            edge_length = blockade_multiplier_value_for_syx
+                            edge_length = blockade_multiplier_value_for_syx * 2
 
                         heapq.heappush(heap, (curdist + edge_length, (xx,yy)))
 
@@ -608,12 +612,13 @@ class Game:
 
 
     def get_nearest_empty_tile_and_distance(self, current_position: Position, current_target: Position=None) -> Tuple[Position, int]:
+        best_distance_with_features = (10**9+7,0,0)
+        nearest_position: Position = current_position
+
         if self.all_resource_amount_matrix[current_position.y, current_position.x] == 0:
             if tuple(current_position) not in self.player_city_tile_xy_set:
-                return current_position, 0
-
-        nearest_distance = 10**9+7
-        nearest_position: Position = current_position
+                best_distance_with_features = (0,0,0)
+                return nearest_position, best_distance_with_features
 
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
@@ -632,9 +637,14 @@ class Game:
                 position = Position(x, y)
                 distance = self.retrieve_distance(current_position.x, current_position.y, position.x, position.y)
 
+                # among tied distances we want to pick a better location
+                distance_with_features = (distance,
+                                          -self.distance_from_edge[y,x],
+                                          self.distance_from_opponent_assets[y,x])
+
                 # update best location
-                if distance < nearest_distance:
-                    nearest_distance = distance
+                if distance_with_features < best_distance_with_features:
+                    best_distance_with_features = distance_with_features
                     nearest_position = position
 
-        return nearest_position, nearest_distance
+        return nearest_position, best_distance_with_features
