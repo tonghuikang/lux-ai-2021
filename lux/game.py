@@ -674,3 +674,18 @@ class Game:
                     nearest_position = position
 
         return nearest_position, best_distance_with_features
+
+
+    def find_nearest_city_requiring_fuel(self, current_position: Position):
+        closest_distance: int = 10**9 + 7
+        closest_position = current_position
+
+        for city in self.player.cities.values():
+            if city.night_fuel_duration < self.night_turns_left:
+                for citytile in city.citytiles:
+                    distance = self.retrieve_distance(current_position.x, current_position.y, citytile.pos.x, citytile.pos.y)
+                    if distance < closest_distance:
+                        closest_distance = distance
+                        closest_position = citytile.pos
+
+        return closest_distance, closest_position

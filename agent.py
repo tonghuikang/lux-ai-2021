@@ -27,6 +27,7 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
 
     print("actions_by_cities", actions_by_cities)
     print("actions_by_units", actions_by_units)
+    print("state_annotations", state_annotations)
     print("mission_annotations", mission_annotations)
     print("movement_annotations", movement_annotations)
     actions = actions_by_cities + actions_by_units + mission_annotations + movement_annotations + state_annotations

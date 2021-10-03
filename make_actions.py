@@ -61,7 +61,8 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         cluster_unit_limit_exceeded = \
             game_state.xy_to_resource_group_id.get_point(tuple(city_tile.pos)) <= len(game_state.resource_leader_to_locating_units[cluster_leader])
         if cluster_unit_limit_exceeded:
-            print("unit_limit_exceeded", city_tile.cityid, tuple(city_tile.pos))
+            print("cluster_unit_limit_exceeded", city_tile.cityid, tuple(city_tile.pos))
+            continue
 
         if player.researched_uranium() and unit_limit_exceeded:
             print("skip city", city_tile.cityid, tuple(city_tile.pos))
@@ -147,12 +148,19 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         best_position, best_cell_value = find_best_cluster(game_state, unit, DEBUG=DEBUG)
         # [TODO] what if best_cell_value is zero
         distance_from_best_position = game_state.retrieve_distance(unit.pos.x, unit.pos.y, best_position.x, best_position.y)
-        print("plan mission adaptative", unit.id, unit.pos, "->", best_position)
-        mission = Mission(unit.id, best_position, None)
+        if best_cell_value > (0,0,0,0):
+            print("plan mission adaptative", unit.id, unit.pos, "->", best_position, best_cell_value)
+            mission = Mission(unit.id, best_position, None)
+            missions.add(mission)
+            unit_ids_with_missions_assigned_this_turn.add(unit.id)
+            continue
+
+        # homing mission
+        homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(unit.pos)
+        print("homing mission", unit.id, unit.pos, "->", homing_position, homing_distance)
+        mission = Mission(unit.id, homing_position, None)
         missions.add(mission)
         unit_ids_with_missions_assigned_this_turn.add(unit.id)
-
-        # [TODO] when you can secure a city all the way to the end of time, do it
 
         # [TODO] just let units die perhaps
 
