@@ -90,6 +90,18 @@ class Cargo:
     def __str__(self) -> str:
         return f"Cargo | Wood: {self.wood}, Coal: {self.coal}, Uranium: {self.uranium}"
 
+    def get_most_common_resource(self) -> str:
+        most_commonn_resource_count = max(self.wood, self.coal, self.uranium)
+
+        if self.wood == most_commonn_resource_count:
+            return "wood"
+        if self.coal == most_commonn_resource_count:
+            return "coal"
+        if self.uranium == most_commonn_resource_count:
+            return "uranium"
+        # error
+        return "wood"
+
     def get_shorthand(self) -> str:
         total_resources = self.wood + self.coal + self.uranium
         if total_resources >= 100:

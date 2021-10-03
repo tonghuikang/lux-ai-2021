@@ -125,7 +125,10 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # print(unit.id, unit.get_cargo_space_left())
         if unit.get_cargo_space_left() == 0 or stay_up_till_dawn:
             nearest_position, distance_with_features = game_state.get_nearest_empty_tile_and_distance(unit.pos, current_target_position)
-            if stay_up_till_dawn or distance_with_features[0] * 2 <= game_state.turns_to_night - 2:
+            if distance_with_features[0] > 5:
+                # not really near
+                pass
+            elif stay_up_till_dawn or distance_with_features[0] * 2 <= game_state.turns_to_night - 2:
                 print("plan mission to build citytile", unit.id, unit.pos, "->", nearest_position)
                 mission = Mission(unit.id, nearest_position, unit.build_city())
                 missions.add(mission)
@@ -196,6 +199,7 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
 
             if action:
                 actions.append(action)
+                unit.cooldown += 2
             del missions[unit.id]
             continue
 
@@ -209,6 +213,63 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             continue
 
         # [TODO] make it possible for units to swap positions
+
+
+    # attempt to eject
+    prev_actions_len = -1
+    while prev_actions_len < len(actions):
+        prev_actions_len = len(actions)
+
+        for unit in player.units:
+            unit: Unit = unit
+            if not unit.can_act():
+                continue
+
+            # source unit not in empty tile
+            if tuple(unit.pos) in game_state.empty_tile_xy_set:
+                continue
+
+            # source unit has almost full resources
+            if unit.get_cargo_space_left() > 4:
+                continue
+
+            for adj_unit in player.units:
+                adj_unit: Unit = adj_unit
+                if not adj_unit.can_act():
+                    continue
+
+                # source unit is not the target unit
+                if adj_unit.id == unit.id:
+                    continue
+
+                # source unit is not beside target unit
+                if adj_unit.pos - unit.pos != 1:
+                    continue
+
+                # adjacent unit is in city tile
+                if tuple(adj_unit.pos) not in game_state.player_city_tile_xy_set:
+                    continue
+
+                # adjacent unit is beside an empty tile
+                if game_state.distance_from_empty_tile[adj_unit.pos.y, adj_unit.pos.x] == 1:
+
+                    # execute actions
+                    action_1 = unit.transfer(adj_unit.id, unit.cargo.get_most_common_resource(), 2000)
+                    for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
+                        xx,yy = adj_unit.pos.x + dx, adj_unit.pos.y + dy
+                        if (xx,yy) in game_state.empty_tile_xy_set:
+                            print("ejecting", unit.id, unit.pos, adj_unit.id, adj_unit.pos)
+                            action_2 = adj_unit.move(direction)
+                            actions.append(action_1)
+                            actions.append(action_2)
+                            unit.cooldown += 2
+                            adj_unit.cooldown += 2
+                            break
+
+                # break loop
+                if not unit.can_act():
+                    break
+
 
     # if the unit is not able to make an action, delete the mission
     for unit_id in units_with_mission_but_no_action:
@@ -240,6 +301,9 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
             if tuple(newpos) not in game_state.player_city_tile_xy_set:
                 if tuple(newpos) != tuple(unit.pos):
                     cost[0] = 3
+
+        if tuple(newpos) in game_state.opponent_city_tile_xy_set:
+            cost[0] = 3
 
         # discourage going into a city tile if you are carrying substantial wood
         if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood >= 60:

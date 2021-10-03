@@ -391,7 +391,7 @@ class Game:
             for x in self.x_iteration_order:
                 if (x,y) in set_object:
                     continue
-                for dy,dx in [(1,0),(0,1),(-1,0),(0,-1)]:
+                for dy,dx in self.dirs_dxdy[:-1]:
                     xx, yy = x+dx, y+dy
                     if (xx,yy) in self.xy_out_of_map:
                         continue
@@ -480,7 +480,7 @@ class Game:
             queue = deque(list(visited))
             while queue:
                 x,y = queue.popleft()
-                for dx,dy in [(0,1), (1,0), (0,-1), (-1,0)]:
+                for dx,dy in self.dirs_dxdy[:-1]:
                     xx, yy = x+dx, y+dy
                     if (xx,yy) in visited:
                         continue
@@ -498,6 +498,7 @@ class Game:
         self.distance_from_opponent_assets = calculate_distance_from_set(self.opponent_units_xy_set | self.opponent_city_tile_xy_set)
 
         self.distance_from_buildable_tile = calculate_distance_from_set(self.buildable_tile_xy_set)
+        self.distance_from_empty_tile = calculate_distance_from_set(self.empty_tile_xy_set)
 
         self.distance_from_floodfill_by_player_city = calculate_distance_from_set(self.floodfill_by_player_city_set)
         self.distance_from_floodfill_by_opponent_city = calculate_distance_from_set(self.floodfill_by_opponent_city_set)
@@ -528,7 +529,7 @@ class Game:
                 start_pos = (sx,sy)
                 xy_processed = set()
 
-                d4 = [(1,0),(0,1),(-1,0),(0,-1)]
+                d4 = self.dirs_dxdy[:-1]
                 heap = [(0, start_pos),]
                 while heap:
                     curdist, (x,y) = heapq.heappop(heap)
@@ -600,7 +601,7 @@ class Game:
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
-                    for dy,dx in [(1,0),(0,1),(-1,0),(0,-1)]:
+                    for dy,dx in self.dirs_dxdy[:-1]:
                         xx, yy = x+dx, y+dy
                         if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
                             self.xy_to_resource_group_id.union((x,y), (xx,yy))
@@ -641,8 +642,9 @@ class Game:
 
         if self.all_resource_amount_matrix[current_position.y, current_position.x] == 0:
             if tuple(current_position) not in self.player_city_tile_xy_set:
-                best_distance_with_features = (0,0,0)
-                return nearest_position, best_distance_with_features
+                if self.distance_from_collectable_resource[current_position.y,current_position.x] == 1:
+                    best_distance_with_features = (0,0,0)
+                    return nearest_position, best_distance_with_features
 
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
