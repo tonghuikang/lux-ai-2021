@@ -163,7 +163,7 @@ cells.append(nbf.new_markdown_cell("# Make Submission"))
 
 zip_code = """\
 !rm snapshots/*.pkl
-!tar --exclude='*.ipynb' --exclude="*.pyc" --exclude="*.pkl" -czf submission.tar.gz *
+!tar --exclude='*.ipynb' --exclude="*.pyc" --exclude="*.pkl" --exclude="replay.json" -czf submission.tar.gz *
 !rm *.py && rm -rf __pycache__/ && rm -rf lux/\
 """
 cells.append(nbf.new_code_cell(zip_code, metadata={"_kg_hide-input": True}))
