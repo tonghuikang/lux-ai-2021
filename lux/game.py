@@ -1,4 +1,3 @@
-import time
 import heapq
 from collections import defaultdict, deque
 from typing import DefaultDict, Dict, List, Tuple, Set
@@ -385,6 +384,24 @@ class Game:
         self.convert_into_sets()
 
 
+    def get_floodfill(self, set_object):
+        # return the largest connected graph ignoring blockers
+        ds = DisjointSet()
+        for y in self.y_iteration_order:
+            for x in self.x_iteration_order:
+                if (x,y) in set_object:
+                    continue
+                for dy,dx in [(1,0),(0,1),(-1,0),(0,-1)]:
+                    xx, yy = x+dx, y+dy
+                    if (xx,yy) in self.xy_out_of_map:
+                        continue
+                    if (xx,yy) in set_object:
+                        continue
+                    ds.union((x,y), (xx,yy))
+
+        return set(max(ds.get_groups().values(), key=len))
+
+
     def populate_set(self, matrix, set_object):
         # modifies the set_object in place and add nonzero items in the matrix
         for y in self.y_iteration_order:
@@ -434,10 +451,14 @@ class Game:
                                 self.opponent_city_tile_xy_set | self.xy_out_of_map) \
                                 - self.player_city_tile_xy_set
 
+        self.floodfill_by_player_city_set = self.get_floodfill(self.player_city_tile_xy_set)
+        self.floodfill_by_opponent_city_set = self.get_floodfill(self.opponent_city_tile_xy_set)
+
         for unit in self.opponent.units:
             if unit.can_act() and unit.get_cargo_space_left() > 4:
                 # expect opponent unit to move and not occupy the space
                 self.occupied_xy_set.discard(tuple(unit.pos))
+
 
     def calculate_distance_matrix(self, blockade_multiplier_value=100):
         self.distance_from_edge = self.init_matrix(self.map_height + self.map_width)
@@ -477,6 +498,9 @@ class Game:
         self.distance_from_opponent_assets = calculate_distance_from_set(self.opponent_units_xy_set | self.opponent_city_tile_xy_set)
 
         self.distance_from_buildable_tile = calculate_distance_from_set(self.buildable_tile_xy_set)
+
+        self.distance_from_floodfill_by_player_city = calculate_distance_from_set(self.floodfill_by_player_city_set)
+        self.distance_from_floodfill_by_opponent_city = calculate_distance_from_set(self.floodfill_by_opponent_city_set)
 
         # calculating distances from every unit positions and its adjacent positions
         # avoid blocked places as much as possible

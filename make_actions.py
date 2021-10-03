@@ -114,6 +114,10 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # avoid sharing the same target
         game_state.repopulate_targets(missions)
 
+        # do not make missions from your fortress
+        if game_state.distance_from_floodfill_by_player_city[unit.pos.y, unit.pos.x] > 1:
+            continue
+
         # if the unit is waiting for dawn at the side of resource
         stay_up_till_dawn = (unit.get_cargo_space_left() <= 4 and (not game_state.is_day_time or game_state.turn%40 == 0))
         # if the unit is full and it is going to be day the next few days
