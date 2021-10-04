@@ -78,17 +78,6 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
             elif target_leader == current_leader:
                 target_bonus = 2
 
-            # prefer empty tile because you can build afterwards quickly
-            empty_tile_bonus = 1/(0.5+game_state.distance_from_buildable_tile[y,x])
-
-            # no empty tile preference if resource is not wood
-            for dx,dy in game_state.dirs_dxdy:
-                xx, yy = x+dx, y+dy
-                if (xx,yy) in game_state.wood_exist_xy_set:
-                    break
-            else:
-                empty_tile_bonus = 1/(0.5+max(1,game_state.distance_from_buildable_tile[y,x]))
-
             # scoring function
             if game_state.convolved_collectable_tiles_matrix[y,x] > 0:
                 # using path distance
@@ -98,12 +87,9 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
                 # estimate target score
                 if distance <= unit.travel_range:
                     cell_value = (target_bonus,
-                                  empty_tile_bonus \
-                                      * game_state.convolved_collectable_tiles_matrix[y,x] ** (game_state.distance_from_buildable_tile[y,x] <= 1) \
-                                      * distance ** distance_multiplier,
-                                  -game_state.distance_from_opponent_assets[y,x],
-                                  game_state.distance_from_edge[y,x])
-                    score_matrix_wrt_pos[y,x] = cell_value[0]*1000 + cell_value[1]*100 + cell_value[2]*10 + cell_value[3]
+                                  - game_state.distance_from_floodfill_by_empty_tile[y,x],
+                                  - distance - game_state.distance_from_opponent_assets[y,x] + game_state.distance_from_edge[y,x])
+                    score_matrix_wrt_pos[y,x] = cell_value[2]
 
                     # update best target
                     if cell_value > best_cell_value:

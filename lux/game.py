@@ -457,6 +457,10 @@ class Game:
 
         self.floodfill_by_player_city_set = self.get_floodfill(self.player_city_tile_xy_set)
         self.floodfill_by_opponent_city_set = self.get_floodfill(self.opponent_city_tile_xy_set)
+        self.floodfill_by_either_city_set = self.get_floodfill(self.player_city_tile_xy_set | self.opponent_city_tile_xy_set)
+
+        self.floodfill_by_empty_tile_set = self.get_floodfill(
+            self.player_city_tile_xy_set | self.opponent_city_tile_xy_set | self.wood_exist_xy_set | self.coal_exist_xy_set | self.uranium_exist_xy_set)
 
         for unit in self.opponent.units:
             if unit.can_act() and unit.get_cargo_space_left() > 4:
@@ -494,7 +498,7 @@ class Game:
                         visited.add((xx,yy))
             return matrix
 
-        # calculate distance from resource (with fulfilled research requirements)
+        # calculate distance from resource (with projected research requirements)
         self.distance_from_collectable_resource = calculate_distance_from_set(self.collectable_tiles_xy_set)
 
         # calculate distance from city or tiles
@@ -506,6 +510,8 @@ class Game:
 
         self.distance_from_floodfill_by_player_city = calculate_distance_from_set(self.floodfill_by_player_city_set)
         self.distance_from_floodfill_by_opponent_city = calculate_distance_from_set(self.floodfill_by_opponent_city_set)
+        self.distance_from_floodfill_by_either_city = calculate_distance_from_set(self.floodfill_by_either_city_set)
+        self.distance_from_floodfill_by_empty_tile = calculate_distance_from_set(self.floodfill_by_empty_tile_set)
 
         # calculating distances from every unit positions and its adjacent positions
         # avoid blocked places as much as possible
@@ -552,8 +558,8 @@ class Game:
                         edge_length = 1
                         if (xx,yy) in self.occupied_xy_set:
                             edge_length = blockade_multiplier_value_for_syx
-                        if (xx,yy) in self.player_city_tile_xy_set:
-                            edge_length = blockade_multiplier_value_for_syx * 2
+                        if (xx,yy) in self.opponent_city_tile_xy_set:
+                            edge_length = blockade_multiplier_value_for_syx * 50
 
                         heapq.heappush(heap, (curdist + edge_length, (xx,yy)))
 
@@ -669,8 +675,7 @@ class Game:
 
                 # among tied distances we want to pick a better location
                 distance_with_features = (distance,
-                                          self.distance_from_opponent_assets[y,x],
-                                          -self.distance_from_edge[y,x])
+                                          self.distance_from_opponent_assets[y,x] - self.distance_from_edge[y,x])
 
                 # update best location
                 if distance_with_features < best_distance_with_features:

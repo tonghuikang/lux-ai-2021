@@ -64,9 +64,11 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
             continue
 
         if not player.researched_uranium() and game_state.turns_to_night < 3:
-            print("research and dont build units at night", tuple(city_tile.pos))
-            do_research(city_tile)
-            continue
+            # give up researching to allow building of units at turn 359
+            if game_state.turn < 350:
+                print("research and dont build units at night", tuple(city_tile.pos))
+                do_research(city_tile)
+                continue
 
         nearest_resource_distance = game_state.distance_from_collectable_resource[city_tile.pos.y, city_tile.pos.x]
         travel_range = game_state.turns_to_night // GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
@@ -82,9 +84,11 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
             continue
 
         if not player.researched_uranium():
-            print("research", tuple(city_tile.pos))
-            do_research(city_tile)
-            continue
+            # give up researching to allow building of units at turn 359
+            if game_state.turn < 350:
+                print("research", tuple(city_tile.pos))
+                do_research(city_tile)
+                continue
 
         # build workers at end of game
         if game_state.turn == 359:
@@ -168,8 +172,6 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
             missions.add(mission)
             unit_ids_with_missions_assigned_this_turn.add(unit.id)
             continue
-
-        # [TODO] just let units die perhaps
 
     return missions
 
