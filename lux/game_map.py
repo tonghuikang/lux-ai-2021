@@ -19,7 +19,7 @@ class Cell:
         self.pos = Position(x, y)
         self.resource: Resource = None
         self.citytile: CityTile = None
-        self.unit: Unit = None
+        self.unit: Unit = None  # may have multiple units
         self.road = 0
 
     def has_resource(self):

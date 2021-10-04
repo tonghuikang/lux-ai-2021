@@ -340,10 +340,8 @@ class Game:
 
                 if cell.unit:
                     is_empty = False
-                    if cell.unit.team == self.player_id:
-                        self.player_units_matrix[y,x] += 1
-                    else:   # unit belongs to opponent
-                        self.opponent_units_matrix[y,x] += 1
+                    # unit counting method implemented later
+                    # cell.unit only contain one unit even though multiple units can stay in citytile
 
                 if cell.has_resource():
                     is_empty = False
@@ -369,6 +367,12 @@ class Game:
 
                 if is_buildable:
                     self.buildable_tile_matrix[y,x] += 1
+
+        for unit in self.player.units:
+            self.player_units_matrix[unit.pos.y,unit.pos.x] += 1
+
+        for unit in self.opponent.units:
+            self.opponent_units_matrix[unit.pos.y,unit.pos.x] += 1
 
         # binary matrices
         self.wood_exist_matrix = (self.wood_amount_matrix > 0).astype(int)
@@ -665,8 +669,8 @@ class Game:
 
                 # among tied distances we want to pick a better location
                 distance_with_features = (distance,
-                                          -self.distance_from_edge[y,x],
-                                          self.distance_from_opponent_assets[y,x])
+                                          self.distance_from_opponent_assets[y,x],
+                                          -self.distance_from_edge[y,x])
 
                 # update best location
                 if distance_with_features < best_distance_with_features:
