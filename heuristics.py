@@ -47,6 +47,7 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
 
             # what not to target
             if (x,y) in game_state.targeted_xy_set:
+                # [TODO] allow exception for overridding closer targets
                 continue
             if (x,y) in game_state.targeted_for_building_xy_set:
                 continue
@@ -82,13 +83,13 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
             if game_state.convolved_collectable_tiles_matrix[y,x] > 0:
                 # using path distance
                 distance = game_state.retrieve_distance(unit.pos.x, unit.pos.y, x, y)
-                distance = max(0.5, distance)  # prevent zero error
 
                 # estimate target score
                 if distance <= unit.travel_range:
                     cell_value = (target_bonus,
                                   - game_state.distance_from_floodfill_by_empty_tile[y,x],
-                                  - distance - game_state.distance_from_opponent_assets[y,x] + game_state.distance_from_edge[y,x])
+                                  - distance - game_state.distance_from_opponent_assets[y,x] + game_state.distance_from_edge[y,x]
+                                  - game_state.opponent_units_matrix[y,x] * 2)
                     score_matrix_wrt_pos[y,x] = cell_value[2]
 
                     # update best target

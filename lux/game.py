@@ -462,12 +462,6 @@ class Game:
         self.floodfill_by_empty_tile_set = self.get_floodfill(
             self.player_city_tile_xy_set | self.opponent_city_tile_xy_set | self.wood_exist_xy_set | self.coal_exist_xy_set | self.uranium_exist_xy_set)
 
-        for unit in self.opponent.units:
-            if unit.can_act() and unit.get_cargo_space_left() > 4:
-                # expect opponent unit to move and not occupy the space
-                self.occupied_xy_set.discard(tuple(unit.pos))
-
-
     def calculate_distance_matrix(self, blockade_multiplier_value=100):
         self.distance_from_edge = self.init_matrix(self.map_height + self.map_width)
         for y in range(self.map_height):
@@ -533,8 +527,6 @@ class Game:
                 if (sx,sy) not in self.positions_to_calculate_distances_from:
                     continue
                 blockade_multiplier_value_for_syx = blockade_multiplier_value
-                if (sx,sy) in self.player_city_tile_xy_set:
-                    blockade_multiplier_value_for_syx = 2
 
                 start_pos = (sx,sy)
                 xy_processed = set()
@@ -595,6 +587,16 @@ class Game:
         self.populate_set(self.collectable_tiles_matrix, self.collectable_tiles_xy_set)
         self.convolved_collectable_tiles_xy_set = set()  # include adjacent
         self.populate_set(self.convolved_collectable_tiles_matrix, self.convolved_collectable_tiles_xy_set)
+
+        for unit in self.opponent.units:
+            # if the opponent can move
+            if unit.can_act():
+                # if the opponent is not collecting resources
+                if tuple(unit.pos) not in self.convolved_collectable_tiles_xy_set:
+                    # if the opponent is not in the city
+                    if tuple(unit.pos) not in self.opponent_city_tile_xy_set:
+                        # expect opponent unit to move and not occupy the space
+                        self.occupied_xy_set.discard(tuple(unit.pos))
 
 
     def calculate_resource_groups(self):

@@ -367,7 +367,7 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
         # discourage going into a city tile if you are carrying substantial wood
         if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood >= 60:
             # only in early game
-            if game_state.turn <= 40:
+            if game_state.turn <= 80:
                 cost[0] = 1
 
         # path distance as main differentiator
