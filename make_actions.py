@@ -42,6 +42,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         action = city_tile.build_worker()
         actions.append(action)
         units_cnt += 1
+        game_state.citytiles_with_new_units_xy_set.add(tuple(city_tile.pos))
 
     city_tiles: List[CityTile] = []
     for city in player.cities.values():
@@ -127,6 +128,22 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # do not make missions from your fortress
         if game_state.distance_from_floodfill_by_player_city[unit.pos.y, unit.pos.x] > 1:
             continue
+
+        # do not make missions if you could mine uranium from a citytile that is not fueled to the end
+        if game_state.matrix_player_cities_nights_of_fuel_required_for_game[unit.pos.y, unit.pos.x] > 0:
+            if game_state.player.researched_uranium():
+                if game_state.convolved_uranium_exist_matrix[unit.pos.y, unit.pos.x] > 0:
+                    if tuple(unit.pos) not in game_state.citytiles_with_new_units_xy_set:
+                        # unless the citytile is producing new units
+                        continue
+
+        # do not make missions if you could mine coal from a citytile that is not fueled for the night
+        if game_state.matrix_player_cities_nights_of_fuel_required_for_night[unit.pos.y, unit.pos.x] > 0:
+            if game_state.player.researched_coal():
+                if game_state.convolved_coal_exist_matrix[unit.pos.y, unit.pos.x] > 0:
+                    if tuple(unit.pos) not in game_state.citytiles_with_new_units_xy_set:
+                        # unless the citytile is producing new units
+                        continue
 
         # if the unit is waiting for dawn at the side of resource
         stay_up_till_dawn = (unit.get_cargo_space_left() <= 4 and (game_state.turn%40 >= 36 or game_state.turn%40 == 0))

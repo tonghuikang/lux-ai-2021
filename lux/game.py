@@ -303,6 +303,7 @@ class Game:
 
         self.repopulate_targets(missions)
 
+        self.citytiles_with_new_units_xy_set: Set = set()
         self.heuristics_from_positions: Dict = dict()
 
 
@@ -379,6 +380,10 @@ class Game:
         self.coal_exist_matrix = (self.coal_amount_matrix > 0).astype(int)
         self.uranium_exist_matrix = (self.uranium_amount_matrix > 0).astype(int)
         self.all_resource_exist_matrix = (self.all_resource_amount_matrix > 0).astype(int)
+
+        self.convolved_wood_exist_matrix = self.convolve(self.wood_amount_matrix)
+        self.convolved_coal_exist_matrix = self.convolve(self.coal_exist_matrix)
+        self.convolved_uranium_exist_matrix = self.convolve(self.uranium_exist_matrix)
 
         # positive if on empty cell and beside the resource
         self.wood_side_matrix = self.convolve(self.wood_exist_matrix) * self.empty_tile_matrix
@@ -598,6 +603,15 @@ class Game:
                         # expect opponent unit to move and not occupy the space
                         self.occupied_xy_set.discard(tuple(unit.pos))
 
+        self.matrix_player_cities_nights_of_fuel_required_for_game = self.init_matrix()
+        self.matrix_player_cities_nights_of_fuel_required_for_night = self.init_matrix()
+        for city in self.player.cities.values():
+            for citytile in city.citytiles:
+                self.matrix_player_cities_nights_of_fuel_required_for_game[citytile.pos.y, citytile.pos.x] = \
+                    self.night_turns_left - city.night_fuel_duration
+                self.matrix_player_cities_nights_of_fuel_required_for_night[citytile.pos.y, citytile.pos.x] = \
+                    10 - city.night_fuel_duration
+
 
     def calculate_resource_groups(self):
         # compute join the resource cluster and calculate the amount of resource
@@ -688,6 +702,8 @@ class Game:
 
 
     def find_nearest_city_requiring_fuel(self, current_position: Position):
+        # could use matrix_player_cities_requiring_fuel now
+        # probably should make a general function that maps each location is nearest suitable location
         closest_distance: int = 10**9 + 7
         closest_position = current_position
 
