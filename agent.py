@@ -7,7 +7,8 @@ import builtins as __builtin__
 from lux.game import Game, Missions
 
 from make_actions import make_city_actions, make_unit_missions, make_unit_actions
-from make_annotations import annotate_game_state, annotate_missions, annotate_movements
+from make_annotations import annotate_game_state, annotate_missions, annotate_movements, filter_cell_annotations
+
 
 game_state = Game()
 missions = Missions()
@@ -31,6 +32,7 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     print("mission_annotations", mission_annotations)
     print("movement_annotations", movement_annotations)
     actions = actions_by_cities + actions_by_units + mission_annotations + movement_annotations + state_annotations
+    actions = filter_cell_annotations(actions)
     return actions, game_state, missions
 
 

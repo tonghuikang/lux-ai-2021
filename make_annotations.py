@@ -92,3 +92,16 @@ def annotate_movements(game_state: Game, actions_by_units: List[str]):
         annotations.append(annotation)
 
     return annotations
+
+
+def filter_cell_annotations(actions: List[str]):
+    annotated_cell_xy_set = set()
+    filtered_actions: List[str] = []
+    for action in actions:
+        instruction, *info = action.split()
+        if instruction == "dt":
+            if (info[0],info[1]) in annotated_cell_xy_set:
+                continue
+            annotated_cell_xy_set.add((info[0],info[1]))
+        filtered_actions.append(action)
+    return filtered_actions

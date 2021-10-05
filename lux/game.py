@@ -477,7 +477,7 @@ class Game:
 
         def calculate_distance_from_set(relevant_set):
             visited = set()
-            matrix = self.init_matrix(default_value=-1)
+            matrix = self.init_matrix(default_value=99)
             for y in self.y_iteration_order:
                 for x in self.x_iteration_order:
                     if (x,y) in relevant_set:

@@ -31,18 +31,21 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
 
     actions: List[str] = []
 
-    def do_research(city_tile: CityTile):
+    def do_research(city_tile: CityTile, annotation: str=""):
         action = city_tile.research()
         game_state.player.research_points += 1
         actions.append(action)
-        actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, "R"))
+        if annotation:
+            actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, annotation))
 
-    def build_workers(city_tile: CityTile):
+    def build_workers(city_tile: CityTile, annotation: str=""):
         nonlocal units_cnt
         action = city_tile.build_worker()
         actions.append(action)
         units_cnt += 1
         game_state.citytiles_with_new_units_xy_set.add(tuple(city_tile.pos))
+        if annotation:
+            actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, annotation))
 
     city_tiles: List[CityTile] = []
     for city in player.cities.values():
@@ -61,40 +64,42 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         unit_limit_exceeded = (units_cnt >= units_cap)
 
         if player.researched_uranium() and unit_limit_exceeded:
-            print("skip city", city_tile.cityid, tuple(city_tile.pos))
+            # you cannot build units because you have reached your limits
+            print("limit reached", city_tile.cityid, tuple(city_tile.pos))
             continue
 
-        if not player.researched_uranium() and game_state.turns_to_night < 3:
-            # give up researching to allow building of units at turn 359
-            if game_state.turn < 350:
-                print("research and dont build units at night", tuple(city_tile.pos))
-                do_research(city_tile)
-                continue
-
         nearest_resource_distance = game_state.distance_from_collectable_resource[city_tile.pos.y, city_tile.pos.x]
-        travel_range = game_state.turns_to_night // GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
-        resource_in_travel_range = nearest_resource_distance < travel_range
+        travel_range = 1 + game_state.turns_to_night // GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
+        resource_in_travel_range = nearest_resource_distance <= travel_range
 
         cluster_leader = game_state.xy_to_resource_group_id.find(tuple(city_tile.pos))
         cluster_unit_limit_exceeded = \
             game_state.xy_to_resource_group_id.get_point(tuple(city_tile.pos)) <= len(game_state.resource_leader_to_locating_units[cluster_leader])
 
         if resource_in_travel_range and not unit_limit_exceeded and not cluster_unit_limit_exceeded:
-            print("build_worker", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
-            build_workers(city_tile)
+            print("build_worker WA", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
+            build_workers(city_tile, "WA")
+            continue
+
+        # allow cities to deliver even if cluster_unit_limit_exceeded
+        if player.researched_uranium() and resource_in_travel_range:
+            print("supply workers WS", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
+            build_workers(city_tile, "WS")
             continue
 
         if not player.researched_uranium():
             # give up researching to allow building of units at turn 359
             if game_state.turn < 350:
-                print("research", tuple(city_tile.pos))
-                do_research(city_tile)
+                print("research RA", tuple(city_tile.pos))
+                do_research(city_tile, "RA")
                 continue
+            else:
+                actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, "NE"))
 
         # build workers at end of game
         if game_state.turn == 359:
-            print("build_worker", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
-            build_workers(city_tile)
+            print("build_worker WE", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
+            build_workers(city_tile, "WE")
             continue
 
         # otherwise don't do anything
@@ -125,8 +130,8 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # avoid sharing the same target
         game_state.repopulate_targets(missions)
 
-        # do not make missions from your fortress
-        if game_state.distance_from_floodfill_by_player_city[unit.pos.y, unit.pos.x] > 1:
+        # do not make missions from a fortress
+        if game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] > 1:
             continue
 
         # do not make missions if you could mine uranium from a citytile that is not fueled to the end
@@ -297,7 +302,7 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
                             action_2 = adj_unit.move(direction)
                             actions.append(action_1)
                             actions.append(action_2)
-                            actions.append(annotate.text(unit.pos.x, unit.pos.y, "E"))
+                            actions.append(annotate.text(unit.pos.x, unit.pos.y, "FJ"))
                             unit.cooldown += 2
                             adj_unit.cooldown += 2
                             game_state.player_units_matrix[adj_unit.pos.y,adj_unit.pos.x] -= 1
@@ -308,23 +313,28 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
                     break
 
 
+    def make_random_move(unit: Unit, annotation: str = ""):
+        for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
+            xx,yy = unit.pos.x + dx, unit.pos.y + dy
+            if (xx,yy) not in game_state.occupied_xy_set:
+                game_state.occupied_xy_set.add((xx,yy))
+                action = unit.move(direction)
+                actions.append(action)
+                if annotation:
+                    actions.append(annotate.text(unit.pos.x, unit.pos.y, annotation))
+                unit.cooldown += 2
+                game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
+                break
+
+
     # no cluster rule
     for unit in player.units:
         unit: Unit = unit
         if not unit.can_act():
             continue
         if game_state.player_units_matrix[unit.pos.y,unit.pos.x] > 1:
-            for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
-                xx,yy = unit.pos.x + dx, unit.pos.y + dy
-                if (xx,yy) not in game_state.occupied_xy_set:
-                    print("dispersing", unit.id, unit.pos)
-                    game_state.occupied_xy_set.add((xx,yy))
-                    action = unit.move(direction)
-                    actions.append(action)
-                    actions.append(annotate.text(unit.pos.x, unit.pos.y, "D"))
-                    unit.cooldown += 2
-                    game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
-                    break
+            print("dispersing", unit.id, unit.pos)
+            make_random_move(unit, "KD")
 
 
     # no sitting duck
@@ -334,17 +344,25 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             continue
         if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
             continue
-        for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
-            xx,yy = unit.pos.x + dx, unit.pos.y + dy
-            if (xx,yy) not in game_state.occupied_xy_set:
-                print("unseating sitting duck", unit.id, unit.pos)
-                game_state.occupied_xy_set.add((xx,yy))
-                action = unit.move(direction)
-                actions.append(action)
-                actions.append(annotate.text(unit.pos.x, unit.pos.y, "S"))
-                unit.cooldown += 2
-                game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
-                break
+        make_random_move(unit, "KS")
+
+
+    # if you have near full resources but not moving, dump it into a nearby citytile
+    for unit in player.units:
+        unit: Unit = unit
+        if not unit.can_act():
+            continue
+
+        # check for full resources
+        if unit.get_cargo_space_left() > 4:
+            continue
+        # if you are in our fortress, dump only if the wood is more than 450
+        if game_state.distance_from_floodfill_by_player_city[unit.pos.y, unit.pos.x] >= 2:
+            if game_state.wood_amount_matrix[unit.pos.y, unit.pos.x] >= 450:
+                make_random_move(unit, "FA")
+        # if you are in a fortress that just not just made up of our citytiles
+        elif game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] >= 2:
+            make_random_move(unit, "FB")
 
 
     # if the unit is not able to make an action, delete the mission
