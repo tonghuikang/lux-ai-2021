@@ -712,16 +712,21 @@ class Game:
         return nearest_position, best_distance_with_features
 
 
-    def find_nearest_city_requiring_fuel(self, current_position: Position):
-        # could use matrix_player_cities_requiring_fuel now
-        # probably should make a general function that maps each location is nearest suitable location
+    def find_nearest_city_requiring_fuel(self, current_position: Position, require_reachable=True, minimum_size=0, maximum_distance=100):
         closest_distance: int = 10**9 + 7
         closest_position = current_position
 
         for city in self.player.cities.values():
+            if len(city.citytiles) < minimum_size:
+                continue
             if city.night_fuel_duration < self.night_turns_left:
                 for citytile in city.citytiles:
                     distance = self.retrieve_distance(current_position.x, current_position.y, citytile.pos.x, citytile.pos.y)
+                    if require_reachable:
+                        if self.turns_to_night + (city.night_fuel_duration // 10)*40 + city.night_fuel_duration <= distance * 2:
+                            continue
+                    if distance > maximum_distance:
+                        continue
                     if distance < closest_distance:
                         closest_distance = distance
                         closest_position = citytile.pos

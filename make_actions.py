@@ -175,12 +175,22 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
                 # take action and not make missions if already at position
                 continue
 
+        # preemptive homing mission
+        if unit.cargo.uranium >= 90:
+            # if there is a citytile nearby already
+            if game_state.distance_from_floodfill_by_player_city[unit.pos.y, unit.pos.x] <= 2:
+                homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
+                    unit.pos, require_reachable=True, minimum_size=5, maximum_distance=10)
+                if unit.pos != homing_position:
+                    mission = Mission(unit.id, homing_position, None)
+                    missions.add(mission)
+                    unit_ids_with_missions_assigned_this_turn.add(unit.id)
+
         if unit.id in missions:
             # the mission will be recaluated if the unit fails to make a move after make_unit_actions
             continue
 
         best_position, best_cell_value = find_best_cluster(game_state, unit, DEBUG=DEBUG)
-        # [TODO] what if best_cell_value is zero
         distance_from_best_position = game_state.retrieve_distance(unit.pos.x, unit.pos.y, best_position.x, best_position.y)
         if best_cell_value > [0,0,0,0]:
             print("plan mission adaptative", unit.id, unit.pos, "->", best_position, best_cell_value)
