@@ -36,10 +36,19 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
     # calculate how resource tiles and how many units on the current cluster
     current_leader = game_state.xy_to_resource_group_id.find(tuple(unit.pos))
     units_mining_on_current_cluster = game_state.resource_leader_to_locating_units[current_leader] & game_state.resource_leader_to_targeting_units[current_leader]
-    if len(units_mining_on_current_cluster) >= 1:
-        consider_different_cluster = True
     resource_size_of_current_cluster = game_state.xy_to_resource_group_id.get_point(current_leader)
+
+    # only consider other cluster if another unit is targeting and mining in the current cluster
+    if len(units_mining_on_current_cluster) >= 1:
+        if len(units_mining_on_current_cluster) >= resource_size_of_current_cluster // 3:
+            # start considering if there are more than 1/3 mining
+            consider_different_cluster = True
+        if len(units_mining_on_current_cluster) >= 6:
+            # definitely consider if your current cluster has more than six workers
+            consider_different_cluster = True
+
     if len(units_mining_on_current_cluster) >= resource_size_of_current_cluster:
+        # must consider if you have more than enough workers in the current cluster
         consider_different_cluster_must = True
 
     for y in game_state.y_iteration_order:
@@ -58,6 +67,8 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
                 if (x,y) in game_state.player_city_tile_xy_set:
                     continue
 
+            distance = game_state.retrieve_distance(unit.pos.x, unit.pos.y, x, y)
+
             # cluster targeting logic
             target_bonus = 1
             target_leader = game_state.xy_to_resource_group_id.find((x,y))
@@ -75,16 +86,30 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
                                        (1 + len(game_state.resource_leader_to_locating_units[target_leader] &
                                                 game_state.resource_leader_to_targeting_units[target_leader]))
 
-                    if consider_different_cluster_must:
-                        target_bonus = target_bonus * 100
+                    # do not target if you are far from being the cloest unit to the resource
+                    distance_bonus = game_state.distance_from_player_assets[y,x]/max(1,distance)
+                    target_bonus = target_bonus * distance_bonus**2
+
+                    if distance_bonus < 1/2:
+                        # if you are far from being the closest to the new cluster, do not target
+                        target_bonus = 1
+
+                    if distance_bonus == 1:
+                        target_bonus = target_bonus*2
+
+            if consider_different_cluster_must:
+                # enforce targeting of other clusters
+                target_bonus = target_bonus * 100
 
             elif target_leader == current_leader:
                 target_bonus = 2
 
-            # scoring function
+            # only target cells where you can collect resources
             if game_state.convolved_collectable_tiles_matrix[y,x] > 0:
-                # using path distance
-                distance = game_state.retrieve_distance(unit.pos.x, unit.pos.y, x, y)
+
+                # do not plan long missions in initial turns
+                if game_state.turn < 40 and distance > 1+game_state.player.city_tile_count*2:
+                    continue
 
                 # estimate target score
                 if distance <= unit.travel_range:

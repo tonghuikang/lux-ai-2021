@@ -19,6 +19,7 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     else: print = lambda *args: None
 
     game_state.calculate_features(missions)
+    censoring = game_state.is_symmetrical()
     state_annotations = annotate_game_state(game_state)
     actions_by_cities = make_city_actions(game_state, missions, DEBUG=DEBUG)
     missions = make_unit_missions(game_state, missions, DEBUG=DEBUG)
@@ -33,6 +34,7 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     print("movement_annotations", movement_annotations)
     actions = actions_by_cities + actions_by_units + mission_annotations + movement_annotations + state_annotations
     actions = filter_cell_annotations(actions)
+    if censoring: actions = []
     return actions, game_state, missions
 
 

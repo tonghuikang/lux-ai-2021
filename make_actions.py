@@ -56,8 +56,13 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
     if not city_tiles:
         return []
 
-    city_tiles.sort(key=lambda city_tile:
-        (city_tile.pos.x*game_state.x_order_coefficient, city_tile.pos.y*game_state.y_order_coefficient))
+    city_tiles.sort(key=lambda city_tile:(
+        - game_state.distance_from_player_units[city_tile.pos.y,city_tile.pos.x],
+        - game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x],
+        - game_state.distance_from_collectable_resource[city_tile.pos.y,city_tile.pos.x],
+        - game_state.distance_from_edge[city_tile.pos.y,city_tile.pos.x],
+        city_tile.pos.x * game_state.x_order_coefficient,
+        city_tile.pos.y * game_state.y_order_coefficient))
 
     for city_tile in city_tiles:
         if not city_tile.can_act():
@@ -86,13 +91,17 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
 
         # allow cities to build workers even if cluster_unit_limit_exceeded, if research limit is reached
         if player.researched_uranium() and resource_in_travel_range:
-            print("supply workers WS", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
-            build_workers(city_tile, "WS")
-            continue
+            # but do not build workers beside wood to conserve wood
+            if game_state.wood_side_matrix[city_tile.pos.y, city_tile.pos.x] == 0:
+                print("supply workers WS", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
+                build_workers(city_tile, "WS")
+                continue
 
         if not player.researched_uranium():
             # give up researching to allow building of units at turn 359
-            if game_state.turn < 350:
+            if game_state.turn < 10:
+                actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, "NS"))
+            elif game_state.turn < 350:
                 print("research RA", tuple(city_tile.pos))
                 do_research(city_tile, "RA")
                 continue
@@ -269,9 +278,14 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
 
 
     # attempt to eject
+    # should part of cluster targeting logic
     prev_actions_len = -1
     while prev_actions_len < len(actions):
         prev_actions_len = len(actions)
+
+        if game_state.turn <= 40:
+            # do not eject before turn 40
+            break
 
         for unit in player.units:
             unit: Unit = unit

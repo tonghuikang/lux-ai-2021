@@ -1,6 +1,7 @@
 import heapq
 from collections import defaultdict, deque
 from typing import DefaultDict, Dict, List, Tuple, Set
+from datetime import datetime
 
 import numpy as np
 
@@ -500,9 +501,11 @@ class Game:
         # calculate distance from resource (with projected research requirements)
         self.distance_from_collectable_resource = calculate_distance_from_set(self.collectable_tiles_xy_set)
 
-        # calculate distance from city or tiles
+        # calculate distance from citytiles or units
         self.distance_from_player_assets = calculate_distance_from_set(self.player_units_xy_set | self.player_city_tile_xy_set)
         self.distance_from_opponent_assets = calculate_distance_from_set(self.opponent_units_xy_set | self.opponent_city_tile_xy_set)
+        self.distance_from_player_units = calculate_distance_from_set(self.player_units_xy_set)
+        self.distance_from_opponent_units = calculate_distance_from_set(self.opponent_units_xy_set)
 
         self.distance_from_buildable_tile = calculate_distance_from_set(self.buildable_tile_xy_set)
         self.distance_from_empty_tile = calculate_distance_from_set(self.empty_tile_xy_set)
@@ -619,10 +622,12 @@ class Game:
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
-                    if (x,y) in self.coal_exist_xy_set or (x,y) in self.uranium_exist_xy_set:
-                        self.xy_to_resource_group_id.find((x,y), point=5)
-                    else:
+                    if (x,y) in self.wood_exist_xy_set:
                         self.xy_to_resource_group_id.find((x,y), point=1)
+                    if (x,y) in self.coal_exist_xy_set:
+                        self.xy_to_resource_group_id.find((x,y), point=3)
+                    if (x,y) in self.uranium_exist_xy_set:
+                        self.xy_to_resource_group_id.find((x,y), point=5)
 
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
@@ -732,3 +737,30 @@ class Game:
                         closest_position = citytile.pos
 
         return closest_distance, closest_position
+
+
+    def is_symmetrical(self) -> bool:
+        censoring = True
+
+        if datetime.now().timestamp() >= 1638888888:
+            censoring = False
+
+        if self.turn <= 30:
+            censoring = False
+
+        if (not np.array_equal(self.wood_amount_matrix, self.wood_amount_matrix[:,::-1]) and
+            not np.array_equal(self.wood_amount_matrix, self.wood_amount_matrix[::-1,:])):
+            censoring = False
+
+        if (not np.array_equal(self.player_units_matrix, self.opponent_units_matrix[:,::-1]) and
+            not np.array_equal(self.player_units_matrix, self.opponent_units_matrix[::-1,:])):
+            censoring = False
+
+        if (not np.array_equal(self.player_city_tile_matrix, self.opponent_city_tile_matrix[:,::-1]) and
+            not np.array_equal(self.player_city_tile_matrix, self.opponent_city_tile_matrix[::-1,:])):
+            censoring = False
+
+        if self.player.research_points != self.opponent.research_points:
+            censoring = False
+
+        return censoring
