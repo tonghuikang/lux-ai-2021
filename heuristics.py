@@ -26,7 +26,7 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
 
     # default response is not to move
     best_position = unit.pos
-    best_cell_value = (0,0,0,0)
+    best_cell_value = [0,0,0,0]
 
     # only consider other cluster if the current cluster has more than one agent mining
     consider_different_cluster = False
@@ -86,10 +86,18 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
 
                 # estimate target score
                 if distance <= unit.travel_range:
-                    cell_value = (target_bonus,
+                    cell_value = [target_bonus,
                                   - game_state.distance_from_floodfill_by_empty_tile[y,x],
                                   - distance - game_state.distance_from_opponent_assets[y,x] + game_state.distance_from_edge[y,x]
-                                  - game_state.opponent_units_matrix[y,x] * 2)
+                                  - game_state.opponent_units_matrix[y,x] * 2]
+
+                    # prefer to mine advanced resources faster
+                    if unit.get_cargo_space_left() > 8:
+                        if game_state.player.researched_coal_projected():
+                            cell_value[1] += 2*game_state.convolved_coal_exist_matrix[y,x]
+                        if game_state.player.researched_uranium_projected():
+                            cell_value[1] += 2*game_state.convolved_uranium_exist_matrix[y,x]
+
                     score_matrix_wrt_pos[y,x] = cell_value[2]
 
                     # update best target

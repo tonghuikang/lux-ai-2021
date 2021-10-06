@@ -619,7 +619,7 @@ class Game:
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
-                    if (x,y) in self.wood_exist_xy_set or (x,y) in self.uranium_exist_xy_set:
+                    if (x,y) in self.coal_exist_xy_set or (x,y) in self.uranium_exist_xy_set:
                         self.xy_to_resource_group_id.find((x,y), point=5)
                     else:
                         self.xy_to_resource_group_id.find((x,y), point=1)
@@ -639,7 +639,18 @@ class Game:
         pos_list = missions.get_targets()
         self.targeted_leaders: Set = set(self.xy_to_resource_group_id.find(tuple(pos)) for pos in pos_list)
         self.targeted_cluster_count = sum(self.xy_to_resource_group_id.get_point((x,y)) > 0 for x,y in self.targeted_leaders)
-        self.targeted_xy_set: Set = set(tuple(pos) for pos in pos_list) - self.player_city_tile_xy_set
+
+        self.targeted_xy_set: Set = set()
+        for mission in missions.values():
+            if mission.unit_id not in self.player.units_by_id:
+                continue
+            unit = self.player.units_by_id[mission.unit_id]
+            if unit.pos - mission.target_position > 5:
+                # do not store long range missions in targeted_xy_set
+                # however target cluster count is still considered
+                continue
+            self.targeted_xy_set.add(tuple(mission.target_position))
+        self.targeted_xy_set -= self.player_city_tile_xy_set
 
         pos_and_action_list = missions.get_targets_and_actions()
         self.targeted_for_building_xy_set: Set = \

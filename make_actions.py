@@ -37,6 +37,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         actions.append(action)
         if annotation:
             actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, annotation))
+        city_tile.cooldown += 10
 
     def build_workers(city_tile: CityTile, annotation: str=""):
         nonlocal units_cnt
@@ -46,6 +47,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         game_state.citytiles_with_new_units_xy_set.add(tuple(city_tile.pos))
         if annotation:
             actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, annotation))
+        city_tile.cooldown += 10
 
     city_tiles: List[CityTile] = []
     for city in player.cities.values():
@@ -76,12 +78,13 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         cluster_unit_limit_exceeded = \
             game_state.xy_to_resource_group_id.get_point(tuple(city_tile.pos)) <= len(game_state.resource_leader_to_locating_units[cluster_leader])
 
+        # standard requirements of building workers
         if resource_in_travel_range and not unit_limit_exceeded and not cluster_unit_limit_exceeded:
             print("build_worker WA", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
             build_workers(city_tile, "WA")
             continue
 
-        # allow cities to deliver even if cluster_unit_limit_exceeded
+        # allow cities to build workers even if cluster_unit_limit_exceeded, if research limit is reached
         if player.researched_uranium() and resource_in_travel_range:
             print("supply workers WS", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
             build_workers(city_tile, "WS")
@@ -179,7 +182,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         best_position, best_cell_value = find_best_cluster(game_state, unit, DEBUG=DEBUG)
         # [TODO] what if best_cell_value is zero
         distance_from_best_position = game_state.retrieve_distance(unit.pos.x, unit.pos.y, best_position.x, best_position.y)
-        if best_cell_value > (0,0,0,0):
+        if best_cell_value > [0,0,0,0]:
             print("plan mission adaptative", unit.id, unit.pos, "->", best_position, best_cell_value)
             mission = Mission(unit.id, best_position, None)
             missions.add(mission)
@@ -400,10 +403,17 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
             cost[0] = 3
 
         # discourage going into a city tile if you are carrying substantial wood
-        if tuple(newpos) in game_state.player_city_tile_xy_set and unit.cargo.wood >= 60:
-            # only in early game
-            if game_state.turn <= 80:
-                cost[0] = 1
+        if unit.cargo.wood >= 60:
+            if tuple(newpos) in game_state.player_city_tile_xy_set:
+                if game_state.turn <= 80:
+                    # only in early game
+                    cost[0] = 1
+
+        # discourage going into a fueled city tile if you are carrying substantial coal and uranium
+        if unit.cargo.wood + unit.cargo.uranium * 2 > 20:
+            if game_state.matrix_player_cities_nights_of_fuel_required_for_game[newpos.y, newpos.x] < 0:
+                if tuple(newpos) in game_state.player_city_tile_xy_set:
+                    cost[0] = 1
 
         # path distance as main differentiator
         path_dist = game_state.retrieve_distance(newpos.x, newpos.y, target_pos.x, target_pos.y)
