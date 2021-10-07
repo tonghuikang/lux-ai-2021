@@ -4,8 +4,8 @@
 import numpy as np
 import builtins as __builtin__
 
-from typing import List
-from lux import game
+from typing import Dict
+from lux import annotate
 
 from lux.game import Game, Unit
 from lux.game_map import Cell, RESOURCE_TYPES
@@ -14,7 +14,7 @@ from lux.game_position import Position
 from lux.game_constants import GAME_CONSTANTS
 
 
-def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, DEBUG=False):
+def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False):
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
@@ -27,6 +27,7 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
     # default response is not to move
     best_position = unit.pos
     best_cell_value = [0,0,0,0]
+    cluster_annotation = []
 
     # only consider other cluster if the current cluster has more than one agent mining
     consider_different_cluster = False
@@ -40,16 +41,13 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
 
     # only consider other cluster if another unit is targeting and mining in the current cluster
     if len(units_mining_on_current_cluster) >= 1:
-        if len(units_mining_on_current_cluster) >= resource_size_of_current_cluster // 3:
-            # start considering if there are more than 1/3 mining
-            consider_different_cluster = True
-        if len(units_mining_on_current_cluster) >= 6:
-            # definitely consider if your current cluster has more than six workers
-            consider_different_cluster = True
+        consider_different_cluster = True
 
     if len(units_mining_on_current_cluster) >= resource_size_of_current_cluster:
         # must consider if you have more than enough workers in the current cluster
         consider_different_cluster_must = True
+
+    best_citytile_of_cluster: Dict = dict()
 
     for y in game_state.y_iteration_order:
         for x in game_state.x_iteration_order:
@@ -99,7 +97,7 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
 
             if consider_different_cluster_must:
                 # enforce targeting of other clusters
-                target_bonus = target_bonus * 100
+                target_bonus = target_bonus * 10
 
             elif target_leader == current_leader:
                 target_bonus = 2
@@ -132,7 +130,20 @@ def find_best_cluster(game_state: Game, unit: Unit, distance_multiplier = -0.5, 
                         best_cell_value = cell_value
                         best_position = Position(x,y)
 
+                    if target_leader not in best_citytile_of_cluster:
+                        best_citytile_of_cluster[target_leader] = (cell_value,x,y)
+                    if cell_value > best_citytile_of_cluster[target_leader][0]:
+                        best_citytile_of_cluster[target_leader] = (cell_value,x,y)
+
+    # annotate if target bonus is more than one
+    if best_cell_value[0] > 2:
+        for cell_value,x,y in best_citytile_of_cluster.values():
+            annotation = annotate.text(x,y,f"{int(cell_value[0])}")
+            cluster_annotation.append(annotation)
+            annotation = annotate.line(unit.pos.x,unit.pos.y,x,y)
+            cluster_annotation.append(annotation)
+
     # for debugging
     game_state.heuristics_from_positions[tuple(unit.pos)] = score_matrix_wrt_pos
 
-    return best_position, best_cell_value
+    return best_position, best_cell_value, cluster_annotation

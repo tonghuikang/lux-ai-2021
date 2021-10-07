@@ -28,13 +28,13 @@ def annotate_game_state(game_state: Game, DEBUG=False):
                 annotation = annotate.circle(citytile.pos.x, citytile.pos.y)
                 annotations.append(annotation)
             else:
-                annotation = annotate.text(citytile.pos.x, citytile.pos.y, str(city.night_fuel_duration), 50)
+                annotation = annotate.text(citytile.pos.x, citytile.pos.y, str(city.night_fuel_duration))
                 annotations.append(annotation)
 
 
     for unit in chain(game_state.player.units, game_state.opponent.units):
         if unit.cargo.get_shorthand():
-            annotation = annotate.text(unit.pos.x, unit.pos.y, unit.cargo.get_shorthand(), 50)
+            annotation = annotate.text(unit.pos.x, unit.pos.y, unit.cargo.get_shorthand())
             annotations.append(annotation)
 
     # you can also read the pickled game_state and print its attributes
@@ -60,10 +60,10 @@ def annotate_missions(game_state: Game, missions: Missions, DEBUG=False):
         annotations.append(annotation)
 
         if mission.target_action and mission.target_action.split(" ")[0] == "bcity":
-            annotation = annotate.circle(mission.target_position.x, mission.target_position.y)
+            annotation = annotate.x(mission.target_position.x, mission.target_position.y)
             annotations.append(annotation)
         else:
-            annotation = annotate.x(mission.target_position.x, mission.target_position.y)
+            annotation = annotate.circle(mission.target_position.x, mission.target_position.y)
             annotations.append(annotation)
 
     annotation = annotate.sidetext("Unit Count: {}-{} Citytiles: {}-{} Groups: {}/{} Runtime: {:.3f}".format(

@@ -3,7 +3,7 @@
 import builtins as __builtin__
 from typing import Tuple, List
 
-from lux.game import Game, Mission, Missions
+from lux.game import Game, Mission, Missions, cleanup_missions
 from lux.game_objects import CityTile, Unit
 from lux.game_position import Position
 from lux.constants import Constants
@@ -20,10 +20,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
     else: print = lambda *args: None
 
     player = game_state.player
-    missions.cleanup(player,
-                     game_state.player_city_tile_xy_set,
-                     game_state.opponent_city_tile_xy_set,
-                     game_state.convolved_collectable_tiles_xy_set)
+    cleanup_missions(game_state, missions, DEBUG=DEBUG)
     game_state.repopulate_targets(missions)
 
     units_cap = sum([len(x.citytiles) for x in player.cities.values()])
@@ -140,12 +137,10 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
     else: print = lambda *args: None
 
     player = game_state.player
-    missions.cleanup(player,
-                     game_state.player_city_tile_xy_set,
-                     game_state.opponent_city_tile_xy_set,
-                     game_state.convolved_collectable_tiles_xy_set)
+    cleanup_missions(game_state, missions, DEBUG=DEBUG)
 
     unit_ids_with_missions_assigned_this_turn = set()
+    cluster_annotations = []
 
     player.units.sort(key=lambda unit:
         (unit.pos.x*game_state.x_order_coefficient, unit.pos.y*game_state.y_order_coefficient, unit.encode_tuple_for_cmp()))
@@ -159,7 +154,8 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         game_state.repopulate_targets(missions)
 
         # do not make missions from a fortress
-        if game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] > 1:
+        if game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] > 1 and game_state.map_resource_count:
+            print("no mission from fortress", unit.id)
             continue
 
         # do not make missions if you could mine uranium from a citytile that is not fueled to the end
@@ -207,7 +203,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
                 homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
                     unit.pos, require_reachable=True, minimum_size=5, maximum_distance=10)
                 if unit.pos != homing_position:
-                    mission = Mission(unit.id, homing_position, None)
+                    mission = Mission(unit.id, homing_position, None, details="homing")
                     missions.add(mission)
                     unit_ids_with_missions_assigned_this_turn.add(unit.id)
 
@@ -215,25 +211,26 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
             # the mission will be recaluated if the unit fails to make a move after make_unit_actions
             continue
 
-        best_position, best_cell_value = find_best_cluster(game_state, unit, DEBUG=DEBUG)
+        best_position, best_cell_value, cluster_annotation = find_best_cluster(game_state, unit, DEBUG=DEBUG)
         distance_from_best_position = game_state.retrieve_distance(unit.pos.x, unit.pos.y, best_position.x, best_position.y)
         if best_cell_value > [0,0,0,0]:
             print("plan mission adaptative", unit.id, unit.pos, "->", best_position, best_cell_value)
             mission = Mission(unit.id, best_position, None)
             missions.add(mission)
             unit_ids_with_missions_assigned_this_turn.add(unit.id)
+            cluster_annotations.extend(cluster_annotation)
             continue
 
         # homing mission
         if unit.get_cargo_space_left() < 100:
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(unit.pos)
             print("homing mission", unit.id, unit.pos, "->", homing_position, homing_distance)
-            mission = Mission(unit.id, homing_position, None)
+            mission = Mission(unit.id, homing_position, "homing")
             missions.add(mission)
             unit_ids_with_missions_assigned_this_turn.add(unit.id)
             continue
 
-    return missions
+    return cluster_annotations
 
 
 def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tuple[Missions, List[str]]:

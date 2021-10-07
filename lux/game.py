@@ -2,6 +2,7 @@ import heapq
 from collections import defaultdict, deque
 from typing import DefaultDict, Dict, List, Tuple, Set
 from datetime import datetime
+import builtins as __builtin__
 
 import numpy as np
 
@@ -15,11 +16,12 @@ INPUT_CONSTANTS = Constants.INPUT_CONSTANTS
 
 
 class Mission:
-    def __init__(self, unit_id: str, target_position: Position, target_action: str = ""):
+    def __init__(self, unit_id: str, target_position: Position, target_action: str = "", details: str = ""):
         self.target_position: Position = target_position
         self.target_action: str = target_action
         self.unit_id: str = unit_id
         self.delays: int = 0
+        self.details: str = details  # block deletion of mission if no resource
         # [TODO] some expiry date for each mission
 
     def __str__(self):
@@ -32,42 +34,6 @@ class Missions(defaultdict):
 
     def add(self, mission: Mission):
         self[mission.unit_id] = mission
-
-    def cleanup(self, player: Player,
-                player_city_tile_xy_set: Set[Tuple],
-                opponent_city_tile_xy_set: Set[Tuple],
-                convolved_collectable_tiles_xy_set: Set[Tuple]):
-        # probably should be a standalone function instead of a method
-
-        for unit_id in list(self.keys()):
-            mission: Mission = self[unit_id]
-
-            # if dead, delete from list
-            if unit_id not in player.units_by_id:
-                del self[unit_id]
-                continue
-
-            unit: Unit = player.units_by_id[unit_id]
-            # if you want to build city without resource, delete from list
-            if mission.target_action and mission.target_action[:5] == "bcity":
-                if unit.cargo == 0:
-                    del self[unit_id]
-                    continue
-
-            # if opponent has already built a base, reconsider your mission
-            if tuple(mission.target_position) in opponent_city_tile_xy_set:
-                del self[unit_id]
-                continue
-
-            # if you are in a base, reconsider your mission
-            if tuple(unit.pos) in player_city_tile_xy_set:
-                del self[unit_id]
-                continue
-
-            # if your target no longer have resource, reconsider your mission
-            if tuple(mission.target_position) not in convolved_collectable_tiles_xy_set:
-                del self[unit_id]
-                continue
 
     def __str__(self):
         return " ".join([unit_id + " " + str(x) for unit_id,x in self.items()])
@@ -769,3 +735,48 @@ class Game:
             censoring = False
 
         return censoring
+
+
+def cleanup_missions(game_state: Game, missions: Missions, DEBUG=False):
+    if DEBUG: print = __builtin__.print
+    else: print = lambda *args: None
+
+    for unit_id in list(missions.keys()):
+        mission: Mission = missions[unit_id]
+
+        # if dead, delete from list
+        if unit_id not in game_state.player.units_by_id:
+            del missions[unit_id]
+            continue
+
+        unit: Unit = game_state.player.units_by_id[unit_id]
+        # if you want to build city without resource, delete from list
+        if mission.target_action and mission.target_action[:5] == "bcity":
+            if unit.cargo == 0:
+                del missions[unit_id]
+                continue
+
+        # if opponent has already built a base, reconsider your mission
+        if tuple(mission.target_position) in game_state.opponent_city_tile_xy_set:
+            del missions[unit_id]
+            continue
+
+        # if you are in a base, reconsider your mission
+        if tuple(unit.pos) in game_state.player_city_tile_xy_set:
+            del missions[unit_id]
+            continue
+
+        # if your target no longer have resource, reconsider your mission
+        if tuple(mission.target_position) not in game_state.convolved_collectable_tiles_xy_set:
+            # do not delete for homing mission
+            if not mission.details:
+                print("deleting mission for empty target", unit_id)
+                del missions[unit_id]
+                continue
+
+        # for homing mission, if your target is filled, reconsider your mission
+        if mission.details == "homing":
+            if game_state.matrix_player_cities_nights_of_fuel_required_for_game[mission.target_position.y, mission.target_position.x] <= 0:
+                print("deleting mission refuelled city", unit_id)
+                del missions[unit_id]
+                continue
