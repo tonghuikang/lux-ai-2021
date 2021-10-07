@@ -13,10 +13,8 @@
 !notebook_test.ipynb
 !notebook_debug.ipynb
 
-# reference bots
-ref/
-
 # replays
+not a tty
 errorlogs/
 replays/
 replay.json

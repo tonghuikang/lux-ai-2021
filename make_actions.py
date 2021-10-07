@@ -39,9 +39,19 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
             actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, annotation))
         city_tile.cooldown += 10
 
-    def build_workers(city_tile: CityTile, annotation: str=""):
+    def build_worker(city_tile: CityTile, annotation: str=""):
         nonlocal units_cnt
         action = city_tile.build_worker()
+        actions.append(action)
+        units_cnt += 1
+        game_state.citytiles_with_new_units_xy_set.add(tuple(city_tile.pos))
+        if annotation:
+            actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, annotation))
+        city_tile.cooldown += 10
+
+    def build_cart(city_tile: CityTile, annotation: str=""):
+        nonlocal units_cnt
+        action = city_tile.build_cart()
         actions.append(action)
         units_cnt += 1
         game_state.citytiles_with_new_units_xy_set.add(tuple(city_tile.pos))
@@ -86,7 +96,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         # standard requirements of building workers
         if resource_in_travel_range and not unit_limit_exceeded and not cluster_unit_limit_exceeded:
             print("build_worker WA", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
-            build_workers(city_tile, "WA")
+            build_worker(city_tile, "WA")
             continue
 
         # allow cities to build workers even if cluster_unit_limit_exceeded, if research limit is reached
@@ -94,7 +104,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
             # but do not build workers beside wood to conserve wood
             if game_state.wood_side_matrix[city_tile.pos.y, city_tile.pos.x] == 0:
                 print("supply workers WS", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
-                build_workers(city_tile, "WS")
+                build_worker(city_tile, "WS")
                 continue
 
         if not player.researched_uranium():
@@ -108,10 +118,16 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
             else:
                 actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, "NE"))
 
+        # easter egg - build carts for fun when there is no resource left
+        if game_state.map_resource_count == 0 and game_state.is_day_time:
+            if not unit_limit_exceeded:
+                print("research NC", tuple(city_tile.pos))
+                build_cart(city_tile, "NC")
+
         # build workers at end of game
         if game_state.turn == 359:
             print("build_worker WE", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
-            build_workers(city_tile, "WE")
+            build_cart(city_tile, "WE")
             continue
 
         # otherwise don't do anything
@@ -344,14 +360,18 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.occupied_xy_set:
-                game_state.occupied_xy_set.add((xx,yy))
-                action = unit.move(direction)
-                actions.append(action)
-                if annotation:
-                    actions.append(annotate.text(unit.pos.x, unit.pos.y, annotation))
-                unit.cooldown += 2
-                game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
-                break
+                if game_state.distance_from_player_citytiles[yy,xx] > game_state.distance_from_player_citytiles[unit.pos.y,unit.pos.x]:
+                    # attempt to move away from your assets
+                    break
+
+        if (xx,yy) not in game_state.occupied_xy_set:
+            game_state.occupied_xy_set.add((xx,yy))
+            action = unit.move(direction)
+            actions.append(action)
+            if annotation:
+                actions.append(annotate.text(unit.pos.x, unit.pos.y, annotation))
+            unit.cooldown += 2
+            game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
 
 
     # no cluster rule

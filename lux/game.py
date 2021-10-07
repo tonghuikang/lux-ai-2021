@@ -393,6 +393,9 @@ class Game:
 
         self.convert_into_sets()
 
+        # calculate aggregate features
+        self.map_resource_count = np.sum(self.wood_amount_matrix + self.coal_amount_matrix + self.uranium_amount_matrix)
+
 
     def get_floodfill(self, set_object):
         # return the largest connected graph ignoring blockers
@@ -506,6 +509,8 @@ class Game:
         self.distance_from_opponent_assets = calculate_distance_from_set(self.opponent_units_xy_set | self.opponent_city_tile_xy_set)
         self.distance_from_player_units = calculate_distance_from_set(self.player_units_xy_set)
         self.distance_from_opponent_units = calculate_distance_from_set(self.opponent_units_xy_set)
+        self.distance_from_player_citytiles = calculate_distance_from_set(self.player_city_tile_xy_set)
+        self.distance_from_opponent_citytiles = calculate_distance_from_set(self.opponent_city_tile_xy_set)
 
         self.distance_from_buildable_tile = calculate_distance_from_set(self.buildable_tile_xy_set)
         self.distance_from_empty_tile = calculate_distance_from_set(self.empty_tile_xy_set)
