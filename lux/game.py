@@ -763,8 +763,10 @@ def cleanup_missions(game_state: Game, missions: Missions, DEBUG=False):
 
         # if you are in a base, reconsider your mission
         if tuple(unit.pos) in game_state.player_city_tile_xy_set:
-            del missions[unit_id]
-            continue
+            # do not delete for simulated worker that is just created
+            if not mission.details == "born":
+                del missions[unit_id]
+                continue
 
         # if your target no longer have resource, reconsider your mission
         if tuple(mission.target_position) not in game_state.convolved_collectable_tiles_xy_set:

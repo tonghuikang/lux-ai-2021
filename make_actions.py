@@ -46,6 +46,15 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
             actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, annotation))
         city_tile.cooldown += 10
 
+        # fake unit and mission to simulate targeting
+        unit = Unit(game_state.player_id, 0, city_tile.cityid, city_tile.pos.x, city_tile.pos.y,
+                    cooldown=6, wood=0, coal=0, uranium=0)  # add dummy unit for targeting purposes
+        game_state.players[game_state.player_id].units.append(unit)
+        game_state.player.units_by_id[city_tile.cityid] = unit
+        mission = Mission(city_tile.cityid, city_tile.pos, details="born")
+        missions.add(mission)
+        print(missions)
+
     def build_cart(city_tile: CityTile, annotation: str=""):
         nonlocal units_cnt
         action = city_tile.build_cart()
@@ -154,9 +163,13 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         game_state.repopulate_targets(missions)
 
         # do not make missions from a fortress
-        if game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] > 1 and game_state.map_resource_count:
-            print("no mission from fortress", unit.id)
-            continue
+        if game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] > 1:
+            # if you are carrying some wood
+            if unit.cargo.wood >= 40:
+                # assuming resources have yet to be exhausted
+                if game_state.map_resource_count:
+                    print("no mission from fortress", unit.id)
+                    continue
 
         # do not make missions if you could mine uranium from a citytile that is not fueled to the end
         if game_state.matrix_player_cities_nights_of_fuel_required_for_game[unit.pos.y, unit.pos.x] > 0:
@@ -203,7 +216,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
                 homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
                     unit.pos, require_reachable=True, minimum_size=5, maximum_distance=10)
                 if unit.pos != homing_position:
-                    mission = Mission(unit.id, homing_position, None, details="homing")
+                    mission = Mission(unit.id, homing_position, details="homing")
                     missions.add(mission)
                     unit_ids_with_missions_assigned_this_turn.add(unit.id)
 
@@ -215,7 +228,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         distance_from_best_position = game_state.retrieve_distance(unit.pos.x, unit.pos.y, best_position.x, best_position.y)
         if best_cell_value > [0,0,0,0]:
             print("plan mission adaptative", unit.id, unit.pos, "->", best_position, best_cell_value)
-            mission = Mission(unit.id, best_position, None)
+            mission = Mission(unit.id, best_position)
             missions.add(mission)
             unit_ids_with_missions_assigned_this_turn.add(unit.id)
             cluster_annotations.extend(cluster_annotation)
