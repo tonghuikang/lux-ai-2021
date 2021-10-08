@@ -4,7 +4,7 @@ import builtins as __builtin__
 from typing import Tuple, List
 
 from lux.game import Game, Mission, Missions, cleanup_missions
-from lux.game_objects import CityTile, Unit
+from lux.game_objects import Cargo, CityTile, Unit
 from lux.game_position import Position
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
@@ -147,12 +147,86 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
     player = game_state.player
     cleanup_missions(game_state, missions, DEBUG=DEBUG)
+    actions_ejections = []
 
     unit_ids_with_missions_assigned_this_turn = set()
     cluster_annotations = []
 
     player.units.sort(key=lambda unit:
         (unit.pos.x*game_state.x_order_coefficient, unit.pos.y*game_state.y_order_coefficient, unit.encode_tuple_for_cmp()))
+
+    # attempt to eject
+    for unit in player.units:
+        unit: Unit = unit
+        if not unit.can_act():
+            continue
+
+        # source unit not in empty tile
+        if tuple(unit.pos) in game_state.empty_tile_xy_set:
+            continue
+
+        # source unit has almost full resources
+        if unit.get_cargo_space_left() > 4:
+            continue
+
+        for adj_unit in player.units:
+            adj_unit: Unit = adj_unit
+            if not adj_unit.can_act():
+                continue
+
+            # source unit is not the target unit
+            if adj_unit.id == unit.id:
+                continue
+
+            # source unit is not beside target unit
+            if adj_unit.pos - unit.pos != 1:
+                continue
+
+            # adjacent unit is in city tile
+            if tuple(adj_unit.pos) not in game_state.player_city_tile_xy_set:
+                continue
+
+            # adjacent unit is beside an empty tile
+            if game_state.distance_from_empty_tile[adj_unit.pos.y, adj_unit.pos.x] != 1:
+                continue
+
+            print("eligible mission ejection", unit.id, unit.pos)
+
+            # temporarily augment night travel range
+            adj_unit.night_travel_range += 10
+            best_position, best_cell_value, cluster_annotation = find_best_cluster(game_state, adj_unit, DEBUG=DEBUG)
+            adj_unit.night_travel_range -= 10
+
+            if best_cell_value == [0,0,0,0]:
+                continue
+
+            # add missions for ejection
+            print("plan mission ejection", unit.id, unit.pos, "->", best_position, best_cell_value)
+            mission = Mission(unit.id, best_position)
+            missions.add(mission)
+            unit_ids_with_missions_assigned_this_turn.add(unit.id)
+            cluster_annotations.extend(cluster_annotation)
+
+            # execute actions for ejection
+            action_1 = unit.transfer(adj_unit.id, unit.cargo.get_most_common_resource(), 2000)
+            for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
+                xx,yy = adj_unit.pos.x + dx, adj_unit.pos.y + dy
+                if (xx,yy) in game_state.empty_tile_xy_set:
+                    print("ejecting", unit.id, unit.pos, adj_unit.id, adj_unit.pos)
+                    action_2 = adj_unit.move(direction)
+                    actions_ejections.append(action_1)
+                    actions_ejections.append(action_2)
+                    actions_ejections.append(annotate.text(unit.pos.x, unit.pos.y, "EJ", 100))
+                    unit.cargo = Cargo()
+                    unit.cooldown += 2
+                    adj_unit.cooldown += 2
+                    game_state.player_units_matrix[adj_unit.pos.y,adj_unit.pos.x] -= 1
+                    break
+
+            # break loop since partner for unit is found
+            if not unit.can_act():
+                break
+
 
     for unit in player.units:
         # mission is planned regardless whether the unit can act
@@ -188,16 +262,16 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
                         continue
 
         # if the unit is waiting for dawn at the side of resource
-        stay_up_till_dawn = (unit.get_cargo_space_left() <= 4 and (game_state.turn%40 >= 36 or game_state.turn%40 == 0))
+        stay_up_till_dawn = (unit.get_cargo_space_left() <= 4 and (game_state.turn%40 >= 32 or game_state.turn%40 == 0))
         # if the unit is full and it is going to be day the next few days
         # go to an empty tile and build a citytile
         # print(unit.id, unit.get_cargo_space_left())
         if unit.get_cargo_space_left() == 0 or stay_up_till_dawn:
             nearest_position, distance_with_features = game_state.get_nearest_empty_tile_and_distance(unit.pos, current_target_position)
-            if distance_with_features[0] > 3:
+            if distance_with_features[0] > 2:
                 # not really near
                 pass
-            elif stay_up_till_dawn or distance_with_features[0] * 2 <= game_state.turns_to_night - 2:
+            elif stay_up_till_dawn or distance_with_features[0] * 2 <= game_state.turns_to_night:
                 print("plan mission to build citytile", unit.id, unit.pos, "->", nearest_position)
                 mission = Mission(unit.id, nearest_position, unit.build_city())
                 missions.add(mission)
@@ -243,7 +317,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
             unit_ids_with_missions_assigned_this_turn.add(unit.id)
             continue
 
-    return cluster_annotations
+    return actions_ejections + cluster_annotations
 
 
 def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tuple[Missions, List[str]]:
@@ -280,7 +354,9 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             action = mission.target_action
 
             # do not build city at last light
-            if action and action[:5] == "bcity" and game_state.turn%40 == 30:
+            if action and action[:5] == "bcity" and 30 <= game_state.turn%40 <= 31:
+                print("do not build city at last light", unit.id)
+                actions.append(annotate.text(unit.pos.x, unit.pos.y, "NB"))
                 del missions[unit.id]
                 continue
 
@@ -300,71 +376,6 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             actions.append(action)
             continue
 
-        # [TODO] make it possible for units to swap positions
-
-
-    # attempt to eject
-    # should part of cluster targeting logic
-    prev_actions_len = -1
-    while prev_actions_len < len(actions):
-        prev_actions_len = len(actions)
-
-        if game_state.turn <= 40:
-            # do not eject before turn 40
-            break
-
-        for unit in player.units:
-            unit: Unit = unit
-            if not unit.can_act():
-                continue
-
-            # source unit not in empty tile
-            if tuple(unit.pos) in game_state.empty_tile_xy_set:
-                continue
-
-            # source unit has almost full resources
-            if unit.get_cargo_space_left() > 4:
-                continue
-
-            for adj_unit in player.units:
-                adj_unit: Unit = adj_unit
-                if not adj_unit.can_act():
-                    continue
-
-                # source unit is not the target unit
-                if adj_unit.id == unit.id:
-                    continue
-
-                # source unit is not beside target unit
-                if adj_unit.pos - unit.pos != 1:
-                    continue
-
-                # adjacent unit is in city tile
-                if tuple(adj_unit.pos) not in game_state.player_city_tile_xy_set:
-                    continue
-
-                # adjacent unit is beside an empty tile
-                if game_state.distance_from_empty_tile[adj_unit.pos.y, adj_unit.pos.x] == 1:
-
-                    # execute actions for ejection
-                    action_1 = unit.transfer(adj_unit.id, unit.cargo.get_most_common_resource(), 2000)
-                    for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
-                        xx,yy = adj_unit.pos.x + dx, adj_unit.pos.y + dy
-                        if (xx,yy) in game_state.empty_tile_xy_set:
-                            print("ejecting", unit.id, unit.pos, adj_unit.id, adj_unit.pos)
-                            action_2 = adj_unit.move(direction)
-                            actions.append(action_1)
-                            actions.append(action_2)
-                            actions.append(annotate.text(unit.pos.x, unit.pos.y, "FJ"))
-                            unit.cooldown += 2
-                            adj_unit.cooldown += 2
-                            game_state.player_units_matrix[adj_unit.pos.y,adj_unit.pos.x] -= 1
-                            break
-
-                # break loop
-                if not unit.can_act():
-                    break
-
 
     def make_random_move(unit: Unit, annotation: str = ""):
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
@@ -375,7 +386,25 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
                     break
 
         if (xx,yy) not in game_state.occupied_xy_set:
-            game_state.occupied_xy_set.add((xx,yy))
+            if (xx,yy) not in game_state.player_city_tile_xy_set:
+                game_state.occupied_xy_set.add((xx,yy))
+            action = unit.move(direction)
+            actions.append(action)
+            if annotation:
+                actions.append(annotate.text(unit.pos.x, unit.pos.y, annotation))
+            unit.cooldown += 2
+            game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
+
+
+    def make_random_move_to_city(unit: Unit, annotation: str = ""):
+        for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
+            xx,yy = unit.pos.x + dx, unit.pos.y + dy
+            if (xx,yy) in game_state.player_city_tile_xy_set:
+                break
+
+        if (xx,yy) not in game_state.occupied_xy_set:
+            if (xx,yy) not in game_state.player_city_tile_xy_set:
+                game_state.occupied_xy_set.add((xx,yy))
             action = unit.move(direction)
             actions.append(action)
             if annotation:
@@ -416,10 +445,12 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
         # if you are in our fortress, dump only if the wood is more than 450
         if game_state.distance_from_floodfill_by_player_city[unit.pos.y, unit.pos.x] >= 2:
             if game_state.wood_amount_matrix[unit.pos.y, unit.pos.x] >= 450:
-                make_random_move(unit, "FA")
+                print("FA make_random_move_to_city", unit.id)
+                make_random_move_to_city(unit, "FA")
         # if you are in a fortress that just not just made up of our citytiles
         elif game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] >= 2:
-            make_random_move(unit, "FB")
+            print("FB make_random_move_to_city", unit.id)
+            make_random_move_to_city(unit, "FB")
 
 
     # if the unit is not able to make an action, delete the mission

@@ -22,7 +22,7 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     censoring = game_state.is_symmetrical()
     state_annotations = annotate_game_state(game_state)
     actions_by_cities = make_city_actions(game_state, missions, DEBUG=DEBUG)
-    cluster_annotations = make_unit_missions(game_state, missions, DEBUG=DEBUG)
+    cluster_annotations_and_ejections = make_unit_missions(game_state, missions, DEBUG=DEBUG)
     mission_annotations = annotate_missions(game_state, missions)
     missions, actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
     movement_annotations = annotate_movements(game_state, actions_by_units)
@@ -33,7 +33,7 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     print("mission_annotations", mission_annotations)
     print("movement_annotations", movement_annotations)
     actions = actions_by_cities + actions_by_units
-    actions += cluster_annotations + mission_annotations + movement_annotations + state_annotations
+    actions += cluster_annotations_and_ejections + mission_annotations + movement_annotations + state_annotations
     actions = filter_cell_annotations(actions)
     if censoring: actions = []
     return actions, game_state, missions
