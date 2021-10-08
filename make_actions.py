@@ -155,7 +155,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
     player.units.sort(key=lambda unit:
         (unit.pos.x*game_state.x_order_coefficient, unit.pos.y*game_state.y_order_coefficient, unit.encode_tuple_for_cmp()))
 
-    # attempt to eject
+    # attempt to eject, unit is the one ejecting
     for unit in player.units:
         unit: Unit = unit
         if not unit.can_act():
@@ -170,6 +170,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
             continue
 
         for adj_unit in player.units:
+            # adj_unit is the one being ejected
             adj_unit: Unit = adj_unit
             if not adj_unit.can_act():
                 continue
@@ -190,25 +191,28 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
             if game_state.distance_from_empty_tile[adj_unit.pos.y, adj_unit.pos.x] != 1:
                 continue
 
-            print("eligible mission ejection", unit.id, unit.pos)
-
             # temporarily augment night travel range
-            adj_unit.night_travel_range += 10
-            best_position, best_cell_value, cluster_annotation = find_best_cluster(game_state, adj_unit, DEBUG=DEBUG)
-            adj_unit.night_travel_range -= 10
+            adj_unit.cargo.wood += 100
+            adj_unit.compute_travel_range()
+            best_position, best_cell_value, cluster_annotation = find_best_cluster(game_state, adj_unit, DEBUG=DEBUG, explore=True)
+            adj_unit.cargo.wood -= 100
+            adj_unit.compute_travel_range()
+
+            print("eligible mission ejection", unit.id, unit.pos, best_cell_value)
 
             if best_cell_value == [0,0,0,0]:
                 continue
 
             # add missions for ejection
-            print("plan mission ejection", unit.id, unit.pos, "->", best_position, best_cell_value)
-            mission = Mission(unit.id, best_position)
+            print("plan mission ejection", adj_unit.id, adj_unit.pos, "->", best_position, best_cell_value)
+            mission = Mission(adj_unit.id, best_position)
             missions.add(mission)
-            unit_ids_with_missions_assigned_this_turn.add(unit.id)
+            unit_ids_with_missions_assigned_this_turn.add(adj_unit.id)
             cluster_annotations.extend(cluster_annotation)
 
             # execute actions for ejection
-            action_1 = unit.transfer(adj_unit.id, unit.cargo.get_most_common_resource(), 2000)
+            # the amount is a stopgap measure to prevent the unit planning bcity mission immediately after ejection
+            action_1 = unit.transfer(adj_unit.id, unit.cargo.get_most_common_resource(), 95)
             for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
                 xx,yy = adj_unit.pos.x + dx, adj_unit.pos.y + dy
                 if (xx,yy) in game_state.empty_tile_xy_set:
@@ -216,7 +220,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
                     action_2 = adj_unit.move(direction)
                     actions_ejections.append(action_1)
                     actions_ejections.append(action_2)
-                    actions_ejections.append(annotate.text(unit.pos.x, unit.pos.y, "EJ", 100))
+                    actions_ejections.append(annotate.text(unit.pos.x, unit.pos.y, "🔴", 50))
                     unit.cargo = Cargo()
                     unit.cooldown += 2
                     adj_unit.cooldown += 2

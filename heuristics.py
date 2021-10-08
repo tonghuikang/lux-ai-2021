@@ -14,7 +14,7 @@ from lux.game_position import Position
 from lux.game_constants import GAME_CONSTANTS
 
 
-def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False):
+def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
@@ -32,7 +32,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False):
     # only consider other cluster if the current cluster has more than one agent mining
     consider_different_cluster = False
     # must consider other cluster if the current cluster has more agent than tiles
-    consider_different_cluster_must = False
+    consider_different_cluster_must = explore
 
     # calculate how resource tiles and how many units on the current cluster
     current_leader = game_state.xy_to_resource_group_id.find(tuple(unit.pos))
