@@ -88,6 +88,10 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                     distance_bonus = game_state.distance_from_player_assets[y,x]/max(3,distance)
                     target_bonus = target_bonus * distance_bonus**2
 
+                    # discourage targeting clusters very close to enemy
+                    if game_state.distance_from_opponent_assets[y,x] < game_state.distance_from_player_assets[y,x]:
+                        distance_bonus *= 0.1
+
                     if distance_bonus < 1/2:
                         # if you are far from being the closest to the new cluster, do not target
                         target_bonus = 1
@@ -106,16 +110,16 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
             # only target cells where you can collect resources
             if game_state.convolved_collectable_tiles_matrix[y,x] > 0:
 
-                # # do not plan long missions in initial turns
-                # if game_state.turn < 40 and distance > 1+game_state.player.city_tile_count*2:
-                #     continue
+                # do not plan long missions in initial turns
+                if game_state.turn < 40 and distance > 1+game_state.player.city_tile_count*2:
+                    continue
 
                 # estimate target score
                 if distance <= unit.travel_range:
                     cell_value = [target_bonus,
                                   - game_state.distance_from_floodfill_by_empty_tile[y,x],
                                   - distance - max(1,game_state.distance_from_opponent_assets[y,x])
-                                  + game_state.distance_from_edge[y,x]
+                                  - game_state.distance_from_resource_median[y,x]
                                   - game_state.opponent_units_matrix[y,x] * 2]
 
                     # penalty on parameter preference

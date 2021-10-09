@@ -255,7 +255,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         game_state.repopulate_targets(missions)
 
         # do not make missions from a fortress
-        if game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] > 1:
+        if game_state.distance_from_floodfill_by_player_city[unit.pos.y, unit.pos.x] > 1:
             # if you are carrying some wood
             if unit.cargo.wood >= 40:
                 # assuming resources have yet to be exhausted
@@ -457,17 +457,39 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
     def make_random_move_to_city_sustain(unit: Unit, annotation: str = ""):
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
-            if (xx,yy) in game_state.player_city_tile_xy_set:
-                citytile = game_state.map.get_cell(xx,yy).citytile
-                city = game_state.player.cities[citytile.cityid]
-                if city.fuel_needed_for_night > 0 and unit.fuel_potential >= city.fuel_needed_for_night:
-                    print("sustain", unit.id, unit.pos, "->", xx, yy)
-                    action = unit.move(direction)
-                    actions.append(action)
-                    if annotation:
-                        actions.append(annotate.text(unit.pos.x, unit.pos.y, annotation))
-                    unit.cooldown += 2
-                    game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
+            if (xx,yy) not in game_state.player_city_tile_xy_set:
+                continue
+            if (xx,yy) in game_state.xy_out_of_map:
+                continue
+            citytile = game_state.map.get_cell(xx,yy).citytile
+            city = game_state.player.cities[citytile.cityid]
+            if city.fuel_needed_for_night > 0 and unit.fuel_potential >= city.fuel_needed_for_night:
+                print("sustain", unit.id, unit.pos, "->", xx, yy)
+                action = unit.move(direction)
+                actions.append(action)
+                if annotation:
+                    actions.append(annotate.text(unit.pos.x, unit.pos.y, annotation))
+                unit.cooldown += 2
+                game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
+
+
+    def make_random_transfer(unit: Unit, annotation: str = ""):
+        for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
+            xx,yy = unit.pos.x + dx, unit.pos.y + dy
+            if (xx,yy) not in game_state.xy_out_of_map:
+                continue
+            adj_unit = game_state.map.get_cell(xx,yy).unit
+            if not adj_unit:
+                continue
+            if adj_unit.id not in game_state.player.units_by_id:
+                continue
+            print("random transfer", unit.id, unit.pos, "->", adj_unit.id, xx, yy)
+            action = unit.transfer(adj_unit.id, unit.cargo.get_most_common_resource(), 2000)
+            actions.append(action)
+            if annotation:
+                actions.append(annotate.text(unit.pos.x, unit.pos.y, annotation))
+            unit.cooldown += 2
+            break
 
 
     print("units without actions", [unit.id for unit in player.units if unit.can_act()])
@@ -487,8 +509,11 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
         unit: Unit = unit
         if not unit.can_act():
             continue
+        if tuple(unit.pos) not in game_state.player_city_tile_xy_set:
+            continue
         if game_state.player_units_matrix[unit.pos.y,unit.pos.x] > 1:
             print("dispersing", unit.id, unit.pos)
+            make_random_move_to_city(unit, "FY")
             make_random_move(unit, "KD")
 
 
@@ -500,16 +525,6 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
         if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
             continue
         make_random_move_to_collectable(unit, "KC")
-
-
-    # no sitting duck
-    for unit in player.units:
-        unit: Unit = unit
-        if not unit.can_act():
-            continue
-        if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
-            continue
-        make_random_move(unit, "KS")
 
 
     # dump it into a nearby citytile
@@ -534,6 +549,31 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
         if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] <= 1 and game_state.turn%40 > 20:
             print("FB make_random_move_to_city", unit.id)
             make_random_move_to_city(unit, "FX")
+
+
+    # make random transfers
+    for unit in player.units:
+        unit: Unit = unit
+        if not unit.can_act():
+            continue
+        if unit.get_cargo_space_left() == 100:
+            # nothing to transfer
+            continue
+        if game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] >= 2:
+            if unit.get_cargo_space_left() <= 4:
+                make_random_transfer(unit, "KT")
+        if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set:
+            make_random_transfer(unit, "KR")
+
+
+    # no sitting duck
+    for unit in player.units:
+        unit: Unit = unit
+        if not unit.can_act():
+            continue
+        if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
+            continue
+        make_random_move(unit, "KS")
 
 
     # if the unit is not able to make an action, delete the mission
