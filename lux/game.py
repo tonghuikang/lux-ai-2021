@@ -725,7 +725,7 @@ class Game:
 
                 # among tied distances we want to pick a better location
                 distance_with_features = (distance,
-                                          self.distance_from_opponent_assets[y,x] - self.distance_from_edge[y,x])
+                                          self.distance_from_opponent_assets[y,x] + self.distance_from_resource_median[y,x])
 
                 # update best location
                 if distance_with_features < best_distance_with_features:
@@ -735,18 +735,22 @@ class Game:
         return nearest_position, best_distance_with_features
 
 
-    def find_nearest_city_requiring_fuel(self, current_position: Position, require_reachable=True, minimum_size=0, maximum_distance=100):
+    def find_nearest_city_requiring_fuel(self, unit: Unit, require_reachable=True, require_night=False,
+                                         minimum_size=0, maximum_distance=100):
         closest_distance: int = 10**9 + 7
-        closest_position = current_position
+        closest_position = unit.pos
 
         for city in self.player.cities.values():
             if len(city.citytiles) < minimum_size:
                 continue
             if city.night_fuel_duration < self.night_turns_left:
                 for citytile in city.citytiles:
-                    distance = self.retrieve_distance(current_position.x, current_position.y, citytile.pos.x, citytile.pos.y)
+                    distance = self.retrieve_distance(unit.pos.x, unit.pos.y, citytile.pos.x, citytile.pos.y)
                     if require_reachable:
                         if self.turns_to_night + (city.night_fuel_duration // 10)*40 + city.night_fuel_duration <= distance * 2:
+                            continue
+                    if require_night:
+                        if unit.fuel_potential < city.fuel_needed_for_night:
                             continue
                     if distance > maximum_distance:
                         continue

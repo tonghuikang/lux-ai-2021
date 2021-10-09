@@ -118,6 +118,11 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                                   + game_state.distance_from_edge[y,x]
                                   - game_state.opponent_units_matrix[y,x] * 2]
 
+                    # penalty on parameter preference
+                    # if not collectable and not buildable, penalise
+                    if (x,y) not in game_state.collectable_tiles_xy_set and (x,y) not in game_state.buildable_tile_xy_set:
+                        cell_value[1] -= 1
+
                     # prefer to mine advanced resources faster
                     if unit.get_cargo_space_left() > 8:
                         if game_state.player.researched_coal_projected():

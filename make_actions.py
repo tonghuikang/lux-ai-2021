@@ -154,7 +154,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
     player.units.sort(key=lambda unit: (
         game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x],
-        - game_state.distance_from_edge[unit.pos.y,unit.pos.x],
+        game_state.distance_from_resource_median[unit.pos.y,unit.pos.x],
         unit.pos.x*game_state.x_order_coefficient,
         unit.pos.y*game_state.y_order_coefficient,
         unit.encode_tuple_for_cmp()))
@@ -295,22 +295,22 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
                 missions.add(mission)
                 continue
 
+        # preemptive homing mission
+        if unit.cargo.uranium > 0:
+            # if there is a citytile nearby already
+            homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
+                unit, require_reachable=True, require_night=True,
+                minimum_size=3, maximum_distance=unit.cargo.uranium//3)
+            if unit.pos != homing_position:
+                mission = Mission(unit.id, homing_position, details="homing")
+                missions.add(mission)
+                unit_ids_with_missions_assigned_this_turn.add(unit.id)
+
         if unit.id in missions:
             mission: Mission = missions[unit.id]
             if mission.target_position == unit.pos:
                 # take action and not make missions if already at position
                 continue
-
-        # preemptive homing mission
-        if unit.cargo.uranium >= 90:
-            # if there is a citytile nearby already
-            if game_state.distance_from_floodfill_by_player_city[unit.pos.y, unit.pos.x] <= 2:
-                homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
-                    unit.pos, require_reachable=True, minimum_size=5, maximum_distance=10)
-                if unit.pos != homing_position:
-                    mission = Mission(unit.id, homing_position, details="homing")
-                    missions.add(mission)
-                    unit_ids_with_missions_assigned_this_turn.add(unit.id)
 
         if unit.id in missions:
             # the mission will be recaluated if the unit fails to make a move after make_unit_actions
@@ -328,7 +328,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
         # homing mission
         if unit.get_cargo_space_left() < 100:
-            homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(unit.pos)
+            homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(unit)
             print("homing mission", unit.id, unit.pos, "->", homing_position, homing_distance)
             mission = Mission(unit.id, homing_position, "homing")
             missions.add(mission)
