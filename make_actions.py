@@ -200,11 +200,18 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
             print("eligible mission ejection", unit.id, unit.pos, best_cell_value)
 
+            # no suitable candidate found
             if best_cell_value == [0,0,0,0]:
+                continue
+
+            # do not eject and return to the same cluster
+            if game_state.xy_to_resource_group_id.find(tuple(best_position)) == game_state.xy_to_resource_group_id.find(tuple(unit.pos)):
                 continue
 
             # add missions for ejection
             print("plan mission ejection", adj_unit.id, adj_unit.pos, "->", best_position, best_cell_value)
+            if adj_unit.id in missions:
+                del missions[adj_unit.id]
             mission = Mission(adj_unit.id, best_position)
             missions.add(mission)
             unit_ids_with_missions_assigned_this_turn.add(adj_unit.id)
@@ -272,7 +279,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         # print(unit.id, unit.get_cargo_space_left())
         if unit.get_cargo_space_left() == 0 or stay_up_till_dawn:
             nearest_position, distance_with_features = game_state.get_nearest_empty_tile_and_distance(unit.pos, current_target_position)
-            if distance_with_features[0] > 2:
+            if distance_with_features[0] > 1:
                 # not really near
                 pass
             elif stay_up_till_dawn or distance_with_features[0] * 2 <= game_state.turns_to_night:
@@ -381,6 +388,7 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             continue
 
 
+    # probably should reduce code repetition in the following lines
     def make_random_move(unit: Unit, annotation: str = ""):
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
@@ -417,6 +425,30 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
 
 
+    def make_random_move_to_city_sustain(unit: Unit, annotation: str = ""):
+        for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
+            xx,yy = unit.pos.x + dx, unit.pos.y + dy
+            if (xx,yy) in game_state.player_city_tile_xy_set:
+                citytile = game_state.map.get_cell(xx,yy).citytile
+                city = game_state.player.cities[citytile.cityid]
+                if city.fuel_needed_for_night > 0 and unit.fuel_potential >= city.fuel_needed_for_night:
+                    print("sustain", unit.id, unit.pos, "->", xx, yy)
+                    action = unit.move(direction)
+                    actions.append(action)
+                    if annotation:
+                        actions.append(annotate.text(unit.pos.x, unit.pos.y, annotation))
+                    unit.cooldown += 2
+                    game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
+
+
+    # if moving to a city can let it sustain the night, move into the city
+    for unit in player.units:
+        unit: Unit = unit
+        if not unit.can_act():
+            continue
+        make_random_move_to_city_sustain(unit, "🟢")
+
+
     # no cluster rule
     for unit in player.units:
         unit: Unit = unit
@@ -451,8 +483,8 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             if game_state.wood_amount_matrix[unit.pos.y, unit.pos.x] >= 450:
                 print("FA make_random_move_to_city", unit.id)
                 make_random_move_to_city(unit, "FA")
-        # if you are in a fortress that just not just made up of our citytiles
-        elif game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] >= 2:
+        # if you are near opponent assets
+        if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] <= 2:
             print("FB make_random_move_to_city", unit.id)
             make_random_move_to_city(unit, "FB")
 

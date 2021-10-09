@@ -84,8 +84,8 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                                        (1 + len(game_state.resource_leader_to_locating_units[target_leader] &
                                                 game_state.resource_leader_to_targeting_units[target_leader]))
 
-                    # do not target if you are far from being the cloest unit to the resource
-                    distance_bonus = game_state.distance_from_player_assets[y,x]/max(1,distance)
+                    # discourage targeting depending are you the closet unit to the resource
+                    distance_bonus = game_state.distance_from_player_assets[y,x]/max(3,distance)
                     target_bonus = target_bonus * distance_bonus**2
 
                     if distance_bonus < 1/2:
@@ -93,27 +93,29 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                         target_bonus = 1
 
                     if distance_bonus == 1:
-                        target_bonus = target_bonus*2
+                        # extra bonus if you are closest to the target
+                        target_bonus = target_bonus * 10
 
             if consider_different_cluster_must:
                 # enforce targeting of other clusters
-                target_bonus = target_bonus * 10
+                target_bonus = target_bonus * 2
 
-            elif target_leader == current_leader:
+            if target_leader == current_leader:
                 target_bonus = 2
 
             # only target cells where you can collect resources
             if game_state.convolved_collectable_tiles_matrix[y,x] > 0:
 
-                # do not plan long missions in initial turns
-                if game_state.turn < 40 and distance > 1+game_state.player.city_tile_count*2:
-                    continue
+                # # do not plan long missions in initial turns
+                # if game_state.turn < 40 and distance > 1+game_state.player.city_tile_count*2:
+                #     continue
 
                 # estimate target score
                 if distance <= unit.travel_range:
                     cell_value = [target_bonus,
                                   - game_state.distance_from_floodfill_by_empty_tile[y,x],
-                                  - distance - game_state.distance_from_opponent_assets[y,x] + game_state.distance_from_edge[y,x]
+                                  - 2*distance - max(2,game_state.distance_from_opponent_assets[y,x])
+                                  + game_state.distance_from_edge[y,x]
                                   - game_state.opponent_units_matrix[y,x] * 2]
 
                     # prefer to mine advanced resources faster

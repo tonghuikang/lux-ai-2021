@@ -38,13 +38,17 @@ class Player:
 
 
 class City:
-    def __init__(self, teamid, cityid, fuel, light_upkeep):
+    def __init__(self, teamid, cityid, fuel, light_upkeep, night_turns_left):
         self.cityid = cityid
         self.team = teamid
         self.fuel = fuel
         self.citytiles: list[CityTile] = []
         self.light_upkeep = light_upkeep
         self.night_fuel_duration = int(self.fuel // self.light_upkeep)
+        self.fuel_needed_for_game = light_upkeep * night_turns_left - fuel
+        self.fuel_needed_for_night = light_upkeep * min(night_turns_left%10, 10) - fuel
+        if night_turns_left%10 == 0 and night_turns_left > 0:
+            self.fuel_needed_for_night += light_upkeep * 10
 
     def _add_city_tile(self, x, y, cooldown):
         ct = CityTile(self.team, self.cityid, x, y, cooldown)
@@ -137,6 +141,7 @@ class Unit:
         self.cargo.wood = wood
         self.cargo.coal = coal
         self.cargo.uranium = uranium
+        self.fuel_potential = wood*1 + coal*5 + uranium*20
         self.compute_travel_range()
 
     def is_worker(self) -> bool:

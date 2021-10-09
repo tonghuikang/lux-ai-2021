@@ -181,6 +181,17 @@ class Game:
         self.turn += 1
         self._reset_player_states()
 
+        # [TODO] Use constants here
+        self.night_turns_left = (360 - self.turn)//40 * 10 + min(10, (360 - self.turn)%40)
+
+        self.turns_to_night = (30 - self.turn)%40
+        self.turns_to_night = 0 if self.turns_to_night > 30 else self.turns_to_night
+
+        self.turns_to_dawn = (40 - self.turn%40)
+        self.turns_to_dawn = 0 if self.turns_to_dawn > 10 else self.turns_to_dawn
+
+        self.is_day_time = self.turns_to_dawn == 0
+
         for update in messages:
             if update == "D_DONE":
                 break
@@ -217,7 +228,7 @@ class Game:
                 cityid = strs[2]
                 fuel = float(strs[3])
                 lightupkeep = float(strs[4])
-                self.players[team].cities[cityid] = City(team, cityid, fuel, lightupkeep)
+                self.players[team].cities[cityid] = City(team, cityid, fuel, lightupkeep, self.night_turns_left)
 
             elif input_identifier == INPUT_CONSTANTS.CITY_TILES:
                 team = int(strs[1])
@@ -250,17 +261,6 @@ class Game:
         self.coal_collection_rate = GAME_CONSTANTS["PARAMETERS"]["WORKER_COLLECTION_RATE"][RESOURCE_TYPES.COAL.upper()]
         self.uranium_fuel_rate = GAME_CONSTANTS["PARAMETERS"]["RESOURCE_TO_FUEL_RATE"][RESOURCE_TYPES.URANIUM.upper()]
         self.uranium_collection_rate = GAME_CONSTANTS["PARAMETERS"]["WORKER_COLLECTION_RATE"][RESOURCE_TYPES.URANIUM.upper()]
-
-        # [TODO] Use constants here
-        self.night_turns_left = (360 - self.turn)//40 * 10 + min(10, (360 - self.turn)%40)
-
-        self.turns_to_night = (30 - self.turn)%40
-        self.turns_to_night = 0 if self.turns_to_night > 30 else self.turns_to_night
-
-        self.turns_to_dawn = (40 - self.turn%40)
-        self.turns_to_dawn = 0 if self.turns_to_dawn > 10 else self.turns_to_dawn
-
-        self.is_day_time = self.turns_to_dawn == 0
 
         # update matrices
         self.calculate_matrix()
@@ -581,10 +581,8 @@ class Game:
         self.matrix_player_cities_nights_of_fuel_required_for_night = self.init_matrix()
         for city in self.player.cities.values():
             for citytile in city.citytiles:
-                self.matrix_player_cities_nights_of_fuel_required_for_game[citytile.pos.y, citytile.pos.x] = \
-                    self.night_turns_left - city.night_fuel_duration
-                self.matrix_player_cities_nights_of_fuel_required_for_night[citytile.pos.y, citytile.pos.x] = \
-                    10 - city.night_fuel_duration
+                self.matrix_player_cities_nights_of_fuel_required_for_game[citytile.pos.y, citytile.pos.x] = city.fuel_needed_for_game
+                self.matrix_player_cities_nights_of_fuel_required_for_night[citytile.pos.y, citytile.pos.x] = city.fuel_needed_for_night
 
 
     def calculate_resource_groups(self):
