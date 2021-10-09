@@ -467,6 +467,52 @@ class Game:
                         visited.add((xx,yy))
             return matrix
 
+
+        def get_norm(p1, p2):
+            return (abs(p1[0] - p2[0]) + abs(p1[1] - p2[1]))
+
+        def calculate_distance_from_median(set_object):
+            # https://leetcode.com/problems/best-position-for-a-service-centre/discuss/733153/
+            if not set_object:
+                return self.init_matrix(default_value=0), Position(0,0)
+
+            curr = list(map(lambda a: sum(a)/len(a), zip(*set_object)))  # [2]
+            prev = [float('inf')] * 2
+
+            err = 1e-7  # [4]
+            epsilon = 1e-20  # [5]
+            while get_norm(curr, prev) > err: # [3]
+                numerator, denominator = [0, 0], 0
+                for p in set_object:
+                    l2 = get_norm(curr, p) + epsilon
+                    numerator[0] += p[0] / l2
+                    numerator[1] += p[1] / l2
+                    denominator += 1 / l2
+                next_p = [numerator[0]/denominator, numerator[1]/denominator]
+                curr, prev = next_p, curr
+
+            matrix = self.init_matrix(default_value=0)
+            for y in self.y_iteration_order:
+                for x in self.x_iteration_order:
+                    matrix[y][x] = get_norm((x,y), curr)
+
+            return matrix, Position(curr[0], curr[1])
+
+        def calculate_distance_from_mean(set_object):
+            # https://leetcode.com/problems/best-position-for-a-service-centre/discuss/733153/
+            if not set_object:
+                return self.init_matrix(default_value=0), Position(0,0)
+
+            mx = sum(p[0] for p in set_object)/len(set_object)
+            my = sum(p[1] for p in set_object)/len(set_object)
+
+            matrix = self.init_matrix(default_value=0)
+            for y in self.y_iteration_order:
+                for x in self.x_iteration_order:
+                    matrix[y][x] = get_norm((x,y), (mx,my))
+
+            return matrix, Position(int(mx), int(my))
+
         # calculate distance from resource (with projected research requirements)
         self.distance_from_collectable_resource = calculate_distance_from_set(self.collectable_tiles_xy_set)
 
@@ -485,6 +531,9 @@ class Game:
         self.distance_from_floodfill_by_opponent_city = calculate_distance_from_set(self.floodfill_by_opponent_city_set)
         self.distance_from_floodfill_by_either_city = calculate_distance_from_set(self.floodfill_by_either_city_set)
         self.distance_from_floodfill_by_empty_tile = calculate_distance_from_set(self.floodfill_by_empty_tile_set)
+
+        self.distance_from_resource_median, self.resource_median = calculate_distance_from_median(self.convolved_collectable_tiles_xy_set)
+        self.distance_from_resource_mean, self.resource_mean = calculate_distance_from_mean(self.convolved_collectable_tiles_xy_set)
 
         # calculating distances from every unit positions and its adjacent positions
         # avoid blocked places as much as possible

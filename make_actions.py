@@ -152,8 +152,12 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
     unit_ids_with_missions_assigned_this_turn = set()
     cluster_annotations = []
 
-    player.units.sort(key=lambda unit:
-        (unit.pos.x*game_state.x_order_coefficient, unit.pos.y*game_state.y_order_coefficient, unit.encode_tuple_for_cmp()))
+    player.units.sort(key=lambda unit: (
+        game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x],
+        - game_state.distance_from_edge[unit.pos.y,unit.pos.x],
+        unit.pos.x*game_state.x_order_coefficient,
+        unit.pos.y*game_state.y_order_coefficient,
+        unit.encode_tuple_for_cmp()))
 
     # attempt to eject, unit is the one ejecting
     for unit in player.units:
@@ -195,6 +199,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
             adj_unit.cargo.wood += 100
             adj_unit.compute_travel_range()
             best_position, best_cell_value, cluster_annotation = find_best_cluster(game_state, adj_unit, DEBUG=DEBUG, explore=True)
+            distance_of_best = game_state.retrieve_distance(adj_unit.pos.x, adj_unit.pos.y, best_position.x, best_position.y)
             adj_unit.cargo.wood -= 100
             adj_unit.compute_travel_range()
 
@@ -223,7 +228,9 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
             for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
                 xx,yy = adj_unit.pos.x + dx, adj_unit.pos.y + dy
                 if (xx,yy) in game_state.empty_tile_xy_set:
-                    print("ejecting", unit.id, unit.pos, adj_unit.id, adj_unit.pos)
+                    if game_state.retrieve_distance(xx, yy, best_position.x, best_position.y) > distance_of_best:
+                        continue
+                    print("ejecting", unit.id, unit.pos, adj_unit.id, adj_unit.pos, direction, "->", best_position)
                     action_2 = adj_unit.move(direction)
                     actions_ejections.append(action_1)
                     actions_ejections.append(action_2)
@@ -408,6 +415,28 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
 
 
+    # probably should reduce code repetition in the following lines
+    def make_random_move_to_collectable(unit: Unit, annotation: str = ""):
+        for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
+            xx,yy = unit.pos.x + dx, unit.pos.y + dy
+            if (xx,yy) not in game_state.occupied_xy_set:
+                if (xx,yy) in game_state.convolved_collectable_tiles_xy_set:
+                    # attempt to move away from your assets
+                    break
+        else:
+            return
+
+        if (xx,yy) not in game_state.occupied_xy_set:
+            if (xx,yy) not in game_state.player_city_tile_xy_set:
+                game_state.occupied_xy_set.add((xx,yy))
+            action = unit.move(direction)
+            actions.append(action)
+            if annotation:
+                actions.append(annotate.text(unit.pos.x, unit.pos.y, annotation))
+            unit.cooldown += 2
+            game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
+
+
     def make_random_move_to_city(unit: Unit, annotation: str = ""):
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
@@ -441,10 +470,14 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
                     game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
 
 
+    print("units without actions", [unit.id for unit in player.units if unit.can_act()])
+
     # if moving to a city can let it sustain the night, move into the city
     for unit in player.units:
         unit: Unit = unit
         if not unit.can_act():
+            continue
+        if game_state.turn%40 < 20:
             continue
         make_random_move_to_city_sustain(unit, "🟢")
 
@@ -459,6 +492,16 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             make_random_move(unit, "KD")
 
 
+    # return to resource to mine
+    for unit in player.units:
+        unit: Unit = unit
+        if not unit.can_act():
+            continue
+        if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
+            continue
+        make_random_move_to_collectable(unit, "KC")
+
+
     # no sitting duck
     for unit in player.units:
         unit: Unit = unit
@@ -469,7 +512,7 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
         make_random_move(unit, "KS")
 
 
-    # if you have near full resources but not moving, dump it into a nearby citytile
+    # dump it into a nearby citytile
     for unit in player.units:
         unit: Unit = unit
         if not unit.can_act():
@@ -484,9 +527,13 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
                 print("FA make_random_move_to_city", unit.id)
                 make_random_move_to_city(unit, "FA")
         # if you are near opponent assets
-        if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] <= 2:
+        if game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] >= 2:
             print("FB make_random_move_to_city", unit.id)
             make_random_move_to_city(unit, "FB")
+        # if you are near opponent assets and it is close to night
+        if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] <= 1 and game_state.turn%40 > 20:
+            print("FB make_random_move_to_city", unit.id)
+            make_random_move_to_city(unit, "FX")
 
 
     # if the unit is not able to make an action, delete the mission

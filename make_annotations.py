@@ -37,6 +37,11 @@ def annotate_game_state(game_state: Game, DEBUG=False):
             annotation = annotate.text(unit.pos.x, unit.pos.y, unit.cargo.get_shorthand())
             annotations.append(annotation)
 
+    annotation = annotate.text(int(game_state.resource_median.x), int(game_state.resource_median.y), "MD")
+    annotations.append(annotation)
+    annotation = annotate.text(int(game_state.resource_mean.x), int(game_state.resource_mean.y), "ME")
+    annotations.append(annotation)
+
     # you can also read the pickled game_state and print its attributes
     return annotations
 

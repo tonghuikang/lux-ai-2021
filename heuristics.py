@@ -114,7 +114,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                 if distance <= unit.travel_range:
                     cell_value = [target_bonus,
                                   - game_state.distance_from_floodfill_by_empty_tile[y,x],
-                                  - 2*distance - max(2,game_state.distance_from_opponent_assets[y,x])
+                                  - distance - max(1,game_state.distance_from_opponent_assets[y,x])
                                   + game_state.distance_from_edge[y,x]
                                   - game_state.opponent_units_matrix[y,x] * 2]
 
