@@ -336,7 +336,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
         if unit.get_cargo_space_left() < 100:
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(unit)
             print("homing mission", unit.id, unit.pos, "->", homing_position, homing_distance)
-            mission = Mission(unit.id, homing_position, "homing")
+            mission = Mission(unit.id, homing_position, "", details="homing")
             missions.add(mission)
             unit_ids_with_missions_assigned_this_turn.add(unit.id)
             continue
@@ -404,13 +404,37 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
         return missions, actions
 
     # probably should reduce code repetition in the following lines
-    def make_random_move(unit: Unit, annotation: str = ""):
+    def make_random_move_to_void(unit: Unit, annotation: str = ""):
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.occupied_xy_set:
                 if game_state.distance_from_player_citytiles[yy,xx] > game_state.distance_from_player_citytiles[unit.pos.y,unit.pos.x]:
                     # attempt to move away from your assets
                     break
+        else:
+            return
+
+        if (xx,yy) not in game_state.occupied_xy_set:
+            if (xx,yy) not in game_state.player_city_tile_xy_set:
+                game_state.occupied_xy_set.add((xx,yy))
+            action = unit.move(direction)
+            actions.append(action)
+            if annotation:
+                actions.append(annotate.text(unit.pos.x, unit.pos.y, annotation))
+            unit.cooldown += 2
+            game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
+
+
+    # probably should reduce code repetition in the following lines
+    def make_random_move_to_center(unit: Unit, annotation: str = ""):
+        for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
+            xx,yy = unit.pos.x + dx, unit.pos.y + dy
+            if (xx,yy) not in game_state.occupied_xy_set:
+                if game_state.distance_from_edge[yy,xx] < game_state.distance_from_edge[unit.pos.y,unit.pos.x]:
+                    # attempt to move away from your assets
+                    break
+        else:
+            return
 
         if (xx,yy) not in game_state.occupied_xy_set:
             if (xx,yy) not in game_state.player_city_tile_xy_set:
@@ -450,6 +474,8 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) in game_state.player_city_tile_xy_set:
                 break
+        else:
+            return
 
         if (xx,yy) not in game_state.occupied_xy_set:
             if (xx,yy) not in game_state.player_city_tile_xy_set:
@@ -529,7 +555,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
         if game_state.player_units_matrix[unit.pos.y,unit.pos.x] > 1:
             print("dispersing", unit.id, unit.pos)
             make_random_move_to_city(unit, "FY")
-            make_random_move(unit, "KD")
+            make_random_move_to_void(unit, "KD")
 
 
     # return to resource to mine
@@ -574,18 +600,34 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
         unit: Unit = unit
         if not unit.can_act():
             continue
+        if unit.get_cargo_space_left() == 0 and game_state.map_resource_count < 500:
+            actions.append(unit.build_city())
+            continue
         if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set:
             make_random_transfer(unit, "KR")
 
 
-    # no sitting duck
+    # no sitting duck not collecting resources
     for unit in player.units:
         unit: Unit = unit
         if not unit.can_act():
             continue
         if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
             continue
-        make_random_move(unit, "KS")
+        if unit.get_cargo_space_left() == 100:
+            make_random_move_to_void(unit, "KS")
+        else:
+            make_random_move_to_center(unit, "KP")
+
+
+    # make a movement within the city at night
+    for unit in player.units:
+        unit: Unit = unit
+        if not unit.can_act():
+            continue
+        if tuple(unit.pos) not in game_state.player_city_tile_xy_set:
+            continue
+        make_random_move_to_city(unit, "MC")
 
 
     # if the unit is not able to make an action, delete the mission
