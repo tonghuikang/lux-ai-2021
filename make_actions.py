@@ -215,12 +215,6 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
 
             # add missions for ejection
             print("plan mission ejection", adj_unit.id, adj_unit.pos, "->", best_position, best_cell_value)
-            if adj_unit.id in missions:
-                del missions[adj_unit.id]
-            mission = Mission(adj_unit.id, best_position)
-            missions.add(mission)
-            unit_ids_with_missions_assigned_this_turn.add(adj_unit.id)
-            cluster_annotations.extend(cluster_annotation)
 
             # execute actions for ejection
             # the amount is a stopgap measure to prevent the unit planning bcity mission immediately after ejection
@@ -230,6 +224,8 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
                 if (xx,yy) in game_state.empty_tile_xy_set:
                     if game_state.retrieve_distance(xx, yy, best_position.x, best_position.y) > distance_of_best:
                         continue
+                    # if Position(xx,yy) - best_position >= adj_unit.pos - best_position:
+                    #     continue
                     print("ejecting", unit.id, unit.pos, adj_unit.id, adj_unit.pos, direction, "->", best_position)
                     action_2 = adj_unit.move(direction)
                     actions_ejections.append(action_1)
@@ -240,6 +236,16 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
                     adj_unit.cooldown += 2
                     game_state.player_units_matrix[adj_unit.pos.y,adj_unit.pos.x] -= 1
                     break
+            else:
+                break
+
+            # if successful
+            if adj_unit.id in missions:
+                del missions[adj_unit.id]
+            mission = Mission(adj_unit.id, best_position)
+            missions.add(mission)
+            unit_ids_with_missions_assigned_this_turn.add(adj_unit.id)
+            cluster_annotations.extend(cluster_annotation)
 
             # break loop since partner for unit is found
             if not unit.can_act():
@@ -338,7 +344,7 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
     return actions_ejections + cluster_annotations
 
 
-def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tuple[Missions, List[str]]:
+def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False, DEBUG=False) -> Tuple[Missions, List[str]]:
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
@@ -394,6 +400,8 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             actions.append(action)
             continue
 
+    if is_initial_run:
+        return missions, actions
 
     # probably should reduce code repetition in the following lines
     def make_random_move(unit: Unit, annotation: str = ""):
@@ -473,10 +481,17 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
                 game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
 
 
-    def make_random_transfer(unit: Unit, annotation: str = ""):
+    def make_random_transfer(unit: Unit, annotation: str = "", limit_target = False, allowed_target_xy: set = set()):
+        if not unit.can_act():
+            return
+        if unit.get_cargo_space_left() == 100:
+            # nothing to transfer
+            return
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
-            if (xx,yy) not in game_state.xy_out_of_map:
+            if (xx,yy) in game_state.xy_out_of_map:
+                continue
+            if limit_target and (xx,yy) not in allowed_target_xy:
                 continue
             adj_unit = game_state.map.get_cell(xx,yy).unit
             if not adj_unit:
@@ -540,14 +555,17 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
         if game_state.distance_from_floodfill_by_player_city[unit.pos.y, unit.pos.x] >= 2:
             if game_state.wood_amount_matrix[unit.pos.y, unit.pos.x] >= 450:
                 print("FA make_random_move_to_city", unit.id)
+                make_random_transfer(unit, "FA1", True, game_state.player_city_tile_xy_set)
                 make_random_move_to_city(unit, "FA")
-        # if you are near opponent assets
-        if game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] >= 2:
+        # if you are in a fortress controlled by both players
+        elif game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] >= 2:
             print("FB make_random_move_to_city", unit.id)
+            make_random_transfer(unit, "FB1", True, game_state.player_city_tile_xy_set)
             make_random_move_to_city(unit, "FB")
         # if you are near opponent assets and it is close to night
         if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] <= 1 and game_state.turn%40 > 20:
             print("FB make_random_move_to_city", unit.id)
+            make_random_transfer(unit, "FX1", True, game_state.player_city_tile_xy_set)
             make_random_move_to_city(unit, "FX")
 
 
@@ -556,12 +574,6 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
         unit: Unit = unit
         if not unit.can_act():
             continue
-        if unit.get_cargo_space_left() == 100:
-            # nothing to transfer
-            continue
-        if game_state.distance_from_floodfill_by_either_city[unit.pos.y, unit.pos.x] >= 2:
-            if unit.get_cargo_space_left() <= 4:
-                make_random_transfer(unit, "KT")
         if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set:
             make_random_transfer(unit, "KR")
 

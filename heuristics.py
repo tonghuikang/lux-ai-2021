@@ -85,7 +85,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                                                 game_state.resource_leader_to_targeting_units[target_leader]))
 
                     # discourage targeting depending are you the closet unit to the resource
-                    distance_bonus = game_state.distance_from_player_assets[y,x]/max(3,distance)
+                    distance_bonus = game_state.distance_from_player_assets[y,x]/max(1,distance)
                     target_bonus = target_bonus * distance_bonus**2
 
                     # discourage targeting clusters very close to enemy
@@ -102,7 +102,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
 
             if consider_different_cluster_must:
                 # enforce targeting of other clusters
-                target_bonus = target_bonus * 2
+                target_bonus = target_bonus * 10
 
             if target_leader == current_leader:
                 target_bonus = 2
@@ -118,8 +118,8 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                 if distance <= unit.travel_range:
                     cell_value = [target_bonus,
                                   - game_state.distance_from_floodfill_by_empty_tile[y,x],
-                                  - distance - max(1,game_state.distance_from_opponent_assets[y,x])
-                                  - game_state.distance_from_resource_median[y,x]
+                                  - distance - game_state.distance_from_opponent_assets[y,x]
+                                  - game_state.distance_from_resource_median[y,x],
                                   - game_state.opponent_units_matrix[y,x] * 2]
 
                     # penalty on parameter preference
