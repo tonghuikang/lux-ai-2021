@@ -41,6 +41,9 @@ class Missions(defaultdict):
     def get_targets(self):
         return [mission.target_position for unit_id, mission in self.items()]
 
+    def get_target_of_unit(self, unit_id):
+        return {unit_id: mission.target_position for unit_id, mission in self.items()}[unit_id]
+
     def get_targets_and_actions(self):
         return [(mission.target_position, mission.target_action) for unit_id, mission in self.items()]
 
@@ -378,7 +381,15 @@ class Game:
                         continue
                     ds.union((x,y), (xx,yy))
 
-        return set(max(ds.get_groups().values(), key=len))
+        floodfills = sorted(ds.get_groups().values(), key=len, reverse=True)
+
+        # for smaller maps, resources may divide the map into two
+        all_floodfill = set()
+        for floodfill in floodfills:
+            all_floodfill.update(floodfill)
+            if len(all_floodfill) > self.map_width * self.map_height*0.7:
+                return all_floodfill
+        return all_floodfill
 
 
     def populate_set(self, matrix, set_object):
@@ -531,6 +542,8 @@ class Game:
         self.distance_from_floodfill_by_opponent_city = calculate_distance_from_set(self.floodfill_by_opponent_city_set)
         self.distance_from_floodfill_by_either_city = calculate_distance_from_set(self.floodfill_by_either_city_set)
         self.distance_from_floodfill_by_empty_tile = calculate_distance_from_set(self.floodfill_by_empty_tile_set)
+        if self.turn <= 20:
+            self.distance_from_floodfill_by_empty_tile = calculate_distance_from_set(self.buildable_tile_xy_set)
 
         self.distance_from_resource_median, self.resource_median = calculate_distance_from_median(self.convolved_collectable_tiles_xy_set)
         self.distance_from_resource_mean, self.resource_mean = calculate_distance_from_mean(self.convolved_collectable_tiles_xy_set)

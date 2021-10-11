@@ -285,17 +285,25 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
                         # unless the citytile is producing new units
                         continue
 
+        # if you are targeting your own cluster you are at and you have at least 60 wood and close to edge
+        targeting_current_cluster = unit.id not in missions or (unit.id in missions and \
+                                    game_state.xy_to_resource_group_id.find(tuple(unit.pos)) == \
+                                    game_state.xy_to_resource_group_id.find(tuple(missions.get_target_of_unit(unit.id))))
+        sufficient_resources = unit.cargo.wood >= 60 or unit.cargo.wood + unit.cargo.coal >= 90 or unit.get_cargo_space_used() >= 96
+        prepare_housing = targeting_current_cluster and sufficient_resources and \
+                          game_state.distance_from_buildable_tile[unit.pos.y, unit.pos.x] <= 1
         # if the unit is waiting for dawn at the side of resource
-        stay_up_till_dawn = (unit.get_cargo_space_left() <= 4 and (game_state.turn%40 >= 32 or game_state.turn%40 == 0))
+        # stay_up_till_dawn = (unit.get_cargo_space_left() <= 4 and (game_state.turn%40 >= 32 or game_state.turn%40 == 0))
         # if the unit is full and it is going to be day the next few days
         # go to an empty tile and build a citytile
         # print(unit.id, unit.get_cargo_space_left())
-        if unit.get_cargo_space_left() == 0 or stay_up_till_dawn:
+        print("prepare_housing test", unit.id, unit.pos, targeting_current_cluster, sufficient_resources, prepare_housing)
+        if prepare_housing:
             nearest_position, distance_with_features = game_state.get_nearest_empty_tile_and_distance(unit.pos, current_target_position)
             if distance_with_features[0] > 1:
                 # not really near
                 pass
-            elif stay_up_till_dawn or distance_with_features[0] * 2 <= game_state.turns_to_night:
+            elif distance_with_features[0] * 2 <= game_state.turns_to_night + 1:
                 print("plan mission to build citytile", unit.id, unit.pos, "->", nearest_position)
                 mission = Mission(unit.id, nearest_position, unit.build_city())
                 missions.add(mission)
@@ -542,6 +550,9 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             continue
         if game_state.turn%40 < 20:
             continue
+        make_random_transfer(unit, "🟢", True, game_state.player_city_tile_xy_set)
+        if not unit.can_act():
+            continue
         make_random_move_to_city_sustain(unit, "🟢")
 
 
@@ -600,11 +611,12 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
         unit: Unit = unit
         if not unit.can_act():
             continue
-        if unit.get_cargo_space_left() == 0 and game_state.map_resource_count < 500:
+        if unit.get_cargo_space_left() == 0 and unit.is_worker() and game_state.map_resource_count < 500:
             actions.append(unit.build_city())
             continue
-        if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set:
-            make_random_transfer(unit, "KR")
+        if unit.get_cargo_space_used() == 0:
+            continue
+        make_random_transfer(unit, "KR")
 
 
     # no sitting duck not collecting resources
@@ -615,8 +627,10 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
         if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
             continue
         if unit.get_cargo_space_left() == 100:
+            # suicide mission
             make_random_move_to_void(unit, "KS")
         else:
+            # move to center so as to consolidate resources
             make_random_move_to_center(unit, "KP")
 
 

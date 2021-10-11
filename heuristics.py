@@ -6,6 +6,7 @@ import builtins as __builtin__
 
 from typing import Dict
 from lux import annotate
+from lux import game
 
 from lux.game import Game, Unit
 from lux.game_map import Cell, RESOURCE_TYPES
@@ -34,9 +35,9 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
     # must consider other cluster if the current cluster has more agent than tiles
     consider_different_cluster_must = explore
 
-    # calculate how resource tiles and how many units on the current cluster
+    # calculate how many resource tiles and how many units on the current cluster
     current_leader = game_state.xy_to_resource_group_id.find(tuple(unit.pos))
-    units_mining_on_current_cluster = game_state.resource_leader_to_locating_units[current_leader] & game_state.resource_leader_to_targeting_units[current_leader]
+    units_mining_on_current_cluster = game_state.resource_leader_to_locating_units[current_leader]
     resource_size_of_current_cluster = game_state.xy_to_resource_group_id.get_point(current_leader)
 
     # only consider other cluster if another unit is targeting and mining in the current cluster
@@ -110,8 +111,8 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
             # only target cells where you can collect resources
             if game_state.convolved_collectable_tiles_matrix[y,x] > 0:
 
-                # do not plan long missions in initial turns
-                if game_state.turn < 40 and distance > 1+game_state.player.city_tile_count*2:
+                # do not plan long missions if you are the only unit mining
+                if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set and len(units_mining_on_current_cluster) <= 1 and distance > 2:
                     continue
 
                 # estimate target score
@@ -134,7 +135,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                         if game_state.player.researched_uranium_projected():
                             cell_value[1] += 2*game_state.convolved_uranium_exist_matrix[y,x]
 
-                    score_matrix_wrt_pos[y,x] = cell_value[2]
+                    score_matrix_wrt_pos[y,x] = cell_value[0]
 
                     # update best target
                     if cell_value > best_cell_value:

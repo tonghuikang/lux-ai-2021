@@ -150,6 +150,9 @@ class Unit:
     def is_cart(self) -> bool:
         return self.type == UNIT_TYPES.CART
 
+    def get_cargo_space_used(self):
+        return self.cargo.wood + self.cargo.coal + self.cargo.uranium
+
     def get_cargo_space_left(self):
         """
         get cargo space left in this unit
