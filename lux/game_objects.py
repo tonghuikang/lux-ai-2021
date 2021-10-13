@@ -222,7 +222,7 @@ class Unit:
 
         if turn_info:
             turns_to_night, turns_to_dawn, is_day_time = turn_info
-            travel_range = max(1, turns_to_night // cooldown_required + self.night_travel_range - cooldown_required)
+            travel_range = max(1, turns_to_night // cooldown_required + self.night_travel_range)
             if self.night_turn_survivable > turns_to_dawn and not is_day_time:
                 travel_range = day_length // cooldown_required + self.night_travel_range
             if self.night_turn_survivable > night_length:

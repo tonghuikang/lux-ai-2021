@@ -46,14 +46,16 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
             actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, annotation))
         city_tile.cooldown += 10
 
-        # fake unit and mission to simulate targeting
-        unit = Unit(game_state.player_id, 0, city_tile.cityid, city_tile.pos.x, city_tile.pos.y,
-                    cooldown=6, wood=0, coal=0, uranium=0)  # add dummy unit for targeting purposes
-        game_state.players[game_state.player_id].units.append(unit)
-        game_state.player.units_by_id[city_tile.cityid] = unit
-        mission = Mission(city_tile.cityid, city_tile.pos, details="born")
-        missions.add(mission)
-        print(missions)
+        # fake unit and mission to simulate targeting current position
+        # if unit limit is not reached
+        if units_cnt <= units_cap:
+            unit = Unit(game_state.player_id, 0, city_tile.cityid, city_tile.pos.x, city_tile.pos.y,
+                        cooldown=6, wood=0, coal=0, uranium=0)  # add dummy unit for targeting purposes
+            game_state.players[game_state.player_id].units.append(unit)
+            game_state.player.units_by_id[city_tile.cityid] = unit
+            mission = Mission(city_tile.cityid, city_tile.pos, details="born")
+            missions.add(mission)
+            print(missions)
 
     def build_cart(city_tile: CityTile, annotation: str=""):
         nonlocal units_cnt
@@ -72,9 +74,18 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
     if not city_tiles:
         return []
 
+
+    def calculate_city_cluster_bonus(pos: Position):
+        current_leader = game_state.xy_to_resource_group_id.find(tuple(pos))
+        units_mining_on_current_cluster = game_state.resource_leader_to_locating_units[current_leader] & game_state.resource_leader_to_targeting_units[current_leader]
+        resource_size_of_current_cluster = game_state.xy_to_resource_group_id.get_point(current_leader)
+        return resource_size_of_current_cluster / (1+len(units_mining_on_current_cluster))
+
+
     city_tiles.sort(key=lambda city_tile:(
-        - game_state.distance_from_player_units[city_tile.pos.y,city_tile.pos.x],
-        - game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x],
+        calculate_city_cluster_bonus(city_tile.pos),
+        - game_state.distance_from_player_units[city_tile.pos.y,city_tile.pos.x]
+        - game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x]
         - game_state.distance_from_collectable_resource[city_tile.pos.y,city_tile.pos.x],
         - game_state.distance_from_edge[city_tile.pos.y,city_tile.pos.x],
         city_tile.pos.x * game_state.x_order_coefficient,
@@ -106,7 +117,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
             continue
 
         # allow cities to build workers even if cluster_unit_limit_exceeded, if research limit is reached
-        if player.researched_uranium() and resource_in_travel_range:
+        if (player.researched_uranium() or units_cnt == 0) and resource_in_travel_range:
             # but do not build workers beside wood to conserve wood
             if game_state.wood_side_matrix[city_tile.pos.y, city_tile.pos.x] == 0:
                 print("supply workers WS", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
@@ -377,7 +388,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             continue
 
         mission: Mission = missions[unit.id]
-        print("attempting action for", unit.id, unit.pos, "->", mission.target_position)
+        print("attempting action for", unit.id, unit.pos, "->", mission.target_position, is_initial_run)
 
         # if the location is reached, take action
         if unit.pos == mission.target_position:
@@ -438,7 +449,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.occupied_xy_set:
-                if game_state.distance_from_edge[yy,xx] < game_state.distance_from_edge[unit.pos.y,unit.pos.x]:
+                if -game_state.distance_from_edge[yy,xx] < -game_state.distance_from_edge[unit.pos.y,unit.pos.x]:
                     # attempt to move away from your assets
                     break
         else:
@@ -481,7 +492,9 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) in game_state.player_city_tile_xy_set:
-                break
+                if game_state.player_units_matrix[xx,yy] < 1:
+                    if (xx,yy) in game_state.convolved_collectable_tiles_xy_set:
+                        break
         else:
             return
 
@@ -494,6 +507,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
                 actions.append(annotate.text(unit.pos.x, unit.pos.y, annotation))
             unit.cooldown += 2
             game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
+            game_state.player_units_matrix[yy,xx] += 1
 
 
     def make_random_move_to_city_sustain(unit: Unit, annotation: str = ""):
@@ -537,6 +551,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             actions.append(action)
             if annotation:
                 actions.append(annotate.text(unit.pos.x, unit.pos.y, annotation))
+            actions.append(annotate.line(unit.pos.x, unit.pos.y, adj_unit.pos.x, adj_unit.pos.y))
             unit.cooldown += 2
             break
 
@@ -599,8 +614,8 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             print("FB make_random_move_to_city", unit.id)
             make_random_transfer(unit, "FB1", True, game_state.player_city_tile_xy_set)
             make_random_move_to_city(unit, "FB")
-        # if you are near opponent assets and it is close to night
-        if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] <= 1 and game_state.turn%40 > 20:
+        # if you are near opponent assets and it is not early game
+        if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] <= 1 and game_state.turn > 20:
             print("FB make_random_move_to_city", unit.id)
             make_random_transfer(unit, "FX1", True, game_state.player_city_tile_xy_set)
             make_random_move_to_city(unit, "FX")
@@ -634,21 +649,24 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             make_random_move_to_center(unit, "KP")
 
 
-    # make a movement within the city at night
+    # make a movement within the city at night, if near the enemy
     for unit in player.units:
         unit: Unit = unit
         if not unit.can_act():
             continue
         if tuple(unit.pos) not in game_state.player_city_tile_xy_set:
             continue
+        if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] >= 3:
+            continue
         make_random_move_to_city(unit, "MC")
 
 
-    # if the unit is not able to make an action, delete the mission
+    # if the unit is not able to make an action over two turns, delete the mission
     for unit_id in units_with_mission_but_no_action:
         mission: Mission = missions[unit_id]
         mission.delays += 1
-        if mission.delays >= 1:
+        if mission.delays >= 2:
+            print("delete mission unable to move", unit_id, mission.target_position)
             del missions[unit_id]
 
     return missions, actions
@@ -675,8 +693,9 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
                 if tuple(newpos) != tuple(unit.pos):
                     cost[0] = 3
 
+        # no entering opponent citytile
         if tuple(newpos) in game_state.opponent_city_tile_xy_set:
-            cost[0] = 3
+            cost[0] = 4
 
         # discourage going into a city tile if you are carrying substantial wood
         if unit.cargo.wood >= 60:
@@ -702,10 +721,6 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
         # prefer to walk on tiles with resources
         aux_cost = game_state.convolved_collectable_tiles_matrix[newpos.y, newpos.x]
         cost[3] = -aux_cost
-
-        # if starting from the city, consider manhattan distance instead of path distance
-        if tuple(unit.pos) in game_state.player_city_tile_xy_set:
-            cost[1] = manhattan_dist
 
         # update decision
         if cost < smallest_cost:

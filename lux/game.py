@@ -125,6 +125,7 @@ class Game:
             Constants.DIRECTIONS.CENTER
         ]
         self.dirs_dxdy: List = [(0,-1), (1,0), (0,1), (-1,0), (0,0)]
+        self.units_expected_to_act: Set[Tuple] = set()
 
 
     def fix_iteration_order(self):
@@ -275,6 +276,14 @@ class Game:
 
         self.citytiles_with_new_units_xy_set: Set = set()
         self.heuristics_from_positions: Dict = dict()
+
+        self.units_did_not_act: Set = set(unit_id for unit_id in self.units_expected_to_act)
+        for unit in self.player.units:
+            if unit.can_act():
+                self.units_expected_to_act.add(unit.id)
+        self.units_did_not_act = self.units_did_not_act & self.units_expected_to_act
+
+        update_mission_delay(self, missions)
 
 
     def init_matrix(self, default_value=0):
@@ -447,6 +456,7 @@ class Game:
 
         self.floodfill_by_empty_tile_set = self.get_floodfill(
             self.player_city_tile_xy_set | self.opponent_city_tile_xy_set | self.wood_exist_xy_set | self.coal_exist_xy_set | self.uranium_exist_xy_set)
+
 
     def calculate_distance_matrix(self, blockade_multiplier_value=100):
         self.distance_from_edge = self.init_matrix(self.map_height + self.map_width)
@@ -649,6 +659,8 @@ class Game:
 
     def calculate_resource_groups(self):
         # compute join the resource cluster and calculate the amount of resource
+        # clusters that are connected by a diagonal are considered to be a different resource
+        # the cluster with more sources own more sides
         self.xy_to_resource_group_id: DisjointSet = DisjointSet()
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
@@ -666,7 +678,18 @@ class Game:
                     for dy,dx in self.dirs_dxdy[:-1]:
                         xx, yy = x+dx, y+dy
                         if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
-                            self.xy_to_resource_group_id.union((x,y), (xx,yy))
+                            if (xx,yy) in self.collectable_tiles_xy_set:
+                                self.xy_to_resource_group_id.union((x,y), (xx,yy))
+
+        for group in sorted(self.xy_to_resource_group_id.get_groups().values(), key=len, reverse=True):
+            for x,y in group:
+                if (x,y) in self.collectable_tiles_xy_set:
+                    for dy,dx in self.dirs_dxdy[:-1]:
+                        xx, yy = x+dx, y+dy
+                        if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
+                            if (xx,yy) not in self.collectable_tiles_xy_set:
+                                if self.xy_to_resource_group_id.find((xx,yy)) == (xx,yy):
+                                    self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
 
     def repopulate_targets(self, missions: Missions):
@@ -748,7 +771,7 @@ class Game:
         return nearest_position, best_distance_with_features
 
 
-    def find_nearest_city_requiring_fuel(self, unit: Unit, require_reachable=True, require_night=False,
+    def find_nearest_city_requiring_fuel(self, unit: Unit, require_reachable=True, require_night=False, prefer_night=True,
                                          minimum_size=0, maximum_distance=100):
         closest_distance: int = 10**9 + 7
         closest_position = unit.pos
@@ -760,11 +783,17 @@ class Game:
                 for citytile in city.citytiles:
                     distance = self.retrieve_distance(unit.pos.x, unit.pos.y, citytile.pos.x, citytile.pos.y)
                     if require_reachable:
+                        # the city should not die before the unit can reach
                         if self.turns_to_night + (city.night_fuel_duration // 10)*40 + city.night_fuel_duration <= distance * 2:
                             continue
                     if require_night:
+                        # require fuel to be able to save city for the night
                         if unit.fuel_potential < city.fuel_needed_for_night:
                             continue
+                    if prefer_night:
+                        if city.fuel_needed_for_night > 0:
+                            # prefer to save cities from the night
+                            distance -= 1000
                     if distance > maximum_distance:
                         continue
                     if distance < closest_distance:
@@ -817,18 +846,21 @@ def cleanup_missions(game_state: Game, missions: Missions, DEBUG=False):
         # if you want to build city without resource, delete from list
         if mission.target_action and mission.target_action[:5] == "bcity":
             if unit.cargo == 0:
+                print("delete mission bcity without resource", unit_id, mission.target_position)
                 del missions[unit_id]
                 continue
 
         # if opponent has already built a base, reconsider your mission
         if tuple(mission.target_position) in game_state.opponent_city_tile_xy_set:
             del missions[unit_id]
+            print("delete mission opponent already build", unit_id, mission.target_position)
             continue
 
         # if you are in a base, reconsider your mission
         if tuple(unit.pos) in game_state.player_city_tile_xy_set:
             # do not delete for simulated worker that is just created
             if not mission.details == "born":
+                print("delete reconsider in base", unit_id, mission.target_position)
                 del missions[unit_id]
                 continue
 
@@ -846,3 +878,10 @@ def cleanup_missions(game_state: Game, missions: Missions, DEBUG=False):
                 print("deleting mission refuelled city", unit_id)
                 del missions[unit_id]
                 continue
+
+
+def update_mission_delay(game_state: Game, missions: Missions):
+    # update mission.delay based on the units had colliding act
+    for unit_id in game_state.units_did_not_act:
+        if unit_id in missions:
+            missions[unit_id].delays += 1
