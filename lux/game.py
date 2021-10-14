@@ -558,6 +558,15 @@ class Game:
         self.distance_from_resource_median, self.resource_median = calculate_distance_from_median(self.convolved_collectable_tiles_xy_set)
         self.distance_from_resource_mean, self.resource_mean = calculate_distance_from_mean(self.convolved_collectable_tiles_xy_set)
 
+        # some features for blocking logic
+        self.opponent_unit_adjacent: Set = set()
+        for y in self.y_iteration_order:
+            for x in self.x_iteration_order:
+                if self.distance_from_opponent_units[y,x] == 1:
+                    self.opponent_unit_adjacent.add((x,y),)
+        self.opponent_unit_adjacent_and_buildable: Set = self.opponent_unit_adjacent & self.buildable_tile_xy_set
+        self.opponent_unit_adjacent_and_player_city: Set = self.opponent_unit_adjacent & self.player_city_tile_xy_set
+
         # calculating distances from every unit positions and its adjacent positions
         # avoid blocked places as much as possible
         self.positions_to_calculate_distances_from = set()

@@ -103,8 +103,8 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
             continue
 
         nearest_resource_distance = game_state.distance_from_collectable_resource[city_tile.pos.y, city_tile.pos.x]
-        travel_range = 1 + game_state.turns_to_night // GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
-        resource_in_travel_range = nearest_resource_distance <= travel_range
+        travel_range_emptyhanded = 1 + game_state.turns_to_night // GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
+        resource_in_travel_range = nearest_resource_distance <= travel_range_emptyhanded
 
         cluster_leader = game_state.xy_to_resource_group_id.find(tuple(city_tile.pos))
         cluster_unit_limit_exceeded = \
@@ -112,7 +112,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
 
         # standard requirements of building workers
         if resource_in_travel_range and not unit_limit_exceeded and not cluster_unit_limit_exceeded:
-            print("build_worker WA", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
+            print("build_worker WA", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range_emptyhanded)
             build_worker(city_tile, "WA")
             continue
 
@@ -120,7 +120,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         if (player.researched_uranium() or units_cnt == 0) and resource_in_travel_range:
             # but do not build workers beside wood to conserve wood
             if game_state.wood_side_matrix[city_tile.pos.y, city_tile.pos.x] == 0:
-                print("supply workers WS", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
+                print("supply workers WS", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range_emptyhanded)
                 build_worker(city_tile, "WS")
                 continue
 
@@ -143,7 +143,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
 
         # build workers at end of game
         if game_state.turn == 359:
-            print("build_worker WE", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range)
+            print("build_worker WE", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range_emptyhanded)
             build_cart(city_tile, "WE")
             continue
 
@@ -152,7 +152,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
     return actions
 
 
-def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Missions:
+def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=False, DEBUG=False) -> Missions:
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
@@ -174,6 +174,9 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
     for unit in player.units:
         unit: Unit = unit
         if not unit.can_act():
+            continue
+
+        if is_initial_plan:
             continue
 
         # source unit not in empty tile
@@ -314,11 +317,14 @@ def make_unit_missions(game_state: Game, missions: Missions, DEBUG=False) -> Mis
             if distance_with_features[0] > 1:
                 # not really near
                 pass
-            elif distance_with_features[0] * 2 <= game_state.turns_to_night + 1:
+            else:
                 print("plan mission to build citytile", unit.id, unit.pos, "->", nearest_position)
                 mission = Mission(unit.id, nearest_position, unit.build_city())
                 missions.add(mission)
                 continue
+
+        if is_initial_plan:
+            continue
 
         # preemptive homing mission
         if unit.cargo.uranium > 0:
@@ -420,6 +426,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             continue
 
     if is_initial_run:
+        # pre-run to eliminate missions that cannot be carried out
         return missions, actions
 
     # probably should reduce code repetition in the following lines

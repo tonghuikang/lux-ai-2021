@@ -22,6 +22,7 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     censoring = game_state.is_symmetrical()
     state_annotations = annotate_game_state(game_state)
     actions_by_cities = make_city_actions(game_state, missions, DEBUG=DEBUG)
+    _ = make_unit_missions(game_state, missions, is_initial_plan=True, DEBUG=DEBUG)
     missions, pre_actions_by_units = make_unit_actions(game_state, missions, is_initial_run=True, DEBUG=DEBUG)
     cluster_annotations_and_ejections = make_unit_missions(game_state, missions, DEBUG=DEBUG)
     mission_annotations = annotate_missions(game_state, missions)
