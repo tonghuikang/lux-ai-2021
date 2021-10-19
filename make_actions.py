@@ -84,12 +84,13 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
 
     city_tiles.sort(key=lambda city_tile:(
         calculate_city_cluster_bonus(city_tile.pos),
-        - game_state.distance_from_player_units[city_tile.pos.y,city_tile.pos.x]
-        - game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x]
+        - max(1, game_state.distance_from_player_units[city_tile.pos.y,city_tile.pos.x])  # max because we assume that it will leave
+        + game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x],
         - game_state.distance_from_collectable_resource[city_tile.pos.y,city_tile.pos.x],
         - game_state.distance_from_edge[city_tile.pos.y,city_tile.pos.x],
         city_tile.pos.x * game_state.x_order_coefficient,
         city_tile.pos.y * game_state.y_order_coefficient))
+
 
     for city_tile in city_tiles:
         if not city_tile.can_act():
@@ -610,9 +611,9 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
         # check for full resources
         if unit.get_cargo_space_left() > 4:
             continue
-        # if you are in our fortress, dump only if the wood is more than 450
+        # if you are in our fortress, dump only if the wood is more than 500
         if game_state.distance_from_floodfill_by_player_city[unit.pos.y, unit.pos.x] >= 2:
-            if game_state.wood_amount_matrix[unit.pos.y, unit.pos.x] >= 450:
+            if game_state.wood_amount_matrix[unit.pos.y, unit.pos.x] >= 500:
                 print("FA make_random_move_to_city", unit.id)
                 make_random_transfer(unit, "FA1", True, game_state.player_city_tile_xy_set)
                 make_random_move_to_city(unit, "FA")
@@ -648,7 +649,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             continue
         if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
             continue
-        if unit.get_cargo_space_left() == 100:
+        if unit.fuel_potential == 0:
             # suicide mission
             make_random_move_to_void(unit, "KS")
         else:
@@ -736,7 +737,8 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
             closest_pos = newpos
 
     if closest_dir != DIRECTIONS.CENTER:
-        game_state.occupied_xy_set.discard(tuple(unit.pos))
+        if tuple(closest_pos) not in game_state.opponent_unit_adjacent_xy_set:
+            game_state.occupied_xy_set.discard(tuple(unit.pos))
         if tuple(closest_pos) not in game_state.player_city_tile_xy_set:
             game_state.occupied_xy_set.add(tuple(closest_pos))
         unit.cooldown += 2

@@ -45,8 +45,9 @@ class City:
         self.citytiles: list[CityTile] = []
         self.light_upkeep = light_upkeep
         self.night_fuel_duration = int(self.fuel // self.light_upkeep)
-        self.fuel_needed_for_game = light_upkeep * night_turns_left - fuel
-        self.fuel_needed_for_night = light_upkeep * min(night_turns_left%10, 10) - fuel
+        self.fuel_on_the_way = 0  # TBC
+        self.fuel_needed_for_game = light_upkeep * night_turns_left - fuel - self.fuel_on_the_way
+        self.fuel_needed_for_night = light_upkeep * min(night_turns_left%10, 10) - fuel - self.fuel_on_the_way
         if night_turns_left%10 == 0 and night_turns_left > 0:
             self.fuel_needed_for_night += light_upkeep * 10
 

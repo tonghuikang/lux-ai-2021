@@ -53,13 +53,15 @@ class DisjointSet:
         self.parent = {}
         self.sizes = defaultdict(int)
         self.points = defaultdict(int)  # tracks resource pile size
+        self.tiles = defaultdict(int)  # tracks resource pile size
         self.num_sets = 0
 
-    def find(self, a, point=0):
+    def find(self, a, point=0, tile=0):
         if a not in self.parent:
             self.parent[a] = a
             self.sizes[a] += 1
             self.points[a] += point
+            self.tiles[a] += tile
             self.num_sets += 1
         acopy = a
         while a != self.parent[a]:
@@ -78,12 +80,16 @@ class DisjointSet:
             self.parent[b] = a
             self.sizes[a] += self.sizes[b]
             self.points[a] += self.points[b]
+            self.tiles[a] += self.tiles[b]
 
     def get_size(self, a):
         return self.sizes[self.find(a)]
 
     def get_point(self, a):
         return self.points[self.find(a)]
+
+    def get_tiles(self, a):
+        return self.tiles[self.find(a)]
 
     def get_groups(self):
         groups = defaultdict(list)
@@ -559,13 +565,13 @@ class Game:
         self.distance_from_resource_mean, self.resource_mean = calculate_distance_from_mean(self.convolved_collectable_tiles_xy_set)
 
         # some features for blocking logic
-        self.opponent_unit_adjacent: Set = set()
+        self.opponent_unit_adjacent_xy_set: Set = set()
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 if self.distance_from_opponent_units[y,x] == 1:
-                    self.opponent_unit_adjacent.add((x,y),)
-        self.opponent_unit_adjacent_and_buildable: Set = self.opponent_unit_adjacent & self.buildable_tile_xy_set
-        self.opponent_unit_adjacent_and_player_city: Set = self.opponent_unit_adjacent & self.player_city_tile_xy_set
+                    self.opponent_unit_adjacent_xy_set.add((x,y),)
+        self.opponent_unit_adjacent_and_buildable_xy_set: Set = self.opponent_unit_adjacent_xy_set & self.buildable_tile_xy_set
+        self.opponent_unit_adjacent_and_player_city_xy_set: Set = self.opponent_unit_adjacent_xy_set & self.player_city_tile_xy_set
 
         # calculating distances from every unit positions and its adjacent positions
         # avoid blocked places as much as possible
@@ -675,11 +681,11 @@ class Game:
             for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
                     if (x,y) in self.wood_exist_xy_set:
-                        self.xy_to_resource_group_id.find((x,y), point=1)
+                        self.xy_to_resource_group_id.find((x,y), point=1, tile=1)
                     if (x,y) in self.coal_exist_xy_set:
-                        self.xy_to_resource_group_id.find((x,y), point=3)
+                        self.xy_to_resource_group_id.find((x,y), point=3, tile=1)
                     if (x,y) in self.uranium_exist_xy_set:
-                        self.xy_to_resource_group_id.find((x,y), point=5)
+                        self.xy_to_resource_group_id.find((x,y), point=5, tile=1)
 
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
@@ -688,7 +694,23 @@ class Game:
                         xx, yy = x+dx, y+dy
                         if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
                             if (xx,yy) in self.collectable_tiles_xy_set:
+                                # if self.xy_to_resource_group_id.get_tiles((x,y)) + self.xy_to_resource_group_id.get_tiles((xx,yy)) > self.map_height/2:
+                                #     continue
                                 self.xy_to_resource_group_id.union((x,y), (xx,yy))
+
+        # # consider resources two steps away as part of the cluster, if cluster size is not exceeded
+        # for y in self.y_iteration_order:
+        #     for x in self.x_iteration_order:
+        #         if (x,y) in self.collectable_tiles_xy_set:
+        #             for dy,dx in self.dirs_dxdy[:-1]:
+        #                 xx, yy = x+dx, y+dy
+        #                 for dy,dx in self.dirs_dxdy[:-1]:
+        #                     xx, yy = xx+dx, yy+dy
+        #                     if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
+        #                         if (xx,yy) in self.collectable_tiles_xy_set:
+        #                             if self.xy_to_resource_group_id.get_point((x,y)) + self.xy_to_resource_group_id.get_point((xx,yy)) > self.map_height/2:
+        #                                 continue
+        #                             self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
         for group in sorted(self.xy_to_resource_group_id.get_groups().values(), key=len, reverse=True):
             for x,y in group:
