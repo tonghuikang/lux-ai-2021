@@ -83,7 +83,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
 
 
     city_tiles.sort(key=lambda city_tile:(
-        calculate_city_cluster_bonus(city_tile.pos),
+        - calculate_city_cluster_bonus(city_tile.pos),
         - max(1, game_state.distance_from_player_units[city_tile.pos.y,city_tile.pos.x])  # max because we assume that it will leave
         + game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x],
         - game_state.distance_from_collectable_resource[city_tile.pos.y,city_tile.pos.x],
@@ -93,6 +93,14 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
 
 
     for city_tile in city_tiles:
+        print(-calculate_city_cluster_bonus(city_tile.pos),
+        - max(1, game_state.distance_from_player_units[city_tile.pos.y,city_tile.pos.x])  # max because we assume that it will leave
+        + game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x],
+        - game_state.distance_from_collectable_resource[city_tile.pos.y,city_tile.pos.x],
+        - game_state.distance_from_edge[city_tile.pos.y,city_tile.pos.x],
+        city_tile.pos.x * game_state.x_order_coefficient,
+        city_tile.pos.y * game_state.y_order_coefficient)
+
         if not city_tile.can_act():
             continue
 
