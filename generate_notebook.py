@@ -169,8 +169,28 @@ zip_code = """\
 cells.append(nbf.new_code_cell(zip_code, metadata={"_kg_hide-input": True}))
 
 
+notebook_metadata = {
+    "kernelspec": {
+        "language": "python",
+        "display_name": "Python 3",
+        "name": "python3"
+    },
+    "language_info": {
+        "name": "python",
+        "version": "3.7.10",
+        "mimetype": "text/x-python",
+        "codemirror_mode": {
+            "name": "ipython",
+            "version": 3
+        },
+        "pygments_lexer": "ipython3",
+        "nbconvert_exporter": "python",
+        "file_extension": ".py"
+    }
+}
 
-nb = nbf.new_notebook(cells=nbformat.from_dict(cells))
+
+nb = nbf.new_notebook(cells=nbformat.from_dict(cells), metadata=notebook_metadata)
 
 with open('notebook_generated.ipynb', 'w') as f:
     nbformat.write(nb, f)

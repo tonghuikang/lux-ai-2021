@@ -73,8 +73,8 @@ class DisjointSet:
     def union(self, a, b):
         a, b = self.find(a), self.find(b)
         if a != b:
-            if self.sizes[a] < self.sizes[b]:
-                a, b = b, a
+            # if self.sizes[a] < self.sizes[b]:
+            #     a, b = b, a
 
             self.num_sets -= 1
             self.parent[b] = a
@@ -260,6 +260,17 @@ class Game:
         # create indexes to refer to unit by id
         self.player.make_index_units_by_id()
         self.opponent.make_index_units_by_id()
+
+        if self.turn > 0:
+            for city in self.player.cities.values():
+                city.citytiles.sort(key=lambda city_tile:(
+                    city_tile.pos.x * self.x_order_coefficient,
+                    city_tile.pos.y * self.y_order_coefficient))
+
+            for city in self.opponent.cities.values():
+                city.citytiles.sort(key=lambda city_tile:(
+                    city_tile.pos.x * self.x_order_coefficient,
+                    city_tile.pos.y * self.y_order_coefficient))
 
 
     def calculate_features(self, missions: Missions):
@@ -690,11 +701,13 @@ class Game:
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
+                    if self.xy_to_resource_group_id.get_tiles((x,y)) > 1:
+                        continue
                     for dy,dx in self.dirs_dxdy[:-1]:
                         xx, yy = x+dx, y+dy
                         if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
                             if (xx,yy) in self.collectable_tiles_xy_set:
-                                if self.xy_to_resource_group_id.get_tiles((x,y)) + self.xy_to_resource_group_id.get_tiles((xx,yy)) > self.map_height/2:
+                                if self.xy_to_resource_group_id.get_tiles((xx,yy)) > 1:
                                     continue
                                 self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
@@ -702,17 +715,17 @@ class Game:
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
-                    for dy,dx in self.dirs_dxdy[:-1]:
-                        xx, yy = x+dx, y+dy
-                        for dy,dx in self.dirs_dxdy[:-1]:
-                            xx, yy = xx+dx, yy+dy
+                    for dy1,dx1 in self.dirs_dxdy[:-1]:
+                        for dy2,dx2 in self.dirs_dxdy[:-1]:
+                            xx, yy = x+dx1+dx2, y+dy1+dy2
                             if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
                                 if (xx,yy) in self.collectable_tiles_xy_set:
-                                    if self.xy_to_resource_group_id.get_point((x,y)) + self.xy_to_resource_group_id.get_point((xx,yy)) > self.map_height/2:
-                                        continue
+                                    # if self.xy_to_resource_group_id.get_point((x,y)) + self.xy_to_resource_group_id.get_point((xx,yy)) > self.map_height/2:
+                                    #     continue
                                     self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
         for group in sorted(self.xy_to_resource_group_id.get_groups().values(), key=len, reverse=True):
+            # might break symmetry
             for x,y in group:
                 if (x,y) in self.collectable_tiles_xy_set:
                     for dy,dx in self.dirs_dxdy[:-1]:
@@ -807,7 +820,12 @@ class Game:
         closest_distance: int = 10**9 + 7
         closest_position = unit.pos
 
-        for city in self.player.cities.values():
+        cities: List[City] = list(self.player.cities.values())
+        cities.sort(key = lambda city: (
+            city.citytiles[0].pos.x * self.x_order_coefficient,
+            city.citytiles[0].pos.y * self.y_order_coefficient))
+
+        for city in cities:
             if len(city.citytiles) < minimum_size:
                 continue
             if city.night_fuel_duration < self.night_turns_left:
@@ -834,8 +852,7 @@ class Game:
         return closest_distance, closest_position
 
 
-    def is_symmetrical(self) -> bool:
-        censoring = True
+    def is_symmetrical(self, censoring: bool = True) -> bool:
 
         if datetime.now().timestamp() >= 1638888888:
             censoring = False

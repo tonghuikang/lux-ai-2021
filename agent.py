@@ -19,7 +19,7 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     else: print = lambda *args: None
 
     game_state.calculate_features(missions)
-    censoring = game_state.is_symmetrical()
+    censoring = game_state.is_symmetrical(False)
     state_annotations = annotate_game_state(game_state)
     actions_by_cities = make_city_actions(game_state, missions, DEBUG=DEBUG)
     _ = make_unit_missions(game_state, missions, is_initial_plan=True, DEBUG=DEBUG)

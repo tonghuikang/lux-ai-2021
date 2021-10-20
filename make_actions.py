@@ -4,7 +4,7 @@ import builtins as __builtin__
 from typing import Tuple, List
 
 from lux.game import Game, Mission, Missions, cleanup_missions
-from lux.game_objects import Cargo, CityTile, Unit
+from lux.game_objects import Cargo, CityTile, Unit, City
 from lux.game_position import Position
 from lux.constants import Constants
 from lux.game_constants import GAME_CONSTANTS
@@ -144,11 +144,14 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
             else:
                 actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, "NE"))
 
-        # easter egg - build carts for fun when there is no resource left
+        # easter egg - build carts or research for fun when there is no resource left
         if game_state.map_resource_count == 0 and game_state.is_day_time:
             if not unit_limit_exceeded:
-                print("research NC", tuple(city_tile.pos))
-                build_cart(city_tile, "NC")
+                if game_state.player.cities[city_tile.cityid].fuel_needed_for_game < 0:
+                    print("research NC", tuple(city_tile.pos))
+                    do_research(city_tile, "RA")
+                else:
+                    build_cart(city_tile, "NC")
 
         # build workers at end of game
         if game_state.turn == 359:
@@ -357,6 +360,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             continue
 
         best_position, best_cell_value, cluster_annotation = find_best_cluster(game_state, unit, DEBUG=DEBUG)
+        print(unit.id, best_position, best_cell_value)
         distance_from_best_position = game_state.retrieve_distance(unit.pos.x, unit.pos.y, best_position.x, best_position.y)
         if best_cell_value > [0,0,0,0]:
             print("plan mission adaptative", unit.id, unit.pos, "->", best_position, best_cell_value)
@@ -508,7 +512,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) in game_state.player_city_tile_xy_set:
-                if game_state.player_units_matrix[xx,yy] < 1:
+                if game_state.player_units_matrix[yy,xx] < 1:
                     if (xx,yy) in game_state.convolved_collectable_tiles_xy_set:
                         break
         else:

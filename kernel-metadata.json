@@ -1,0 +1,13 @@
+{
+  "id": "huikang/lux-ai-working-title-bot-v7",
+  "title": "[Lux AI] Working Title Bot v7",
+  "code_file": "notebook_generated.ipynb",
+  "language": "python",
+  "kernel_type": "notebook",
+  "is_private": "true",
+  "enable_gpu": "false",
+  "enable_internet": "true",
+  "dataset_sources": [],
+  "competition_sources": ["lux-ai-2021"],
+  "kernel_sources": []
+}
