@@ -91,7 +91,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                                        (1 + len(game_state.resource_leader_to_locating_units[target_leader] &
                                                 game_state.resource_leader_to_targeting_units[target_leader]))
 
-                    # discourage targeting depending are you the closet unit to the resource
+                    # discourage targeting depending are you the closest unit to the resource
                     distance_bonus = game_state.distance_from_player_assets[y,x]/max(1,distance)
 
                     if consider_different_cluster_must:

@@ -377,9 +377,11 @@ class Game:
         self.uranium_exist_matrix = (self.uranium_amount_matrix > 0).astype(int)
         self.all_resource_exist_matrix = (self.all_resource_amount_matrix > 0).astype(int)
 
-        self.convolved_wood_exist_matrix = self.convolve(self.wood_amount_matrix)
+        self.convolved_wood_exist_matrix = self.convolve(self.wood_exist_matrix)
         self.convolved_coal_exist_matrix = self.convolve(self.coal_exist_matrix)
         self.convolved_uranium_exist_matrix = self.convolve(self.uranium_exist_matrix)
+
+        self.resource_collection_rate = self.convolved_wood_exist_matrix * 20 + self.convolved_coal_exist_matrix * 5 + self.convolved_uranium_exist_matrix * 2
 
         # positive if on empty cell and beside the resource
         self.wood_side_matrix = self.convolve(self.wood_exist_matrix) * self.empty_tile_matrix
@@ -770,11 +772,11 @@ class Game:
                 self.resource_leader_to_targeting_units[leader].add(unit_id)
 
 
-    def get_nearest_empty_tile_and_distance(self, current_position: Position, current_target: Position=None) -> Tuple[Position, int]:
+    def get_nearest_empty_tile_and_distance(self, current_position: Position, current_target: Position=None, move_ok=False) -> Tuple[Position, int]:
         best_distance_with_features = (10**9+7,0,0)
         nearest_position: Position = current_position
 
-        if self.all_resource_amount_matrix[current_position.y, current_position.x] == 0:
+        if self.all_resource_amount_matrix[current_position.y, current_position.x] == 0 and not move_ok:
             if tuple(current_position) not in self.player_city_tile_xy_set:
                 if self.distance_from_collectable_resource[current_position.y,current_position.x] == 1:
                     best_distance_with_features = (0,0,0)
@@ -796,6 +798,9 @@ class Game:
 
                 position = Position(x, y)
                 distance = self.retrieve_distance(current_position.x, current_position.y, position.x, position.y)
+
+                if move_ok:
+                    distance = max(1, distance)
 
                 # among tied distances we want to pick a better location
                 distance_with_features = (distance,
