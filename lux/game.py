@@ -506,35 +506,29 @@ class Game:
             return matrix
 
 
-        def get_norm(p1, p2):
-            return (abs(p1[0] - p2[0]) + abs(p1[1] - p2[1]))
+        def get_median(arr):
+            arr = sorted(arr)
+            midpoint = len(arr)//2
+            return (arr[midpoint] + arr[~midpoint]) / 2
 
         def calculate_distance_from_median(set_object):
             # https://leetcode.com/problems/best-position-for-a-service-centre/discuss/733153/
             if not set_object:
                 return self.init_matrix(default_value=0), Position(0,0)
 
-            curr = list(map(lambda a: sum(a)/len(a), zip(*set_object)))  # [2]
-            prev = [float('inf')] * 2
-
-            err = 1e-7  # [4]
-            epsilon = 1e-20  # [5]
-            while get_norm(curr, prev) > err: # [3]
-                numerator, denominator = [0, 0], 0
-                for p in set_object:
-                    l2 = get_norm(curr, p) + epsilon
-                    numerator[0] += p[0] / l2
-                    numerator[1] += p[1] / l2
-                    denominator += 1 / l2
-                next_p = [numerator[0]/denominator, numerator[1]/denominator]
-                curr, prev = next_p, curr
+            mx = get_median([x for x,y in set_object])
+            my = get_median([y for x,y in set_object])
 
             matrix = self.init_matrix(default_value=0)
             for y in self.y_iteration_order:
                 for x in self.x_iteration_order:
-                    matrix[y][x] = get_norm((x,y), curr)
+                    matrix[y][x] = abs(x-mx) + abs(y-my)
 
-            return matrix, Position(curr[0], curr[1])
+            return matrix, Position(int(mx), int(my))
+
+
+        def get_norm(p1, p2):
+            return (abs(p1[0] - p2[0]) + abs(p1[1] - p2[1]))
 
         def calculate_distance_from_mean(set_object):
             # https://leetcode.com/problems/best-position-for-a-service-centre/discuss/733153/
@@ -572,8 +566,8 @@ class Game:
         if self.turn <= 20:
             self.distance_from_floodfill_by_empty_tile = calculate_distance_from_set(self.buildable_tile_xy_set)
 
-        self.distance_from_resource_median, self.resource_median = calculate_distance_from_median(self.convolved_collectable_tiles_xy_set)
-        self.distance_from_resource_mean, self.resource_mean = calculate_distance_from_mean(self.convolved_collectable_tiles_xy_set)
+        self.distance_from_resource_median, self.resource_median = calculate_distance_from_median(self.collectable_tiles_xy_set)
+        self.distance_from_resource_mean, self.resource_mean = calculate_distance_from_mean(self.collectable_tiles_xy_set)
 
         # some features for blocking logic
         self.opponent_unit_adjacent_xy_set: Set = set()
@@ -701,14 +695,10 @@ class Game:
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
-                    if self.xy_to_resource_group_id.get_tiles((x,y)) > 1:
-                        continue
                     for dy,dx in self.dirs_dxdy[:-1]:
                         xx, yy = x+dx, y+dy
                         if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
                             if (xx,yy) in self.collectable_tiles_xy_set:
-                                if self.xy_to_resource_group_id.get_tiles((xx,yy)) > 1:
-                                    continue
                                 self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
         # consider resources two steps away as part of the cluster, if cluster size is not exceeded
@@ -720,8 +710,8 @@ class Game:
                             xx, yy = x+dx1+dx2, y+dy1+dy2
                             if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
                                 if (xx,yy) in self.collectable_tiles_xy_set:
-                                    # if self.xy_to_resource_group_id.get_point((x,y)) + self.xy_to_resource_group_id.get_point((xx,yy)) > self.map_height/2:
-                                    #     continue
+                                    if self.xy_to_resource_group_id.get_tiles((xx,yy)) > 1:
+                                        continue
                                     self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
         for group in sorted(self.xy_to_resource_group_id.get_groups().values(), key=len, reverse=True):
