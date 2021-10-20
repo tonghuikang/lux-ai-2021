@@ -695,8 +695,12 @@ class Game:
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
+                    if self.xy_to_resource_group_id.get_tiles((x,y)) > self.map_height/2:
+                        continue
                     for dy,dx in self.dirs_dxdy[:-1]:
                         xx, yy = x+dx, y+dy
+                        if self.xy_to_resource_group_id.get_tiles((xx,yy)) > self.map_height/2:
+                            continue
                         if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
                             if (xx,yy) in self.collectable_tiles_xy_set:
                                 self.xy_to_resource_group_id.union((x,y), (xx,yy))

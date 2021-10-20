@@ -251,8 +251,10 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 if (xx,yy) in game_state.empty_tile_xy_set:
                     if game_state.retrieve_distance(xx, yy, best_position.x, best_position.y) > distance_of_best:
                         continue
-                    # if Position(xx,yy) - best_position >= adj_unit.pos - best_position:
-                    #     continue
+                    if Position(xx,yy) - best_position >= unit.pos - best_position:
+                        continue
+                    if Position(xx,yy) - best_position >= adj_unit.pos - best_position:
+                        continue
                     print("ejecting", unit.id, unit.pos, adj_unit.id, adj_unit.pos, direction, "->", best_position)
                     action_2 = adj_unit.move(direction)
                     actions_ejections.append(action_1)
@@ -586,7 +588,8 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             continue
         if game_state.turn%40 < 20:
             continue
-        make_random_transfer(unit, "🟢", True, game_state.player_city_tile_xy_set)
+        if tuple(unit.pos) not in game_state.buildable_tile_xy_set:
+            make_random_transfer(unit, "🟢", True, game_state.player_city_tile_xy_set)
         if not unit.can_act():
             continue
         make_random_move_to_city_sustain(unit, "🟢")
