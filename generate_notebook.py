@@ -7,6 +7,7 @@ import nbformat.v4 as nbf
 
 
 
+
 cells = []
 
 preamble_intro = """
@@ -19,8 +20,8 @@ You can submit the zip the repository to the competition. This notebook is gener
 
 Regardless, do feel free to clone this notebook and submit `submission.tar.gz` under the "Data" tab.
 """
-
 cells.append(nbf.new_markdown_cell(preamble_intro))
+
 
 init_code = """\
 !pip install kaggle-environments -U > /dev/null
@@ -38,7 +39,6 @@ The following scipts contain the algorithms that the agent uses.
 The algorithm is described in the comments.
 Feel free to ask for more clarification.
 """
-
 cells.append(nbf.new_markdown_cell(preamble_agent))
 
 
@@ -56,6 +56,7 @@ for filename in filenames:
         content = savefile_cell_magic + f.read()
     cell = nbf.new_code_cell(content, metadata={"_kg_hide-input": True})
     cells.append(cell)
+
 
 
 
@@ -87,6 +88,7 @@ for filename in filenames:
 
 
 
+
 preamble_rendering = """\
 # Game Rendering
 This is a replay of the agent fighting against itself.
@@ -101,7 +103,6 @@ Otherwise, the number of nights it can endure will be indicated on the tile.
 The inscription on the unit indicates the amount of total resources it has, and the majority type of resource.
 `F` indicates that it has at least 100 resources. If the unit has moved in the turn, the inscription is annotated on the previous location.
 """
-
 cells.append(nbf.new_markdown_cell(preamble_rendering))
 
 
@@ -113,10 +114,12 @@ steps = env.run(["agent.py", "agent.py"])\
 """
 cells.append(nbf.new_code_cell(runner_code, metadata={"_kg_hide-input": True, "jupyter": {"outputs_hidden":True}}))
 
+
 render_code = """\
 env.render(mode="ipython", width=900, height=800)\
 """
 cells.append(nbf.new_code_cell(render_code, metadata={"_kg_hide-input": True}))
+
 
 
 
@@ -131,9 +134,8 @@ For visualisation, we plot `convolved_collectable_tiles_matrix`.
 This matrix is used for estimating the best target position of a mission.
 You could also print other attributes of `game_state`.
 """
-
-
 cells.append(nbf.new_markdown_cell(preamble_debugging))
+
 
 debugging_code = """\
 import pickle
@@ -153,19 +155,103 @@ plt.imshow(game_state.convolved_collectable_tiles_matrix)
 plt.colorbar()
 plt.show()\
 """
-
 cells.append(nbf.new_code_cell(debugging_code, metadata={"_kg_hide-input": True}))
 
 
 
 
+
+preamble_evaluation = """\
+# Evaluation
+We run the agent against the imitation agent for a few matches.
+"""
+cells.append(nbf.new_markdown_cell(preamble_evaluation))
+
+
+evaluation_code = """\
+!npm install -g @lux-ai/2021-challenge@latest &> /dev/null
+!pip install kaggle-environments -U &> /dev/null\
+"""
+cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True}))
+
+
+evaluation_code = """\
+%%bash
+REF_DIR="/kaggle/input/lux-ai-with-imitation-learning/submission.tar.gz"
+mkdir -p ref/  # imitation agent
+cp -r $REF_DIR ref/
+cd ref && tar -xvzf *.tar.gz &> /dev/null\
+"""
+cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True}))
+
+
+evaluation_code = """\
+!cp main.py ref/main.py  # fix main.py\
+"""
+cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True}))
+
+
+evaluation_code = """\
+!GFOOTBALL_DATA_DIR=C lux-ai-2021 --loglevel 0 --width 12 --height 12 main.py ref/main.py\
+"""
+cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True}))
+
+
+evaluation_code = """\
+%%bash
+MAP_SIZE=12
+for run in {1..200};
+    do GFOOTBALL_DATA_DIR=C lux-ai-2021 --seed $run --loglevel 1 --maxtime 10000 \\
+    --height $MAP_SIZE --width $MAP_SIZE --storeReplay=false --storeLogs=false \\
+    main.py ref/main.py >> logs-$MAP_SIZE.txt;
+done\
+"""
+cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True}))
+
+
+evaluation_code = '''\
+wins_template = """
+    { rank: 1, agentID: 0, name: 'main.py' },
+    { rank: 2, agentID: 1, name: 'ref/main.py' }
+"""
+
+draw_template = """
+    { rank: 1, agentID: 0, name: 'main.py' },
+    { rank: 1, agentID: 1, name: 'ref/main.py' }
+"""
+
+lose_template = """
+    { rank: 1, agentID: 1, name: 'main.py' },
+    { rank: 2, agentID: 0, name: 'ref/main.py' }
+"""
+
+map_sizes = [12]
+total_score = 0
+for map_size in map_sizes:
+    logfile_name = f"logs-{map_size}.txt"
+    with open(logfile_name) as f:
+        data_string = f.read()
+        wins = data_string.count(wins_template)
+        lose = data_string.count(draw_template)
+        draw = data_string.count(lose_template)
+        score = (wins + lose / 2)/(wins + lose + draw)*100
+        total_score += score/len(map_sizes)
+        print(f"Map size: {map_size}, Score: {score:.3f}, Stats: {wins}/{lose}/{draw}")
+print(f"Total score: {total_score:.3f}")\
+'''
+
+cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True}))
+
+
 cells.append(nbf.new_markdown_cell("# Make Submission"))
+
 
 zip_code = """\
 !rm snapshots/*.pkl
-!tar --exclude='*.ipynb' --exclude="*.pyc" --exclude="*.pkl" --exclude="replay.json" -czf submission.tar.gz *
+!tar --exclude='*.ipynb' --exclude="*.pyc" --exclude="*.pkl" --exclude="replays/" --exclude="ref/" -czf submission.tar.gz *
 !rm *.py && rm -rf __pycache__/ && rm -rf lux/\
 """
+
 cells.append(nbf.new_code_cell(zip_code, metadata={"_kg_hide-input": True}))
 
 
