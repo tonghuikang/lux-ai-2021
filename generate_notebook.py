@@ -221,8 +221,8 @@ draw_template = """
 """
 
 lose_template = """
-    { rank: 1, agentID: 1, name: 'main.py' },
-    { rank: 2, agentID: 0, name: 'ref/main.py' }
+    { rank: 1, agentID: 1, name: 'ref/main.py' },
+    { rank: 2, agentID: 0, name: 'main.py' }
 """
 
 map_sizes = [12]

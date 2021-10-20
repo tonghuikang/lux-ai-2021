@@ -2,6 +2,7 @@
 
 import builtins as __builtin__
 from typing import Tuple, List
+from lux import game
 
 from lux.game import Game, Mission, Missions, cleanup_missions
 from lux.game_objects import Cargo, CityTile, Unit, City
@@ -371,7 +372,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             continue
 
         # homing mission
-        if unit.get_cargo_space_left() < 100:
+        if unit.get_cargo_space_used() > 0:
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(unit)
             print("homing mission", unit.id, unit.pos, "->", homing_position, homing_distance)
             mission = Mission(unit.id, homing_position, "", details="homing")
@@ -552,7 +553,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
     def make_random_transfer(unit: Unit, annotation: str = "", limit_target = False, allowed_target_xy: set = set()):
         if not unit.can_act():
             return
-        if unit.get_cargo_space_left() == 100:
+        if unit.get_cargo_space_used() == 0:
             # nothing to transfer
             return
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
@@ -723,6 +724,12 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
                 if game_state.turn <= 80:
                     # only in early game
                     cost[0] = 1
+
+        # if targeting same cluster, do not walk on tiles without resources
+        targeting_same_cluster = game_state.xy_to_resource_group_id.find(tuple(target_pos)) == game_state.xy_to_resource_group_id.find(tuple(unit.pos))
+        if targeting_same_cluster:
+            if tuple(newpos) not in game_state.convolved_collectable_tiles_xy_set:
+                cost[0] = 3
 
         # discourage going into a fueled city tile if you are carrying substantial coal and uranium
         if unit.cargo.wood + unit.cargo.uranium * 2 > 20:
