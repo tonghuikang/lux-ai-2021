@@ -52,16 +52,18 @@ class DisjointSet:
     def __init__(self):
         self.parent = {}
         self.sizes = defaultdict(int)
-        self.points = defaultdict(int)  # tracks resource pile size
-        self.tiles = defaultdict(int)  # tracks resource pile size
+        self.points = defaultdict(int)  # 1 point for wood, 3 point for coal, 5 point for uranium
+        self.tiles = defaultdict(int)  # 1 point for all resource
+        self.citytiles = defaultdict(int)  # 1 point for citytile next to cluster
         self.num_sets = 0
 
-    def find(self, a, point=0, tile=0):
+    def find(self, a, point=0, tile=0, citytile=0):
         if a not in self.parent:
             self.parent[a] = a
             self.sizes[a] += 1
             self.points[a] += point
             self.tiles[a] += tile
+            self.citytiles[a] += citytile
             self.num_sets += 1
         acopy = a
         while a != self.parent[a]:
@@ -81,6 +83,7 @@ class DisjointSet:
             self.sizes[a] += self.sizes[b]
             self.points[a] += self.points[b]
             self.tiles[a] += self.tiles[b]
+            self.citytiles[a] += self.citytiles[b]
 
     def get_size(self, a):
         return self.sizes[self.find(a)]
@@ -91,6 +94,9 @@ class DisjointSet:
     def get_tiles(self, a):
         return self.tiles[self.find(a)]
 
+    def get_citytiles(self, a):
+        return self.citytiles[self.find(a)]
+
     def get_groups(self):
         groups = defaultdict(list)
         for element in self.parent:
@@ -98,6 +104,16 @@ class DisjointSet:
             if leader:
                 groups[leader].append(element)
         return groups
+
+    def get_groups_sorted_by_citytile_size(self):
+        groups = defaultdict(list)
+        for element in self.parent:
+            leader = self.find(element)
+            if leader:
+                groups[leader].append(element)
+        leaders = list(groups.keys())
+        leaders.sort(key=lambda leader: self.get_citytiles(leader), reverse=True)
+        return [groups[leader] for leader in leaders]
 
     def get_group_count(self):
         return sum(self.points[leader] > 1 for leader in self.get_groups().keys())
@@ -694,6 +710,9 @@ class Game:
                         self.xy_to_resource_group_id.find((x,y), point=3, tile=1)
                     if (x,y) in self.uranium_exist_xy_set:
                         self.xy_to_resource_group_id.find((x,y), point=5, tile=1)
+                    if (x,y) in self.player_city_tile_xy_set:
+                        self.xy_to_resource_group_id.find((x,y), citytile=1)
+
 
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
@@ -721,7 +740,7 @@ class Game:
                                         continue
                                     self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
-        for group in sorted(self.xy_to_resource_group_id.get_groups().values(), key=len, reverse=True):
+        for group in self.xy_to_resource_group_id.get_groups_sorted_by_citytile_size():
             # might break symmetry
             for x,y in group:
                 if (x,y) in self.collectable_tiles_xy_set:
