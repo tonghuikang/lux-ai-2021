@@ -568,8 +568,9 @@ class Game:
         if self.turn <= 20:
             self.distance_from_floodfill_by_empty_tile = calculate_distance_from_set(self.buildable_tile_xy_set)
 
-        self.distance_from_resource_median, self.resource_median = calculate_distance_from_median(self.collectable_tiles_xy_set)
         self.distance_from_resource_mean, self.resource_mean = calculate_distance_from_mean(self.collectable_tiles_xy_set)
+        self.distance_from_resource_median, self.resource_median = calculate_distance_from_median(self.collectable_tiles_xy_set)
+        self.distance_from_player_unit_median, self.player_unit_median = calculate_distance_from_mean(self.player_units_xy_set)
 
         # some features for blocking logic
         self.opponent_unit_adjacent_xy_set: Set = set()
@@ -697,12 +698,12 @@ class Game:
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
-                    if self.xy_to_resource_group_id.get_tiles((x,y)) > self.map_height/2:
-                        continue
+                    # if self.xy_to_resource_group_id.get_tiles((x,y)) > self.map_height/2:
+                    #     continue
                     for dy,dx in self.dirs_dxdy[:-1]:
                         xx, yy = x+dx, y+dy
-                        if self.xy_to_resource_group_id.get_tiles((xx,yy)) > self.map_height/2:
-                            continue
+                        # if self.xy_to_resource_group_id.get_tiles((xx,yy)) > self.map_height/2:
+                        #     continue
                         if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
                             if (xx,yy) in self.collectable_tiles_xy_set:
                                 self.xy_to_resource_group_id.union((x,y), (xx,yy))
