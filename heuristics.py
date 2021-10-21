@@ -147,6 +147,11 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                         if game_state.player.researched_uranium_projected():
                             cell_value[1] += 2*game_state.convolved_uranium_exist_matrix[y,x]
 
+                    # if mining advanced resource, stand your ground unless there is a direct path
+                    if game_state.convolved_coal_exist_matrix[unit.pos.y,unit.pos.x] or game_state.convolved_uranium_exist_matrix[unit.pos.y,unit.pos.x]:
+                        if distance > abs(unit.pos.x - x) + abs(unit.pos.y - y):
+                            continue
+
                     # discourage if the target is one unit closer to the enemy, in the early game
                     # specific case to avoid this sort of targeting
                     #    X
@@ -157,7 +162,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                             cell_value[2] -= 2
 
                     # for debugging
-                    score_matrix_wrt_pos[y,x] = cell_value[2]
+                    score_matrix_wrt_pos[y,x] = cell_value[1]
 
                     # update best target
                     if cell_value > best_cell_value:
