@@ -657,6 +657,8 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             continue
         if unit.get_cargo_space_used() == 0:
             continue
+        if tuple(unit.pos) in game_state.buildable_tile_xy_set:
+            continue
         make_random_transfer(unit, "KR")
 
 
