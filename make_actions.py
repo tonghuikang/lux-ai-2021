@@ -730,11 +730,12 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
                     # only in early game
                     cost[0] = 1
 
-        # if targeting same cluster, do not walk on tiles without resources
+        # if targeting same cluster, do not walk on tiles without resources unless you will be closer to enemy unit
         targeting_same_cluster = game_state.xy_to_resource_group_id.find(tuple(target_pos)) == game_state.xy_to_resource_group_id.find(tuple(unit.pos))
         if targeting_same_cluster:
-            if tuple(newpos) not in game_state.convolved_collectable_tiles_xy_set:
-                cost[0] = 3
+            if game_state.retrieve_distance(newpos.x, newpos.y, target_pos.x, target_pos.y) >= game_state.distance_from_opponent_units[target_pos.y, target_pos.x]:
+                if tuple(newpos) not in game_state.convolved_collectable_tiles_xy_set:
+                    cost[0] = 3
 
         # discourage going into a fueled city tile if you are carrying substantial coal and uranium
         if unit.cargo.wood + unit.cargo.uranium * 2 > 20:

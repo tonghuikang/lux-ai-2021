@@ -101,7 +101,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
 
                     # slightly discourage targeting clusters closer to enemy
                     if game_state.distance_from_opponent_assets[y,x] < game_state.distance_from_player_assets[y,x]:
-                        distance_bonus *= 0.9
+                        target_bonus *= 0.9
 
                     if distance_bonus < 1/2:
                         # if you are far from being the closest to the new cluster, force target bonus to be close to one
