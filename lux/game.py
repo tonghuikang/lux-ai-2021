@@ -112,8 +112,8 @@ class DisjointSet:
             if leader:
                 groups[leader].append(element)
         leaders = list(groups.keys())
-        leaders.sort(key=lambda leader: self.get_citytiles(leader), reverse=True)
-        return [groups[leader] for leader in leaders]
+        leaders.sort(key=lambda leader: (self.get_citytiles(leader), self.get_tiles(leader)), reverse=True)
+        return [groups[leader] for leader in leaders if self.get_point(leader) > 0]
 
     def get_group_count(self):
         return sum(self.points[leader] > 1 for leader in self.get_groups().keys())
@@ -700,6 +700,8 @@ class Game:
         # compute join the resource cluster and calculate the amount of resource
         # clusters that are connected by a diagonal are considered to be a different resource
         # the cluster with more sources own more sides
+
+        # index individual resource tiles
         self.xy_to_resource_group_id: DisjointSet = DisjointSet()
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
@@ -710,10 +712,11 @@ class Game:
                         self.xy_to_resource_group_id.find((x,y), point=3, tile=1)
                     if (x,y) in self.uranium_exist_xy_set:
                         self.xy_to_resource_group_id.find((x,y), point=5, tile=1)
+                if (x,y) in self.convolved_collectable_tiles_xy_set:
                     if (x,y) in self.player_city_tile_xy_set:
                         self.xy_to_resource_group_id.find((x,y), citytile=1)
 
-
+        # merge adjacent resource tiles
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
@@ -740,6 +743,19 @@ class Game:
                                         continue
                                     self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
+        # absorb adjacent citytiles
+        for group in self.xy_to_resource_group_id.get_groups_sorted_by_citytile_size():
+            # might break symmetry
+            for x,y in group:
+                if (x,y) in self.collectable_tiles_xy_set:
+                    for dy,dx in self.dirs_dxdy[:-1]:
+                        xx, yy = x+dx, y+dy
+                        if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
+                            if (xx,yy) not in self.player_city_tile_xy_set:
+                                if self.xy_to_resource_group_id.find((xx,yy)) == (xx,yy):
+                                    self.xy_to_resource_group_id.union((x,y), (xx,yy))
+
+        # absorb adjacent buildable tiles
         for group in self.xy_to_resource_group_id.get_groups_sorted_by_citytile_size():
             # might break symmetry
             for x,y in group:

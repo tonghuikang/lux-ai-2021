@@ -133,7 +133,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                                   - distance - game_state.distance_from_opponent_assets[y,x]
                                   - game_state.distance_from_resource_median[y,x]
                                   + game_state.distance_from_player_unit_median[y,x],
-                                  - game_state.opponent_units_matrix[y,x] * 2]
+                                  - distance - game_state.opponent_units_matrix[y,x] * 2]
 
                     # penalty on parameter preference
                     # if not collectable and not buildable, penalise
@@ -162,7 +162,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                             cell_value[2] -= 2
 
                     # for debugging
-                    score_matrix_wrt_pos[y,x] = cell_value[0]
+                    score_matrix_wrt_pos[y,x] = cell_value[2]
 
                     # update best target
                     if cell_value > best_cell_value:
