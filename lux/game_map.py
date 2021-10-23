@@ -42,6 +42,13 @@ class GameMap:
     def get_cell(self, x, y) -> Cell:
         return self.map[y][x]
 
+    def get_cityid_of_cell(self, x, y) -> Cell:
+        cell: Cell = self.map[y][x]
+        citytile: CityTile = cell.citytile
+        if not citytile:
+            return None
+        return citytile.cityid
+
     def _setResource(self, r_type, x, y, amount):
         """
         do not use this function, this is for internal tracking of state

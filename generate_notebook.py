@@ -177,7 +177,7 @@ cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True
 
 evaluation_code = """\
 %%bash
-REF_DIR="/kaggle/input/lux-ai-with-imitation-learning/submission.tar.gz"
+REF_DIR="/kaggle/input/lux-ai-imitation-learning/submission.tar.gz"
 mkdir -p ref/  # imitation agent
 cp -r $REF_DIR ref/
 cd ref && tar -xvzf *.tar.gz &> /dev/null\

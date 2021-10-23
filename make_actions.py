@@ -571,6 +571,14 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
                 continue
             if adj_unit.id not in game_state.player.units_by_id:
                 continue
+
+            # do not transfer to a citytile that can already last for the game
+            cityid = game_state.map.get_cityid_of_cell(xx,yy)
+            if cityid:
+                city: City = game_state.player.cities[cityid]
+                if city and city.fuel_needed_for_game < 0:
+                    continue
+
             print("random transfer", unit.id, unit.pos, "->", adj_unit.id, xx, yy)
             action = unit.transfer(adj_unit.id, unit.cargo.get_most_common_resource(), 2000)
             actions.append(action)

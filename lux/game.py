@@ -586,7 +586,7 @@ class Game:
 
         self.distance_from_resource_mean, self.resource_mean = calculate_distance_from_mean(self.collectable_tiles_xy_set)
         self.distance_from_resource_median, self.resource_median = calculate_distance_from_median(self.collectable_tiles_xy_set)
-        self.distance_from_player_unit_median, self.player_unit_median = calculate_distance_from_mean(self.player_units_xy_set)
+        self.distance_from_player_unit_median, self.player_unit_median = calculate_distance_from_median(self.player_units_xy_set)
 
         # some features for blocking logic
         self.opponent_unit_adjacent_xy_set: Set = set()
@@ -730,7 +730,7 @@ class Game:
                             if (xx,yy) in self.collectable_tiles_xy_set:
                                 self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
-        # consider resources two steps away as part of the cluster, if cluster size is not exceeded
+        # consider resources two steps away as part of the cluster, if cluster size is not exceeded or map is large
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
@@ -739,7 +739,7 @@ class Game:
                             xx, yy = x+dx1+dx2, y+dy1+dy2
                             if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
                                 if (xx,yy) in self.collectable_tiles_xy_set:
-                                    if self.xy_to_resource_group_id.get_tiles((xx,yy)) > 1:
+                                    if self.xy_to_resource_group_id.get_tiles((xx,yy)) > 1 and self.map_width < 24:
                                         continue
                                     self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
@@ -825,7 +825,9 @@ class Game:
 
                 if (x,y) in self.targeted_for_building_xy_set:
                     # we allow units to build at a tile that is targeted but not for building
-                    if current_target and (x,y) != tuple(current_target):
+                    if not current_target:
+                        continue
+                    if (x,y) != tuple(current_target):
                         continue
 
                 # only build beside a collectable resource

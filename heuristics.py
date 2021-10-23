@@ -39,6 +39,8 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
     current_leader = game_state.xy_to_resource_group_id.find(tuple(unit.pos))
     units_mining_on_current_cluster = game_state.resource_leader_to_locating_units[current_leader] & game_state.resource_leader_to_targeting_units[current_leader]
     resource_size_of_current_cluster = game_state.xy_to_resource_group_id.get_point(current_leader)
+    if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 10:
+        resource_size_of_current_cluster = (resource_size_of_current_cluster+1)//2
 
     # only consider other cluster if another unit is targeting and mining in the current cluster
     if len(units_mining_on_current_cluster) >= 1:
@@ -162,7 +164,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                             cell_value[2] -= 2
 
                     # for debugging
-                    score_matrix_wrt_pos[y,x] = cell_value[2]
+                    score_matrix_wrt_pos[y,x] = cell_value[0]
 
                     # update best target
                     if cell_value > best_cell_value:
