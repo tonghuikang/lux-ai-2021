@@ -288,6 +288,11 @@ class Game:
                     city_tile.pos.x * self.x_order_coefficient,
                     city_tile.pos.y * self.y_order_coefficient))
 
+        # rotate iteration order
+        if self.turn%4 != 0:
+            self.dirs[3], self.dirs[0:3] = self.dirs[0], self.dirs[1:4]
+            self.dirs_dxdy[3], self.dirs_dxdy[0:3] = self.dirs_dxdy[0], self.dirs_dxdy[1:4]
+
 
     def calculate_features(self, missions: Missions):
 
@@ -481,7 +486,7 @@ class Game:
         for x,y in self.player_city_tile_xy_set:
             city = self.player.cities[self.map.get_cell(x,y).citytile.cityid]
             if city.fuel_needed_for_night <= -18:
-                for dx, dy in self.dirs_dxdy:
+                for dx, dy in self.dirs_dxdy[:-1]:
                     xx,yy = x+dx,y+dy
                     if 0 <= xx < self.map_width and 0 <= yy < self.map_height:
                         self.preferred_buildable_tile_matrix[yy,xx] = 1
@@ -880,11 +885,12 @@ class Game:
 
 
     def find_nearest_city_requiring_fuel(self, unit: Unit, require_reachable=True,
-                                         require_night=False, prefer_night=True, enforce_night=False,
+                                         require_night=False, prefer_night=True, enforce_night=False, enforce_night_addn=0,
                                          minimum_size=0, maximum_distance=100):
         # require_night - require refuelling to bring the city through the night
         # prefer_night - prefer refuelling a city that could not survive the night
         # enforce_night - only refuel city that could not survive the night
+        # enforce_night_addn - only refuel city that could not survive the night + enforce_night_addn
         closest_distance: int = 10**9 + 7
         closest_position = unit.pos
 
@@ -905,14 +911,14 @@ class Game:
                             continue
                     if require_night:
                         # require fuel to be able to save city for the night
-                        if unit.fuel_potential < city.fuel_needed_for_night:
+                        if unit.fuel_potential < city.fuel_needed_for_night - enforce_night_addn * city.get_light_upkeep():
                             continue
                     if prefer_night:
                         if city.fuel_needed_for_night > 0:
                             # prefer to save cities from the night
                             distance -= 1000
                     if enforce_night:
-                        if city.fuel_needed_for_night < 0:
+                        if city.fuel_needed_for_night < - enforce_night_addn * city.get_light_upkeep():
                             continue
                     if distance > maximum_distance:
                         continue

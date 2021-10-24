@@ -145,6 +145,12 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
             else:
                 actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, "NE"))
 
+        # extend carts to fetch resource
+        if 10 < game_state.player.cities[city_tile.cityid].night_fuel_duration < 30 and game_state.is_day_time:
+            if game_state.player.cities[city_tile.cityid].citytiles.__len__() > 5:
+                if not unit_limit_exceeded:
+                    build_cart(city_tile, "NC")
+
         # easter egg - build carts or research for fun when there is no resource left
         if game_state.map_resource_count == 0 and game_state.is_day_time:
             if not unit_limit_exceeded:
@@ -355,7 +361,20 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             continue
 
         # preemptive homing mission
-        if unit.cargo.uranium > 0:
+        preemptive_homing_mission_planned = False
+        if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set or game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 5:
+          if unit.cargo.uranium > 0:
+            # if there is a citytile nearby already
+            homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
+                unit, require_reachable=True, require_night=True, enforce_night=True, enforce_night_addn=10,
+                minimum_size=10, maximum_distance=unit.cargo.uranium//3)
+            if unit.pos != homing_position:
+                mission = Mission(unit.id, homing_position, details="homing two")
+                missions.add(mission)
+                unit_ids_with_missions_assigned_this_turn.add(unit.id)
+                preemptive_homing_mission_planned = True
+
+          if unit.cargo.uranium > 0 and not preemptive_homing_mission_planned:
             # if there is a citytile nearby already
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
                 unit, require_reachable=True, require_night=True, enforce_night=True,
@@ -463,7 +482,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.occupied_xy_set:
-                if game_state.distance_from_player_citytiles[yy,xx] > game_state.distance_from_player_citytiles[unit.pos.y,unit.pos.x]:
+                if game_state.distance_from_opponent_assets[yy,xx] < game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x]:
                     # attempt to move away from your assets
                     break
         else:
@@ -675,6 +694,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             continue
         if unit.get_cargo_space_used() == 0:
             continue
+        make_random_transfer(unit, "KT", True, game_state.buildable_tile_xy_set)
         if tuple(unit.pos) in game_state.buildable_tile_xy_set and game_state.distance_from_collectable_resource[unit.pos.y, unit.pos.x] == 1:
             continue
         make_random_transfer(unit, "KR")
@@ -720,14 +740,14 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
 
 def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> DIRECTIONS:
 
-    smallest_cost = [2,2,2,2]
+    smallest_cost = [2,2,2,2,2]
     closest_dir = DIRECTIONS.CENTER
     closest_pos = unit.pos
 
     for direction in game_state.dirs:
         newpos = unit.pos.translate(direction, 1)
 
-        cost = [0,0,0,0]
+        cost = [0,0,0,0,0]
 
         # do not go out of map
         if tuple(newpos) in game_state.xy_out_of_map:
@@ -758,7 +778,7 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
                     cost[0] = 3
 
         # discourage going into a fueled city tile if you are carrying substantial coal and uranium
-        if unit.cargo.wood + unit.cargo.uranium * 2 > 20:
+        if unit.cargo.coal + unit.cargo.uranium * 2 > 20:
             if game_state.matrix_player_cities_nights_of_fuel_required_for_game[newpos.y, newpos.x] < 0:
                 if tuple(newpos) in game_state.player_city_tile_xy_set:
                     cost[0] = 1
@@ -773,7 +793,11 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
 
         # prefer to walk on tiles with resources
         aux_cost = game_state.convolved_collectable_tiles_matrix[newpos.y, newpos.x]
-        cost[3] = -aux_cost
+        cost[3] = -min(2,aux_cost)
+
+        # prefer to walk closer to opponent
+        aux_cost = game_state.distance_from_opponent_assets[newpos.y, newpos.x]
+        cost[4] = aux_cost
 
         # update decision
         if cost < smallest_cost:
