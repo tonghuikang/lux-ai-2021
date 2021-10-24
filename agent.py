@@ -22,7 +22,7 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     censoring = game_state.is_symmetrical(False)
     state_annotations = annotate_game_state(game_state)
     actions_by_cities = make_city_actions(game_state, missions, DEBUG=DEBUG)
-    _ = make_unit_missions(game_state, missions, is_initial_plan=True, DEBUG=DEBUG)
+    cluster_annotations_and_ejections_pre = make_unit_missions(game_state, missions, is_initial_plan=True, DEBUG=DEBUG)
     missions, pre_actions_by_units = make_unit_actions(game_state, missions, is_initial_run=True, DEBUG=DEBUG)
     cluster_annotations_and_ejections = make_unit_missions(game_state, missions, DEBUG=DEBUG)
     mission_annotations = annotate_missions(game_state, missions)
@@ -30,12 +30,16 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     movement_annotations = annotate_movements(game_state, actions_by_units)
 
     print("actions_by_cities", actions_by_cities)
+    print("cluster_annotations_and_ejections_pre", cluster_annotations_and_ejections_pre)
+    print("pre_actions_by_units", pre_actions_by_units)
+    print("cluster_annotations_and_ejections", cluster_annotations_and_ejections)
+    print("mission_annotations", mission_annotations)
     print("actions_by_units", actions_by_units)
     print("state_annotations", state_annotations)
-    print("mission_annotations", mission_annotations)
     print("movement_annotations", movement_annotations)
     actions = actions_by_cities + pre_actions_by_units + actions_by_units
-    actions += cluster_annotations_and_ejections + mission_annotations + movement_annotations + state_annotations
+    actions += cluster_annotations_and_ejections + cluster_annotations_and_ejections_pre
+    actions += mission_annotations + movement_annotations + state_annotations
     actions = filter_cell_annotations(actions)
     if censoring: actions = []
     return actions, game_state, missions

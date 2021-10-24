@@ -43,6 +43,8 @@ def annotate_game_state(game_state: Game, DEBUG=False):
     annotations.append(annotation)
     annotation = annotate.text(int(game_state.player_unit_median.x), int(game_state.player_unit_median.y), "PD")
     annotations.append(annotation)
+    annotation = annotate.text(int(game_state.player_city_median.x), int(game_state.player_city_median.y), "PE")
+    annotations.append(annotation)
 
     # you can also read the pickled game_state and print its attributes
     return annotations

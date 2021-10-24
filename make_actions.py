@@ -189,7 +189,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         if not unit.can_act():
             continue
 
-        if is_initial_plan:
+        if is_initial_plan and game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] < 5:
             continue
 
         # source unit not in empty tile
@@ -268,12 +268,16 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             else:
                 break
 
+           # add missions for ejection
+            print("plan mission ejection success", xx, yy)
+
             # if successful
             if adj_unit.id in missions:
                 del missions[adj_unit.id]
             mission = Mission(adj_unit.id, best_position)
             missions.add(mission)
             unit_ids_with_missions_assigned_this_turn.add(adj_unit.id)
+            game_state.ejected_units_set.add(adj_unit.id)
             cluster_annotations.extend(cluster_annotation)
 
             # break loop since partner for unit is found
@@ -294,7 +298,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             # if you are carrying some wood
             if unit.cargo.wood >= 40:
                 # assuming resources have yet to be exhausted
-                if game_state.map_resource_count:
+                if not game_state.player.researched_uranium():
                     print("no mission from fortress", unit.id)
                     continue
 
@@ -327,7 +331,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         # if the unit is full and it is going to be day the next few days
         # go to an empty tile and build a citytile
         # print(unit.id, unit.get_cargo_space_left())
-        print("prepare_housing test", unit.id, unit.pos, targeting_current_cluster, sufficient_resources, prepare_housing, full_resources_next_turn)
+        print("prepare_housing test", unit.id, unit.pos, prepare_housing, targeting_current_cluster, sufficient_resources, full_resources_next_turn)
         if prepare_housing:
             nearest_position, distance_with_features = game_state.get_nearest_empty_tile_and_distance(
                 unit.pos, current_target_position, move_ok=not full_resources_next_turn)
@@ -469,13 +473,12 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             game_state.player_units_matrix[unit.pos.y,unit.pos.x] -= 1
 
 
-    # probably should reduce code repetition in the following lines
     def make_random_move_to_center(unit: Unit, annotation: str = ""):
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.occupied_xy_set:
-                if -game_state.distance_from_edge[yy,xx] < -game_state.distance_from_edge[unit.pos.y,unit.pos.x]:
-                    # attempt to move away from your assets
+                if game_state.distance_from_player_city_median[yy,xx] < game_state.distance_from_player_city_median[unit.pos.y,unit.pos.x]:
+                    # attempt to collide together and build additional citytile
                     break
         else:
             return

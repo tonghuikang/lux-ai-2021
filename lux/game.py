@@ -36,7 +36,7 @@ class Missions(defaultdict):
         self[mission.unit_id] = mission
 
     def __str__(self):
-        return " ".join([unit_id + " " + str(x) for unit_id,x in self.items()])
+        return " | ".join([unit_id + " " + str(x) for unit_id,x in self.items()])
 
     def get_targets(self):
         return [mission.target_position for unit_id, mission in self.items()]
@@ -492,6 +492,7 @@ class Game:
         self.floodfill_by_empty_tile_set = self.get_floodfill(
             self.player_city_tile_xy_set | self.opponent_city_tile_xy_set | self.wood_exist_xy_set | self.coal_exist_xy_set | self.uranium_exist_xy_set)
 
+        self.ejected_units_set: Set = set()
 
     def calculate_distance_matrix(self, blockade_multiplier_value=100):
         self.distance_from_edge = self.init_matrix(self.map_height + self.map_width)
@@ -587,6 +588,7 @@ class Game:
         self.distance_from_resource_mean, self.resource_mean = calculate_distance_from_mean(self.collectable_tiles_xy_set)
         self.distance_from_resource_median, self.resource_median = calculate_distance_from_median(self.collectable_tiles_xy_set)
         self.distance_from_player_unit_median, self.player_unit_median = calculate_distance_from_median(self.player_units_xy_set)
+        self.distance_from_player_city_median, self.player_city_median = calculate_distance_from_median(self.player_city_tile_xy_set)
 
         # some features for blocking logic
         self.opponent_unit_adjacent_xy_set: Set = set()
@@ -945,9 +947,10 @@ def cleanup_missions(game_state: Game, missions: Missions, DEBUG=False):
         if tuple(unit.pos) in game_state.player_city_tile_xy_set:
             # do not delete for simulated worker that is just created
             if not mission.details == "born":
-                print("delete reconsider in base", unit_id, mission.target_position)
-                del missions[unit_id]
-                continue
+                if unit.id not in game_state.ejected_units_set:
+                    print("delete reconsider in base", unit_id, mission.target_position)
+                    del missions[unit_id]
+                    continue
 
         # if your target no longer have resource, reconsider your mission
         if tuple(mission.target_position) not in game_state.convolved_collectable_tiles_xy_set:
