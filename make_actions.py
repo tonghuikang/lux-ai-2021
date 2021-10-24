@@ -297,10 +297,12 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         if game_state.distance_from_floodfill_by_player_city[unit.pos.y, unit.pos.x] > 1:
             # if you are carrying some wood
             if unit.cargo.wood >= 40:
-                # assuming resources have yet to be exhausted
+                # assuming uranium has yet to be researched
                 if not game_state.player.researched_uranium():
-                    print("no mission from fortress", unit.id)
-                    continue
+                    # allow building beside sustainable city
+                    if not game_state.preferred_buildable_tile_matrix[unit.pos.y,unit.pos.x]:
+                        print("no mission from fortress", unit.id)
+                        continue
 
         # do not make missions if you could mine uranium from a citytile that is not fueled to the end
         if game_state.matrix_player_cities_nights_of_fuel_required_for_game[unit.pos.y, unit.pos.x] > 0:
@@ -325,16 +327,21 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         sufficient_resources = unit.cargo.wood >= 60 or unit.cargo.wood + unit.cargo.coal >= 90 or unit.get_cargo_space_used() >= 96
         prepare_housing = targeting_current_cluster and sufficient_resources and \
                           game_state.distance_from_buildable_tile[unit.pos.y, unit.pos.x] <= 1
-        full_resources_next_turn =  unit.get_cargo_space_used() + game_state.resource_collection_rate[unit.pos.y, unit.pos.x] >= 100
+        full_resources_not_on_next_turn = (unit.get_cargo_space_used() + game_state.resource_collection_rate[unit.pos.y, unit.pos.x] < 100)
+        relocation_to_preferred = (game_state.distance_from_preferred_buildable[unit.pos.y, unit.pos.x] <= 1 and
+                                  unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 < 28 and
+                                  game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 2)
+
         # if the unit is waiting for dawn at the side of resource
         # stay_up_till_dawn = (unit.get_cargo_space_left() <= 4 and (game_state.turn%40 >= 32 or game_state.turn%40 == 0))
         # if the unit is full and it is going to be day the next few days
         # go to an empty tile and build a citytile
         # print(unit.id, unit.get_cargo_space_left())
-        print("prepare_housing test", unit.id, unit.pos, prepare_housing, targeting_current_cluster, sufficient_resources, full_resources_next_turn)
+        print("prepare_housing test", unit.id, unit.pos, prepare_housing, targeting_current_cluster, sufficient_resources, "|",
+              full_resources_not_on_next_turn, relocation_to_preferred)
         if prepare_housing:
             nearest_position, distance_with_features = game_state.get_nearest_empty_tile_and_distance(
-                unit.pos, current_target_position, move_ok=not full_resources_next_turn)
+                unit.pos, current_target_position, move_ok=full_resources_not_on_next_turn, relocation_to_preferred=relocation_to_preferred)
             if distance_with_features[0] > 1:
                 # not really near
                 pass
@@ -477,7 +484,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.occupied_xy_set:
-                if game_state.distance_from_player_city_median[yy,xx] < game_state.distance_from_player_city_median[unit.pos.y,unit.pos.x]:
+                if game_state.distance_from_preferred_median[yy,xx] < game_state.distance_from_preferred_median[unit.pos.y,unit.pos.x]:
                     # attempt to collide together and build additional citytile
                     break
         else:

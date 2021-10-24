@@ -343,6 +343,7 @@ class Game:
 
         # if you can build on tile (a unit may be on the tile)
         self.buildable_tile_matrix = self.init_matrix()
+        self.preferred_buildable_tile_matrix = self.init_matrix()
 
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
@@ -454,6 +455,7 @@ class Game:
         self.opponent_units_xy_set = set()
         self.empty_tile_xy_set = set()
         self.buildable_tile_xy_set = set()
+        self.preferred_buildable_tile_xy_set = set()
 
         for set_object, matrix in [
             [self.wood_exist_xy_set,            self.wood_exist_matrix],
@@ -475,6 +477,16 @@ class Game:
         for y in range(self.map_height):
             for x in [-1, self.map_width]:
                 self.xy_out_of_map.add((x,y))
+
+        for x,y in self.player_city_tile_xy_set:
+            city = self.player.cities[self.map.get_cell(x,y).citytile.cityid]
+            if city.fuel_needed_for_night <= -18:
+                for dx, dy in self.dirs_dxdy:
+                    xx,yy = x+dx,y+dy
+                    if 0 <= xx < self.map_width and 0 <= yy < self.map_height:
+                        self.preferred_buildable_tile_matrix[yy,xx] = 1
+        self.preferred_buildable_tile_xy_set = self.preferred_buildable_tile_xy_set & self.empty_tile_xy_set
+        self.populate_set(self.preferred_buildable_tile_matrix, self.preferred_buildable_tile_xy_set)
 
         # used for distance calculation
         # out of map - yes
@@ -584,11 +596,13 @@ class Game:
         self.distance_from_floodfill_by_empty_tile = calculate_distance_from_set(self.floodfill_by_empty_tile_set)
         if self.turn <= 20:
             self.distance_from_floodfill_by_empty_tile = calculate_distance_from_set(self.buildable_tile_xy_set)
+        self.distance_from_preferred_buildable = calculate_distance_from_set(self.preferred_buildable_tile_xy_set)
 
         self.distance_from_resource_mean, self.resource_mean = calculate_distance_from_mean(self.collectable_tiles_xy_set)
         self.distance_from_resource_median, self.resource_median = calculate_distance_from_median(self.collectable_tiles_xy_set)
         self.distance_from_player_unit_median, self.player_unit_median = calculate_distance_from_median(self.player_units_xy_set)
         self.distance_from_player_city_median, self.player_city_median = calculate_distance_from_median(self.player_city_tile_xy_set)
+        self.distance_from_preferred_median, self.player_preferred_median = calculate_distance_from_median(self.preferred_buildable_tile_xy_set)
 
         # some features for blocking logic
         self.opponent_unit_adjacent_xy_set: Set = set()
@@ -810,15 +824,19 @@ class Game:
                 self.resource_leader_to_targeting_units[leader].add(unit_id)
 
 
-    def get_nearest_empty_tile_and_distance(self, current_position: Position, current_target: Position=None, move_ok=False) -> Tuple[Position, int]:
+    def get_nearest_empty_tile_and_distance(self, current_position: Position, current_target: Position=None,
+                                            move_ok=False, relocation_to_preferred=False) -> Tuple[Position, int]:
         best_distance_with_features = (10**9+7,0,0)
         nearest_position: Position = current_position
 
         if self.all_resource_amount_matrix[current_position.y, current_position.x] == 0 and not move_ok:
             if tuple(current_position) not in self.player_city_tile_xy_set:
                 if self.distance_from_collectable_resource[current_position.y,current_position.x] == 1:
-                    best_distance_with_features = (0,0,0)
-                    return nearest_position, best_distance_with_features
+                    best_distance_with_features = (0,0,0,0)
+                    if not relocation_to_preferred:
+                        return nearest_position, best_distance_with_features
+                    if relocation_to_preferred:
+                        best_distance_with_features = (1,0,0,0)
 
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
@@ -834,16 +852,23 @@ class Game:
 
                 # only build beside a collectable resource
                 if self.distance_from_collectable_resource[y,x] != 1:
-                    continue
+                    if not relocation_to_preferred or (x,y) not in self.preferred_buildable_tile_xy_set:
+                        continue
 
                 position = Position(x, y)
                 distance = self.retrieve_distance(current_position.x, current_position.y, position.x, position.y)
 
-                if move_ok:
-                    distance = max(1, distance)
+                simulated_distance = distance
+                if move_ok and (x,y) in self.convolved_collectable_tiles_xy_set:
+                    simulated_distance = max(1, distance)
+
+                if relocation_to_preferred:
+                    simulated_distance = max(1, distance)
 
                 # among tied distances we want to pick a better location
-                distance_with_features = (distance,
+                distance_with_features = (simulated_distance,
+                                          -int((x,y) in self.preferred_buildable_tile_xy_set),
+                                          distance,
                                           self.distance_from_opponent_assets[y,x] + self.distance_from_resource_median[y,x])
 
                 # update best location
