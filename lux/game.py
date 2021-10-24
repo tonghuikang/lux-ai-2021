@@ -931,6 +931,9 @@ class Game:
         if self.turn <= 30:
             censoring = False
 
+        if self.turn%2 == 0:
+            censoring = False
+
         if (not np.array_equal(self.wood_amount_matrix, self.wood_amount_matrix[:,::-1]) and
             not np.array_equal(self.wood_amount_matrix, self.wood_amount_matrix[::-1,:])):
             censoring = False
