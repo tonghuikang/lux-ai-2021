@@ -88,11 +88,17 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                         game_state.resource_leader_to_locating_units[target_leader] | \
                         game_state.resource_leader_to_targeting_units[target_leader]
 
+                    resource_size_of_target_cluster = game_state.xy_to_resource_group_id.get_point(target_leader)
+
                     # target bonus depends on how many resource tiles and how many units that are mining or targeting
                     if len(units_targeting_or_mining_on_target_cluster) == 0:
-                        target_bonus = game_state.xy_to_resource_group_id.get_point(target_leader)/\
+                        target_bonus = resource_size_of_target_cluster/\
                                        (1 + len(game_state.resource_leader_to_locating_units[target_leader] &
                                                 game_state.resource_leader_to_targeting_units[target_leader]))
+
+                    # avoid targeting overpopulated clusters
+                    if len(units_targeting_or_mining_on_target_cluster) >= resource_size_of_target_cluster:
+                        target_bonus = 0.1
 
                     # discourage targeting depending are you the closest unit to the resource
                     distance_bonus = game_state.distance_from_player_assets[y,x]/max(1,distance)
@@ -118,8 +124,8 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                 # enforce targeting of other clusters
                 target_bonus = target_bonus * 10
 
-            if target_leader == current_leader:
-                target_bonus = 2
+            if target_leader == current_leader and not consider_different_cluster_must:
+                target_bonus = target_bonus * 2
 
             # only target cells where you can collect resources
             if game_state.convolved_collectable_tiles_matrix[y,x] > 0:

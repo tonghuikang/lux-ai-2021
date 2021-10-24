@@ -351,7 +351,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         if unit.cargo.uranium > 0:
             # if there is a citytile nearby already
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
-                unit, require_reachable=True, require_night=True,
+                unit, require_reachable=True, require_night=True, enforce_night=True,
                 minimum_size=3, maximum_distance=unit.cargo.uranium//3)
             if unit.pos != homing_position:
                 mission = Mission(unit.id, homing_position, details="homing")
@@ -668,7 +668,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             continue
         if unit.get_cargo_space_used() == 0:
             continue
-        if tuple(unit.pos) in game_state.buildable_tile_xy_set:
+        if tuple(unit.pos) in game_state.buildable_tile_xy_set and game_state.distance_from_collectable_resource[unit.pos.y, unit.pos.x] == 1:
             continue
         make_random_transfer(unit, "KR")
 

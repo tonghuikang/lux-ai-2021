@@ -854,8 +854,12 @@ class Game:
         return nearest_position, best_distance_with_features
 
 
-    def find_nearest_city_requiring_fuel(self, unit: Unit, require_reachable=True, require_night=False, prefer_night=True,
+    def find_nearest_city_requiring_fuel(self, unit: Unit, require_reachable=True,
+                                         require_night=False, prefer_night=True, enforce_night=False,
                                          minimum_size=0, maximum_distance=100):
+        # require_night - require refuelling to bring the city through the night
+        # prefer_night - prefer refuelling a city that could not survive the night
+        # enforce_night - only refuel city that could not survive the night
         closest_distance: int = 10**9 + 7
         closest_position = unit.pos
 
@@ -882,6 +886,9 @@ class Game:
                         if city.fuel_needed_for_night > 0:
                             # prefer to save cities from the night
                             distance -= 1000
+                    if enforce_night:
+                        if city.fuel_needed_for_night < 0:
+                            continue
                     if distance > maximum_distance:
                         continue
                     if distance < closest_distance:
