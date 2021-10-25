@@ -335,8 +335,10 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                           game_state.distance_from_buildable_tile[unit.pos.y, unit.pos.x] <= 1
         full_resources_not_on_next_turn = (unit.get_cargo_space_used() + game_state.resource_collection_rate[unit.pos.y, unit.pos.x] < 100)
         relocation_to_preferred = (game_state.distance_from_preferred_buildable[unit.pos.y, unit.pos.x] <= 1 and
-                                  unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 < 28 and
-                                  game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 2)
+                                   unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 < 28 and
+                                   game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 2) or (
+                                   game_state.distance_from_preferred_buildable[unit.pos.y, unit.pos.x] == 0 and
+                                   unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 <= 30)
 
         # if the unit is waiting for dawn at the side of resource
         # stay_up_till_dawn = (unit.get_cargo_space_left() <= 4 and (game_state.turn%40 >= 32 or game_state.turn%40 == 0))
@@ -479,13 +481,23 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
 
     # probably should reduce code repetition in the following lines
     def make_random_move_to_void(unit: Unit, annotation: str = ""):
+        (xx,yy) = (-1,-1)
+
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.occupied_xy_set:
-                if game_state.distance_from_opponent_assets[yy,xx] < game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x]:
+                if game_state.distance_from_player_assets[yy,xx] < game_state.distance_from_player_assets[unit.pos.y,unit.pos.x]:
                     # attempt to move away from your assets
                     break
-        else:
+
+        for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
+            xx,yy = unit.pos.x + dx, unit.pos.y + dy
+            if (xx,yy) not in game_state.occupied_xy_set and (xx,yy) not in game_state.player_city_tile_xy_set:
+                if game_state.distance_from_opponent_assets[yy,xx] < game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x]:
+                    # attempt to move toward enemy assets
+                    break
+
+        if (xx,yy) == (-1,-1):
             return
 
         if (xx,yy) not in game_state.occupied_xy_set:
