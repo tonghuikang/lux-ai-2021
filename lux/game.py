@@ -55,9 +55,11 @@ class DisjointSet:
         self.points = defaultdict(int)  # 1 point for wood, 3 point for coal, 5 point for uranium
         self.tiles = defaultdict(int)  # 1 point for all resource
         self.citytiles = defaultdict(int)  # 1 point for citytile next to cluster
+        self.dist_from_player = defaultdict(int)  # closest distance from player
         self.num_sets = 0
 
     def find(self, a, point=0, tile=0, citytile=0):
+        assert type(a) == tuple
         if a not in self.parent:
             self.parent[a] = a
             self.sizes[a] += 1
@@ -73,6 +75,8 @@ class DisjointSet:
         return a
 
     def union(self, a, b):
+        assert type(a) == tuple
+        assert type(b) == tuple
         a, b = self.find(a), self.find(b)
         if a != b:
             # if self.sizes[a] < self.sizes[b]:
@@ -86,16 +90,26 @@ class DisjointSet:
             self.citytiles[a] += self.citytiles[b]
 
     def get_size(self, a):
+        assert type(a) == tuple
         return self.sizes[self.find(a)]
 
     def get_point(self, a):
+        assert type(a) == tuple
         return self.points[self.find(a)]
 
     def get_tiles(self, a):
+        assert type(a) == tuple
         return self.tiles[self.find(a)]
 
     def get_citytiles(self, a):
+        assert type(a) == tuple
         return self.citytiles[self.find(a)]
+
+    def get_dist_from_player(self, a):
+        assert type(a) == tuple
+        if self.find(a) not in self.dist_from_player:
+            return 100
+        return self.dist_from_player[self.find(a)]
 
     def get_groups(self):
         groups = defaultdict(list)
@@ -617,6 +631,12 @@ class Game:
                     self.opponent_unit_adjacent_xy_set.add((x,y),)
         self.opponent_unit_adjacent_and_buildable_xy_set: Set = self.opponent_unit_adjacent_xy_set & self.buildable_tile_xy_set
         self.opponent_unit_adjacent_and_player_city_xy_set: Set = self.opponent_unit_adjacent_xy_set & self.player_city_tile_xy_set
+
+        # standardise distance from self
+        for x,y in self.convolved_collectable_tiles_xy_set:
+            leader = self.xy_to_resource_group_id.find((x,y),)
+            self.xy_to_resource_group_id.dist_from_player[leader] = min(self.xy_to_resource_group_id.get_dist_from_player((x,y),),
+                                                                        self.distance_from_player_assets[y,x])
 
         # calculating distances from every unit positions and its adjacent positions
         # avoid blocked places as much as possible
