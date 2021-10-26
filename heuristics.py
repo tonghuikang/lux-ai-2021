@@ -110,11 +110,6 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
 
                     target_bonus = target_bonus * distance_bonus**2
 
-                    # slightly discourage targeting clusters closer to enemy
-                    if game_state.xy_to_resource_group_id.get_dist_from_player((x,y),) < \
-                       game_state.xy_to_resource_group_id.get_dist_from_opponent((x,y),):
-                        target_bonus *= 0.5
-
                     if distance_bonus < 1/2:
                         # if you are far from being the closest to the new cluster, force target bonus to be close to one
                         target_bonus = target_bonus**0.0001
@@ -122,6 +117,19 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                     if distance_bonus == 1:
                         # extra bonus if you are closest to the target
                         target_bonus = target_bonus * 10
+
+                    # if targeted cluster is much closer to enemy, do not target if cannot survive the night
+                    # resources is required for invasion
+                    if game_state.distance_from_opponent_assets[y,x] + 5 < \
+                       game_state.xy_to_resource_group_id.get_dist_from_player((x,y),):
+                        if unit.night_turn_survivable < 10:
+                            target_bonus = 1
+
+                    # slightly discourage targeting clusters closer to enemy
+                    if game_state.xy_to_resource_group_id.get_dist_from_opponent((x,y),) < \
+                       game_state.xy_to_resource_group_id.get_dist_from_player((x,y),):
+                        target_bonus *= 0.9
+
 
             if consider_different_cluster_must:
                 # enforce targeting of other clusters
