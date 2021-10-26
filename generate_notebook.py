@@ -200,7 +200,7 @@ cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True
 evaluation_code = """\
 %%bash
 MAP_SIZE=12
-for run in {1..5};
+for run in {1..500};
     do GFOOTBALL_DATA_DIR=C lux-ai-2021 --seed $run --loglevel 1 --maxtime 10000 \\
     --height $MAP_SIZE --width $MAP_SIZE --storeReplay=false --storeLogs=false \\
     main.py ref/main.py >> logs-$MAP_SIZE.txt;
@@ -248,8 +248,8 @@ cells.append(nbf.new_markdown_cell("# Make Submission"))
 
 zip_code = """\
 !rm snapshots/*.pkl
-!tar --exclude='*.ipynb' --exclude="*.pyc" --exclude="*.pkl" --exclude="replays/" --exclude="ref/" -czf submission.tar.gz *
-!rm *.py && rm -rf __pycache__/ && rm -rf lux/\
+!tar --exclude='*.ipynb' --exclude="*.pyc" --exclude="*.pkl" --exclude="./replays/" --exclude="./ref/" -czf submission.tar.gz *
+!rm *.py && rm -rf __pycache__/ && rm -rf lux/ && rm -rf ref/\
 """
 
 cells.append(nbf.new_code_cell(zip_code, metadata={"_kg_hide-input": True}))

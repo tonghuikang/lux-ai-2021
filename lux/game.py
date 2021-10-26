@@ -459,7 +459,7 @@ class Game:
         all_floodfill = set()
         for floodfill in floodfills:
             all_floodfill.update(floodfill)
-            if len(all_floodfill) > self.map_width * self.map_height*0.7:
+            if len(all_floodfill) > self.map_width * self.map_height * 0.7 - len(self.occupied_xy_set):
                 return all_floodfill
         return all_floodfill
 

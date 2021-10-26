@@ -31,6 +31,18 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
     best_cell_value = [0,0,0,0]
     cluster_annotation = []
 
+    # if near enemy, if at night, if city is going to die, if staying can keep the city alive
+    if game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x] <= 2:
+        if not game_state.is_day_time:
+            cityid = game_state.map.get_cityid_of_cell(unit.pos.x, unit.pos.y)
+            if cityid:
+                city = game_state.player.cities[cityid]
+                if city.fuel_needed_for_night > 0:
+                    if game_state.resource_collection_rate[unit.pos.y, unit.pos.x] > city.get_light_upkeep():
+                        best_cell_value = [999,0,0,0]
+                        annotation = annotate.text(unit.pos.x, unit.pos.y,"SU")
+                        cluster_annotation.append(annotation)
+
     # only consider other cluster if the current cluster has more than one agent mining
     consider_different_cluster = False
     # must consider other cluster if the current cluster has more agent than tiles
@@ -158,9 +170,9 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                 if distance <= unit.travel_range:
                     cell_value = [target_bonus,
                                   - game_state.distance_from_floodfill_by_empty_tile[y,x],
-                                  - distance - game_state.distance_from_opponent_assets[y,x]
                                   - game_state.distance_from_resource_median[y,x]
-                                  + game_state.distance_from_player_unit_median[y,x],
+                                  - distance - game_state.distance_from_opponent_assets[y,x]
+                                  - distance + game_state.distance_from_player_unit_median[y,x],
                                   - distance - game_state.opponent_units_matrix[y,x] * 2]
 
                     # penalty on parameter preference
@@ -190,7 +202,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                             cell_value[2] -= 2
 
                     # for debugging
-                    score_matrix_wrt_pos[y,x] = cell_value[0]
+                    score_matrix_wrt_pos[y,x] = cell_value[2]
 
                     # update best target
                     if cell_value > best_cell_value:
