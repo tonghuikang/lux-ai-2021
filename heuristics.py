@@ -38,7 +38,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
             if cityid:
                 city = game_state.player.cities[cityid]
                 if city.fuel_needed_for_night > 0:
-                    if game_state.resource_collection_rate[unit.pos.y, unit.pos.x] > city.get_light_upkeep():
+                    if game_state.resource_collection_rate[unit.pos.y, unit.pos.x] * game_state.night_turns_left >= city.fuel_needed_for_night:
                         best_cell_value = [999,0,0,0]
                         annotation = annotate.text(unit.pos.x, unit.pos.y,"SU")
                         cluster_annotation.append(annotation)
