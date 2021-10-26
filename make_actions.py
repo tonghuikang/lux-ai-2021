@@ -120,19 +120,29 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         cluster_unit_limit_exceeded = \
             game_state.xy_to_resource_group_id.get_point(tuple(city_tile.pos)) <= len(game_state.resource_leader_to_locating_units[cluster_leader])
 
-        # standard requirements of building workers
+        # standard process of building workers
         if resource_in_travel_range and not unit_limit_exceeded and not cluster_unit_limit_exceeded:
             print("build_worker WA", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range_emptyhanded)
             build_worker(city_tile, "WA")
             continue
 
-        # allow cities to build workers even if cluster_unit_limit_exceeded, if research limit is reached
-        if (player.researched_uranium() or units_cnt == 0) and resource_in_travel_range:
-            # but do not build workers beside wood to conserve wood
-            if game_state.wood_side_matrix[city_tile.pos.y, city_tile.pos.x] == 0:
-                print("supply workers WS", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range_emptyhanded)
-                build_worker(city_tile, "WS")
-                continue
+        # allow cities to build workers even if cluster_unit_limit_exceeded
+        # because uranium is researched or scouting for advanced resources
+        # require resource_in_travel_range
+        if player.researched_uranium() or (units_cnt <= units_cap//4 and game_state.turn%40 < 10):
+            if resource_in_travel_range:
+                # but do not build workers beside wood to conserve wood
+                if game_state.wood_side_matrix[city_tile.pos.y, city_tile.pos.x] == 0:
+                    print("supply workers WB", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range_emptyhanded)
+                    build_worker(city_tile, "WB")
+                    continue
+
+        # build worker and move to adjacent if there are no workers nearby
+        if nearest_resource_distance == 2 and game_state.distance_from_player_units[city_tile.pos.y, city_tile.pos.x] > 2:
+            print("supply workers WC", city_tile.cityid, city_tile.pos.x, city_tile.pos.y, nearest_resource_distance, travel_range_emptyhanded)
+            build_worker(city_tile, "WC")
+            continue
+
 
         if not player.researched_uranium():
             # give up researching to allow building of units at turn 359
@@ -454,10 +464,11 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
 
             # do not build city at last light
             if action and action[:5] == "bcity" and 30 <= game_state.turn%40 <= 31:
-                print("do not build city at last light", unit.id)
-                actions.append(annotate.text(unit.pos.x, unit.pos.y, "NB"))
-                del missions[unit.id]
-                continue
+                if game_state.fuel_collection_rate[unit.pos.y, unit.pos.x] < 23:
+                    print("do not build city at last light", unit.id)
+                    actions.append(annotate.text(unit.pos.x, unit.pos.y, "NB"))
+                    del missions[unit.id]
+                    continue
 
             if action:
                 actions.append(action)
@@ -693,11 +704,12 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             print("FB make_random_move_to_city", unit.id)
             make_random_transfer(unit, "FB1", True, game_state.player_city_tile_xy_set)
             make_random_move_to_city(unit, "FB")
-        # if you are near opponent assets and it is not early game
-        if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] <= 1 and game_state.turn > 20:
-            print("FB make_random_move_to_city", unit.id)
-            make_random_transfer(unit, "FX1", True, game_state.player_city_tile_xy_set)
-            make_random_move_to_city(unit, "FX")
+        # if you are near opponent assets and you are not on buildable tile
+        if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] <= 2:
+            if tuple(unit.pos) not in game_state.buildable_tile_xy_set:
+                print("FX make_random_move_to_city", unit.id)
+                make_random_transfer(unit, "FX1", True, game_state.player_city_tile_xy_set)
+                make_random_move_to_city(unit, "FX")
 
 
     # make random transfers

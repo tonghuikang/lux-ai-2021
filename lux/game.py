@@ -426,6 +426,7 @@ class Game:
         self.convolved_uranium_exist_matrix = self.convolve(self.uranium_exist_matrix)
 
         self.resource_collection_rate = self.convolved_wood_exist_matrix * 20 + self.convolved_coal_exist_matrix * 5 + self.convolved_uranium_exist_matrix * 2
+        self.fuel_collection_rate = self.convolved_wood_exist_matrix * 20 + self.convolved_coal_exist_matrix * 5 * 5 + self.convolved_uranium_exist_matrix * 2 * 20
 
         # positive if on empty cell and beside the resource
         self.wood_side_matrix = self.convolve(self.wood_exist_matrix) * self.empty_tile_matrix
@@ -777,7 +778,7 @@ class Game:
                     if (x,y) in self.player_city_tile_xy_set:
                         self.xy_to_resource_group_id.find((x,y), citytile=1)
 
-        # merge adjacent resource tiles
+        # merge adjacent resource tiles and citytiles
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_xy_set:
@@ -790,6 +791,9 @@ class Game:
                         if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
                             if (xx,yy) in self.collectable_tiles_xy_set:
                                 self.xy_to_resource_group_id.union((x,y), (xx,yy))
+                            if (xx,yy) in self.player_city_tile_xy_set:
+                                if self.xy_to_resource_group_id.get_tiles((xx,yy),) == 0:
+                                    self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
         # consider resources two steps away as part of the cluster, if cluster size is not exceeded or map is large
         for y in self.y_iteration_order:

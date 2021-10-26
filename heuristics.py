@@ -202,7 +202,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                             cell_value[2] -= 2
 
                     # for debugging
-                    score_matrix_wrt_pos[y,x] = cell_value[2]
+                    score_matrix_wrt_pos[y,x] = cell_value[0]
 
                     # update best target
                     if cell_value > best_cell_value:
