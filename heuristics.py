@@ -1,5 +1,6 @@
 # contains designed heuristics
 # which could be fine tuned
+import math
 
 import numpy as np
 import builtins as __builtin__
@@ -118,6 +119,9 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                         # extra bonus if you are closest to the target
                         target_bonus = target_bonus * 10
 
+                    # travel penalty
+                    target_bonus = target_bonus / math.log(4 + game_state.xy_to_resource_group_id.get_dist_from_player((x,y),), 2)
+
                     # if targeted cluster is much closer to enemy, do not target if cannot survive the night
                     # resources is required for invasion
                     if game_state.distance_from_opponent_assets[y,x] + 5 < \
@@ -130,6 +134,10 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                        game_state.xy_to_resource_group_id.get_dist_from_player((x,y),):
                         target_bonus *= 0.9
 
+            if target_leader and target_leader == current_leader:
+                # if targeting same cluster do not move more than five
+                if distance > 5:
+                    continue
 
             if consider_different_cluster_must:
                 # enforce targeting of other clusters

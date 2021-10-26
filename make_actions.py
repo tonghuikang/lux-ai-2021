@@ -612,6 +612,8 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
                 continue
             if adj_unit.id not in game_state.player.units_by_id:
                 continue
+            if adj_unit.is_worker() and adj_unit.get_cargo_space_used() == 100:
+                continue
 
             # do not transfer to a citytile that can already last for the game
             cityid = game_state.map.get_cityid_of_cell(xx,yy)
@@ -665,6 +667,8 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
         if not unit.can_act():
             continue
         if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
+            continue
+        if unit.cargo.uranium > 0:
             continue
         make_random_move_to_collectable(unit, "KC")
 

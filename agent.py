@@ -18,6 +18,7 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
+    game_state.compute_start_time = time.time()
     game_state.calculate_features(missions)
     censoring = game_state.is_symmetrical()
     state_annotations = annotate_game_state(game_state)
@@ -71,6 +72,5 @@ def agent(observation, configuration, DEBUG=False):
         with open('snapshots/missions-{}-{}.pkl'.format(str_step, game_state.player_id), 'wb') as handle:
             pickle.dump(missions, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    game_state.compute_start_time = time.time()
     actions, game_state, missions = game_logic(game_state, missions)
     return actions

@@ -1,4 +1,4 @@
-import heapq
+import heapq, time
 from collections import defaultdict, deque
 from typing import DefaultDict, Dict, List, Tuple, Set
 from datetime import datetime
@@ -369,6 +369,7 @@ class Game:
 
         # if you can build on tile (a unit may be on the tile)
         self.buildable_tile_matrix = self.init_matrix()
+        self.probably_buildable_tile_matrix = self.init_matrix()
         self.preferred_buildable_tile_matrix = self.init_matrix()
 
         for y in self.y_iteration_order:
@@ -481,6 +482,7 @@ class Game:
         self.opponent_units_xy_set = set()
         self.empty_tile_xy_set = set()
         self.buildable_tile_xy_set = set()
+        self.probably_buildable_tile_xy_set = set()
         self.preferred_buildable_tile_xy_set = set()
 
         for set_object, matrix in [
@@ -506,12 +508,15 @@ class Game:
 
         for x,y in self.player_city_tile_xy_set:
             city = self.player.cities[self.map.get_cell(x,y).citytile.cityid]
-            if city.fuel_needed_for_night <= -18:
-                for dx, dy in self.dirs_dxdy[:-1]:
-                    xx,yy = x+dx,y+dy
-                    if 0 <= xx < self.map_width and 0 <= yy < self.map_height:
-                        self.preferred_buildable_tile_matrix[yy,xx] = 1
-        self.preferred_buildable_tile_xy_set = self.preferred_buildable_tile_xy_set & self.empty_tile_xy_set
+            for dx, dy in self.dirs_dxdy[:-1]:
+                xx,yy = x+dx,y+dy
+                if 0 <= xx < self.map_width and 0 <= yy < self.map_height:
+                    if self.buildable_tile_matrix[yy,xx]:
+                        self.probably_buildable_tile_matrix[yy,xx] = 1
+                        if city.fuel_needed_for_night <= -18:
+                            self.preferred_buildable_tile_matrix[yy,xx] = 1
+
+        self.populate_set(self.probably_buildable_tile_matrix, self.probably_buildable_tile_xy_set)
         self.populate_set(self.preferred_buildable_tile_matrix, self.preferred_buildable_tile_xy_set)
 
         # used for distance calculation
@@ -670,6 +675,8 @@ class Game:
             for sx in range(self.map_width):
                 if (sx,sy) not in self.positions_to_calculate_distances_from:
                     continue
+                if time.time() > self.compute_start_time + 2:
+                    continue
                 blockade_multiplier_value_for_syx = blockade_multiplier_value
 
                 start_pos = (sx,sy)
@@ -793,9 +800,8 @@ class Game:
                             xx, yy = x+dx1+dx2, y+dy1+dy2
                             if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
                                 if (xx,yy) in self.collectable_tiles_xy_set:
-                                    if self.xy_to_resource_group_id.get_tiles((xx,yy)) > 1 and self.map_width < 24:
-                                        continue
-                                    self.xy_to_resource_group_id.union((x,y), (xx,yy))
+                                    if self.xy_to_resource_group_id.get_tiles((xx,yy)) <= 2:
+                                        self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
         # absorb adjacent citytiles
         for group in self.xy_to_resource_group_id.get_groups_sorted_by_citytile_size():
