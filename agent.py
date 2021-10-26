@@ -6,7 +6,7 @@ import builtins as __builtin__
 
 from lux.game import Game, Missions
 
-from make_actions import make_city_actions, make_unit_missions, make_unit_actions
+from make_actions import make_city_actions, make_unit_missions, make_unit_actions, make_unit_actions_supplementary
 from make_annotations import annotate_game_state, annotate_missions, annotate_movements, filter_cell_annotations
 
 
@@ -23,12 +23,13 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     censoring = game_state.is_symmetrical()
     state_annotations = annotate_game_state(game_state)
     actions_by_cities = make_city_actions(game_state, missions, DEBUG=DEBUG)
+    actions_by_units_initial = make_unit_actions_supplementary(game_state, missions, initial=True, DEBUG=DEBUG)
     cluster_annotations_and_ejections_pre = make_unit_missions(game_state, missions, is_initial_plan=True, DEBUG=DEBUG)
     missions, pre_actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
     cluster_annotations_and_ejections = make_unit_missions(game_state, missions, DEBUG=DEBUG)
     mission_annotations = annotate_missions(game_state, missions)
     missions, actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
-    missions_post, actions_by_units_post = make_unit_actions(game_state, missions, DEBUG=DEBUG)
+    actions_by_units_supplementary = make_unit_actions_supplementary(game_state, missions, DEBUG=DEBUG)
     movement_annotations = annotate_movements(game_state, actions_by_units)
 
     print("actions_by_cities", actions_by_cities)
@@ -37,10 +38,10 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     print("cluster_annotations_and_ejections", cluster_annotations_and_ejections)
     print("mission_annotations", mission_annotations)
     print("actions_by_units", actions_by_units)
-    print("actions_by_units", actions_by_units_post)
+    print("actions_by_units", actions_by_units_supplementary)
     print("state_annotations", state_annotations)
     print("movement_annotations", movement_annotations)
-    actions = actions_by_cities + pre_actions_by_units + actions_by_units + actions_by_units_post
+    actions = actions_by_cities + actions_by_units_initial + pre_actions_by_units + actions_by_units + actions_by_units_supplementary
     actions += cluster_annotations_and_ejections + cluster_annotations_and_ejections_pre
     actions += mission_annotations + movement_annotations + state_annotations
     actions = filter_cell_annotations(actions)

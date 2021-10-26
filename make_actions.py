@@ -497,14 +497,14 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
     return missions, actions
 
 
-def make_unit_actions_post(game_state: Game, missions: Missions, DEBUG=False) -> Tuple[Missions, List[str]]:
+def make_unit_actions_supplementary(game_state: Game, missions: Missions, initial=False, DEBUG=False) -> Tuple[Missions, List[str]]:
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
-    print("units without actions", [unit.id for unit in player.units if unit.can_act()])
-
     player, opponent = game_state.player, game_state.opponent
     actions = []
+
+    print("units without actions", [unit.id for unit in player.units if unit.can_act()])
 
     # probably should reduce code repetition in the following lines
     def make_random_move_to_void(unit: Unit, annotation: str = ""):
@@ -658,6 +658,8 @@ def make_unit_actions_post(game_state: Game, missions: Missions, DEBUG=False) ->
             unit.cooldown += 2
             break
 
+    if initial:
+        return actions
 
     # if moving to a city can let it sustain the night, move into the city
     for unit in player.units:
@@ -769,7 +771,7 @@ def make_unit_actions_post(game_state: Game, missions: Missions, DEBUG=False) ->
         make_random_move_to_city(unit, "MC")
 
 
-    return missions, actions
+    return actions
 
 
 def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> DIRECTIONS:
