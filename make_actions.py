@@ -429,7 +429,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
     return actions_ejections + cluster_annotations
 
 
-def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False, DEBUG=False) -> Tuple[Missions, List[str]]:
+def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tuple[Missions, List[str]]:
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
@@ -454,7 +454,7 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             continue
 
         mission: Mission = missions[unit.id]
-        print("attempting action for", unit.id, unit.pos, "->", mission.target_position, is_initial_run)
+        print("attempting action for", unit.id, unit.pos, "->", mission.target_position)
 
         # if the location is reached, take action
         if unit.pos == mission.target_position:
@@ -486,9 +486,25 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             actions.append(action)
             continue
 
-    if is_initial_run:
-        # pre-run to eliminate missions that cannot be carried out
-        return missions, actions
+    # if the unit is not able to make an action over two turns, delete the mission
+    for unit_id in units_with_mission_but_no_action:
+        mission: Mission = missions[unit_id]
+        mission.delays += 1
+        if mission.delays >= 2:
+            print("delete mission unable to move", unit_id, mission.target_position)
+            del missions[unit_id]
+
+    return missions, actions
+
+
+def make_unit_actions_post(game_state: Game, missions: Missions, DEBUG=False) -> Tuple[Missions, List[str]]:
+    if DEBUG: print = __builtin__.print
+    else: print = lambda *args: None
+
+    print("units without actions", [unit.id for unit in player.units if unit.can_act()])
+
+    player, opponent = game_state.player, game_state.opponent
+    actions = []
 
     # probably should reduce code repetition in the following lines
     def make_random_move_to_void(unit: Unit, annotation: str = ""):
@@ -643,8 +659,6 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             break
 
 
-    print("units without actions", [unit.id for unit in player.units if unit.can_act()])
-
     # if moving to a city can let it sustain the night, move into the city
     for unit in player.units:
         unit: Unit = unit
@@ -754,14 +768,6 @@ def make_unit_actions(game_state: Game, missions: Missions, is_initial_run=False
             continue
         make_random_move_to_city(unit, "MC")
 
-
-    # if the unit is not able to make an action over two turns, delete the mission
-    for unit_id in units_with_mission_but_no_action:
-        mission: Mission = missions[unit_id]
-        mission.delays += 1
-        if mission.delays >= 2:
-            print("delete mission unable to move", unit_id, mission.target_position)
-            del missions[unit_id]
 
     return missions, actions
 
