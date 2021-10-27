@@ -739,8 +739,10 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
         if unit.get_cargo_space_used() == 0:
             continue
         make_random_transfer(unit, "KT", True, game_state.buildable_tile_xy_set)
-        if tuple(unit.pos) in game_state.buildable_tile_xy_set and game_state.distance_from_collectable_resource[unit.pos.y, unit.pos.x] == 1:
-            continue
+        if tuple(unit.pos) in game_state.buildable_tile_xy_set:
+            if game_state.distance_from_collectable_resource[unit.pos.y, unit.pos.x] == 1:
+                if unit.cargo.get_most_common_resource() == "wood":
+                    continue
         make_random_transfer(unit, "KR")
 
 

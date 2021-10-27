@@ -1,6 +1,7 @@
 # contains designed heuristics
 # which could be fine tuned
 import math
+import time
 
 import numpy as np
 import builtins as __builtin__
@@ -30,6 +31,10 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
     best_position = unit.pos
     best_cell_value = [0,0,0,0]
     cluster_annotation = []
+
+    if time.time() - game_state.compute_start_time > 3:
+        # running out of time
+        return best_position, best_cell_value, cluster_annotation
 
     # if near enemy, if at night, if city is going to die, if staying can keep the city alive
     if game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x] <= 2:
@@ -71,6 +76,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
     print("finding best cluster for", unit.id, unit.pos, consider_different_cluster, consider_different_cluster_must)
 
     best_citytile_of_cluster: Dict = dict()
+    target_bonus_for_current_cluster_logging = -999
 
     for y in game_state.y_iteration_order:
         for x in game_state.x_iteration_order:
@@ -97,7 +103,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
             target_leader = game_state.xy_to_resource_group_id.find((x,y))
             if consider_different_cluster or consider_different_cluster_must:
                 # if the target is a cluster and not the current cluster
-                if target_leader and target_leader != current_leader:
+                if target_leader:
 
                     units_targeting_or_mining_on_target_cluster = \
                         game_state.resource_leader_to_locating_units[target_leader] | \
@@ -106,17 +112,15 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                     resource_size_of_target_cluster = game_state.xy_to_resource_group_id.get_point(target_leader)
 
                     # target bonus depends on how many resource tiles and how many units that are mining or targeting
-                    if len(units_targeting_or_mining_on_target_cluster) == 0:
-                        target_bonus = resource_size_of_target_cluster/\
-                                       (1 + len(game_state.resource_leader_to_locating_units[target_leader] &
-                                                game_state.resource_leader_to_targeting_units[target_leader]))
+                    target_bonus = resource_size_of_target_cluster/\
+                                   (1 + len(units_targeting_or_mining_on_target_cluster))
 
                     # avoid targeting overpopulated clusters
-                    if len(units_targeting_or_mining_on_target_cluster) >= resource_size_of_target_cluster:
-                        target_bonus = 0.1
+                    if len(units_targeting_or_mining_on_target_cluster) > resource_size_of_target_cluster:
+                        target_bonus = target_bonus * 0.1
 
                     # discourage targeting depending are you the closest unit to the resource
-                    distance_bonus = game_state.distance_from_player_assets[y,x]/max(1,distance)
+                    distance_bonus = max(1,game_state.distance_from_player_assets[y,x])/max(1,distance)
 
                     if consider_different_cluster_must:
                         distance_bonus = max(1/2, distance_bonus)
@@ -139,7 +143,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                     if game_state.distance_from_opponent_assets[y,x] + 5 < \
                        game_state.xy_to_resource_group_id.get_dist_from_player((x,y),):
                         if unit.night_turn_survivable < 10:
-                            target_bonus = 1
+                            target_bonus *= 0.01
 
                     # slightly discourage targeting clusters closer to enemy
                     if game_state.xy_to_resource_group_id.get_dist_from_opponent((x,y),) < \
@@ -151,15 +155,15 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                 if distance > 5:
                     continue
 
-            if consider_different_cluster_must:
+            if consider_different_cluster_must and target_leader != current_leader:
                 # enforce targeting of other clusters
                 target_bonus = target_bonus * 10
 
-            if target_leader == current_leader and not consider_different_cluster_must:
+            if not consider_different_cluster_must and target_leader == current_leader:
                 target_bonus = target_bonus * 2
 
             # only target cells where you can collect resources
-            if game_state.convolved_collectable_tiles_matrix[y,x] > 0:
+            if game_state.convolved_collectable_tiles_matrix_projected[y,x] > 0:
 
                 # do not plan overnight missions if you are the only unit mining
                 if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
@@ -214,8 +218,11 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                     if (cell_value,x,y) > best_citytile_of_cluster[target_leader]:
                         best_citytile_of_cluster[target_leader] = (cell_value,x,y)
 
+                    if target_leader == current_leader:
+                        target_bonus_for_current_cluster_logging = max(target_bonus_for_current_cluster_logging, target_bonus)
+
     # annotate if target bonus is more than one
-    if best_cell_value[0] > 2:
+    if best_cell_value[0] > target_bonus_for_current_cluster_logging > -999:
         for cell_value,x,y in best_citytile_of_cluster.values():
             annotation = annotate.text(x,y,f"{int(cell_value[0])}")
             cluster_annotation.append(annotation)

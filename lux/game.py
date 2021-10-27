@@ -724,16 +724,30 @@ class Game:
 
     def calculate_resource_matrix(self):
         # calculate value of the resource considering the reasearch level
-        self.collectable_tiles_matrix = self.wood_exist_matrix
+        self.collectable_tiles_matrix = self.wood_exist_matrix.copy()
+        self.collectable_tiles_matrix_projected = self.wood_exist_matrix.copy()
+        self.resource_collection_rate = self.wood_exist_matrix.copy() * 20
+        self.fuel_collection_rate = self.wood_exist_matrix.copy() * 20
+
+        if self.player.researched_coal():
+            self.collectable_tiles_matrix += self.coal_exist_matrix
+            self.resource_collection_rate += self.coal_exist_matrix.copy() * 5 * 5
+            self.fuel_collection_rate += self.coal_exist_matrix.copy() * 5 * 5
 
         if self.player.researched_coal_projected():
-            self.collectable_tiles_matrix += self.coal_exist_matrix
+            self.collectable_tiles_matrix_projected += self.coal_exist_matrix
+
+        if self.player.researched_uranium():
+            self.collectable_tiles_matrix += self.uranium_exist_matrix
+            self.resource_collection_rate += self.uranium_exist_matrix.copy() * 2 * 20
+            self.fuel_collection_rate += self.uranium_exist_matrix.copy() * 2 * 20
 
         if self.player.researched_uranium_projected():
-            self.collectable_tiles_matrix += self.uranium_exist_matrix
+            self.collectable_tiles_matrix_projected += self.uranium_exist_matrix
 
         # adjacent cells collect from the cell as well
         self.convolved_collectable_tiles_matrix = self.convolve(self.collectable_tiles_matrix)
+        self.convolved_collectable_tiles_matrix_projected = self.convolve(self.collectable_tiles_matrix_projected)
 
         self.collectable_tiles_xy_set = set()  # exclude adjacent
         self.populate_set(self.collectable_tiles_matrix, self.collectable_tiles_xy_set)
