@@ -757,6 +757,8 @@ class Game:
         self.populate_set(self.collectable_tiles_matrix, self.collectable_tiles_xy_set)
         self.convolved_collectable_tiles_xy_set = set()  # include adjacent
         self.populate_set(self.convolved_collectable_tiles_matrix, self.convolved_collectable_tiles_xy_set)
+        self.convolved_collectable_tiles_projected_xy_set = set()  # include adjacent
+        self.populate_set(self.convolved_collectable_tiles_matrix_projected, self.convolved_collectable_tiles_projected_xy_set)
 
         for unit in self.opponent.units:
             # if the opponent can move
@@ -785,14 +787,14 @@ class Game:
         self.xy_to_resource_group_id: DisjointSet = DisjointSet()
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
-                if (x,y) in self.collectable_tiles_xy_set:
+                if (x,y) in self.convolved_collectable_tiles_projected_xy_set:
                     if (x,y) in self.wood_exist_xy_set:
                         self.xy_to_resource_group_id.find((x,y), point=1, tile=1)
                     if (x,y) in self.coal_exist_xy_set:
                         self.xy_to_resource_group_id.find((x,y), point=3, tile=1)
                     if (x,y) in self.uranium_exist_xy_set:
                         self.xy_to_resource_group_id.find((x,y), point=5, tile=1)
-                if (x,y) in self.convolved_collectable_tiles_xy_set:
+                if (x,y) in self.convolved_collectable_tiles_projected_xy_set:
                     if (x,y) in self.player_city_tile_xy_set:
                         self.xy_to_resource_group_id.find((x,y), citytile=1)
 

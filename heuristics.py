@@ -169,8 +169,15 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                 target_bonus = target_bonus * 2
 
             # only target cells where you can collect resources
-            if game_state.convolved_collectable_tiles_matrix_projected[y,x] > 0:
+            if game_state.convolved_collectable_tiles_matrix_projected[y,x] == 0:
+                continue
 
+            if unit.night_turn_survivable < 10:
+                if game_state.convolved_collectable_tiles_matrix[y,x] == 0:
+                    continue
+
+            # identation to retain commit history
+            if True:
                 # do not plan overnight missions if you are the only unit mining
                 if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
                     if len(units_mining_on_current_cluster) <= 1 and distance > 15:

@@ -271,15 +271,15 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
 
             # execute actions for ejection
             # the amount is a stopgap measure to prevent the unit planning bcity mission immediately after ejection
-            action_1 = unit.transfer(adj_unit.id, unit.cargo.get_most_common_resource(), 95)
+            action_1 = unit.transfer(adj_unit.id, unit.cargo.get_most_common_resource(), 100)
             for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
                 xx,yy = adj_unit.pos.x + dx, adj_unit.pos.y + dy
                 if (xx,yy) in game_state.empty_tile_xy_set:
                     if game_state.retrieve_distance(xx, yy, best_position.x, best_position.y) > distance_of_best:
                         continue
-                    if Position(xx,yy) - best_position >= unit.pos - best_position:
+                    if Position(xx,yy) - best_position > unit.pos - best_position:
                         continue
-                    if Position(xx,yy) - best_position >= adj_unit.pos - best_position:
+                    if Position(xx,yy) - best_position > adj_unit.pos - best_position:
                         continue
                     print("ejecting", unit.id, unit.pos, adj_unit.id, adj_unit.pos, direction, "->", best_position)
                     action_2 = adj_unit.move(direction)
@@ -528,6 +528,8 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
 
     # probably should reduce code repetition in the following lines
     def make_random_move_to_void(unit: Unit, annotation: str = ""):
+        if not unit.can_act():
+            return
         (xx,yy) = (-1,-1)
 
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
@@ -559,6 +561,8 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
 
 
     def make_random_move_to_center(unit: Unit, annotation: str = ""):
+        if not unit.can_act():
+            return
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.occupied_xy_set:
@@ -581,6 +585,8 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
 
     # probably should reduce code repetition in the following lines
     def make_random_move_to_collectable(unit: Unit, annotation: str = ""):
+        if not unit.can_act():
+            return
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.occupied_xy_set:
@@ -602,6 +608,8 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
 
 
     def make_random_move_to_city(unit: Unit, annotation: str = ""):
+        if not unit.can_act():
+            return
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) in game_state.player_city_tile_xy_set:
@@ -624,6 +632,8 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
 
 
     def make_random_move_to_city_sustain(unit: Unit, annotation: str = ""):
+        if not unit.can_act():
+            return
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.player_city_tile_xy_set:
@@ -688,10 +698,8 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
             continue
         if game_state.turn%40 < 20:
             continue
-        if tuple(unit.pos) not in game_state.buildable_tile_xy_set:
+        if tuple(unit.pos) not in game_state.buildable_tile_xy_set or not game_state.is_day_time:
             make_random_transfer(unit, "🟢", True, game_state.player_city_tile_xy_set)
-        if not unit.can_act():
-            continue
         make_random_move_to_city_sustain(unit, "🟢")
 
 
