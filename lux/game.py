@@ -629,6 +629,7 @@ class Game:
         if self.turn <= 20:
             self.distance_from_floodfill_by_empty_tile = calculate_distance_from_set(self.buildable_tile_xy_set)
         self.distance_from_preferred_buildable = calculate_distance_from_set(self.preferred_buildable_tile_xy_set)
+        self.distance_from_probably_buildable = calculate_distance_from_set(self.probably_buildable_tile_xy_set)
 
         self.distance_from_resource_mean, self.resource_mean = calculate_distance_from_mean(self.collectable_tiles_xy_set)
         self.distance_from_resource_median, self.resource_median = calculate_distance_from_median(self.collectable_tiles_xy_set)
@@ -914,7 +915,7 @@ class Game:
 
                 # only build beside a collectable resource
                 if self.distance_from_collectable_resource[y,x] != 1:
-                    if not relocation_to_preferred or (x,y) not in self.preferred_buildable_tile_xy_set:
+                    if not relocation_to_preferred or (x,y) not in self.probably_buildable_tile_xy_set:
                         continue
 
                 position = Position(x, y)
@@ -929,7 +930,7 @@ class Game:
 
                 # among tied distances we want to pick a better location
                 distance_with_features = (simulated_distance,
-                                          -int((x,y) in self.preferred_buildable_tile_xy_set),
+                                          -int((x,y) in self.preferred_buildable_tile_xy_set) -int((x,y) in self.probably_buildable_tile_xy_set),
                                           distance,
                                           self.distance_from_opponent_assets[y,x] + self.distance_from_resource_median[y,x])
 

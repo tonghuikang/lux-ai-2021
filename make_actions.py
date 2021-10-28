@@ -320,8 +320,8 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                         print("no mission from fortress", unit.id)
                         continue
 
-        # do not make missions if you could mine uranium from a citytile that is not fueled to the end
-        if game_state.matrix_player_cities_nights_of_fuel_required_for_game[unit.pos.y, unit.pos.x] > 0:
+        # do not make missions if you could mine uranium from a citytile that is not fueled for the night
+        if game_state.matrix_player_cities_nights_of_fuel_required_for_night[unit.pos.y, unit.pos.x] > 0:
             if game_state.player.researched_uranium():
                 if game_state.convolved_uranium_exist_matrix[unit.pos.y, unit.pos.x] > 0:
                     if tuple(unit.pos) not in game_state.citytiles_with_new_units_xy_set:
@@ -346,9 +346,15 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         full_resources_not_on_next_turn = (unit.get_cargo_space_used() + game_state.resource_collection_rate[unit.pos.y, unit.pos.x] < 100)
         relocation_to_preferred = (game_state.distance_from_preferred_buildable[unit.pos.y, unit.pos.x] <= 1 and
                                    unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 < 28 and
-                                   game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 2) or (
-                                   game_state.distance_from_preferred_buildable[unit.pos.y, unit.pos.x] == 0 and
-                                   unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 <= 30)
+                                   game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 2
+                                  ) or (
+                                   game_state.distance_from_probably_buildable[unit.pos.y, unit.pos.x] <= 1 and
+                                   unit.get_cargo_space_used() == 100 and 10 < game_state.turn%40 < 25 and
+                                   game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 3
+                                  ) or (
+                                   game_state.distance_from_probably_buildable[unit.pos.y, unit.pos.x] == 0 and
+                                   unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 <= 30
+                                  )
 
         # if the unit is waiting for dawn at the side of resource
         # stay_up_till_dawn = (unit.get_cargo_space_left() <= 4 and (game_state.turn%40 >= 32 or game_state.turn%40 == 0))
@@ -359,12 +365,14 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
               full_resources_not_on_next_turn, relocation_to_preferred)
         if prepare_housing:
             nearest_position, distance_with_features = game_state.get_nearest_empty_tile_and_distance(
-                unit.pos, current_target_position, move_ok=full_resources_not_on_next_turn, relocation_to_preferred=relocation_to_preferred)
+                unit.pos, current_target_position,
+                move_ok=full_resources_not_on_next_turn,
+                relocation_to_preferred=relocation_to_preferred)
             if distance_with_features[0] > 1:
                 # not really near
                 pass
             else:
-                print("plan mission to build citytile", unit.id, unit.pos, "->", nearest_position)
+                print("plan mission to build citytile", unit.id, unit.pos, "->", nearest_position, distance_with_features)
                 mission = Mission(unit.id, nearest_position, unit.build_city())
                 missions.add(mission)
                 continue

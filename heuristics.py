@@ -119,6 +119,11 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                     if len(units_targeting_or_mining_on_target_cluster) > resource_size_of_target_cluster:
                         target_bonus = target_bonus * 0.1
 
+                    # if none of your units is targeting the cluster and definitely reachable
+                    if units_targeting_or_mining_on_target_cluster == 0:
+                        if distance <= game_state.distance_from_opponent_assets[y,x]:
+                            target_bonus = target_bonus * 5
+
                     # discourage targeting depending are you the closest unit to the resource
                     distance_bonus = max(1,game_state.distance_from_player_assets[y,x])/max(1,distance)
 
@@ -143,12 +148,12 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                     if game_state.distance_from_opponent_assets[y,x] + 5 < \
                        game_state.xy_to_resource_group_id.get_dist_from_player((x,y),):
                         if unit.night_turn_survivable < 10:
-                            target_bonus *= 0.01
+                            target_bonus = target_bonus * 0.01
 
                     # slightly discourage targeting clusters closer to enemy
                     if game_state.xy_to_resource_group_id.get_dist_from_opponent((x,y),) < \
                        game_state.xy_to_resource_group_id.get_dist_from_player((x,y),):
-                        target_bonus *= 0.9
+                        target_bonus = target_bonus * 0.9
 
             if target_leader and target_leader == current_leader:
                 # if targeting same cluster do not move more than five
