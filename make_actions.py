@@ -83,7 +83,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         for city_tile in city.citytiles:
             city_tiles.append(city_tile)
     if not city_tiles:
-        return []
+        return False, []
 
 
     def calculate_city_cluster_bonus(pos: Position):
