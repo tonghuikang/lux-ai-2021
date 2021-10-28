@@ -28,14 +28,24 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
     units_cnt = len(player.units)  # current number of units
 
     actions: List[str] = []
+    reset_missions = False
 
     def do_research(city_tile: CityTile, annotation: str=""):
+        nonlocal reset_missions
         action = city_tile.research()
         game_state.player.research_points += 1
         actions.append(action)
         if annotation:
             actions.append(annotate.text(city_tile.pos.x, city_tile.pos.y, annotation))
         city_tile.cooldown += 10
+
+        # reset all missions
+        if game_state.player.research_points == 50:
+            print("delete missions at 50 rp")
+            reset_missions = True
+        if game_state.player.research_points == 200:
+            print("delete missions at 200 rp")
+            reset_missions = True
 
     def build_worker(city_tile: CityTile, annotation: str=""):
         nonlocal units_cnt
@@ -178,7 +188,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
 
         # otherwise don't do anything
 
-    return actions
+    return reset_missions, actions
 
 
 def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=False, DEBUG=False) -> Missions:

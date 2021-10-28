@@ -22,7 +22,11 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     game_state.calculate_features(missions)
     censoring = game_state.is_symmetrical()
     state_annotations = annotate_game_state(game_state)
-    actions_by_cities = make_city_actions(game_state, missions, DEBUG=DEBUG)
+    reset_missions, actions_by_cities = make_city_actions(game_state, missions, DEBUG=DEBUG)
+    if reset_missions:
+        print("reset_missions")
+        missions = Missions()
+        game_state.calculate_features(missions)
     actions_by_units_initial = make_unit_actions_supplementary(game_state, missions, initial=True, DEBUG=DEBUG)
     cluster_annotations_and_ejections_pre = make_unit_missions(game_state, missions, is_initial_plan=True, DEBUG=DEBUG)
     missions, pre_actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
