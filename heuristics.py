@@ -63,7 +63,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
             resource_size_of_current_cluster = resource_size_of_current_cluster//2
 
     # only consider other cluster if another unit is targeting and mining in the current cluster
-    if len(units_mining_on_current_cluster) >= 1:
+    if len(units_mining_on_current_cluster - set([unit.id])) >= 1:
         consider_different_cluster = True
 
     # if you are in a barren field you must consider a different cluster

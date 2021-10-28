@@ -925,15 +925,19 @@ class Game:
                 distance = self.retrieve_distance(current_position.x, current_position.y, position.x, position.y)
 
                 simulated_distance = distance
+
+                move_ok_new = False
                 if move_ok and (x,y) in self.convolved_collectable_tiles_xy_set:
-                    simulated_distance = max(1, distance)
+                    if self.distance_from_opponent_assets[y,x] <= self.distance_from_opponent_assets[current_position.y,current_position.x]:
+                        move_ok_new = True
+                        simulated_distance = max(1, distance)
 
                 if relocation_to_preferred:
                     simulated_distance = max(1, distance)
 
                 # among tied distances we want to pick a better location
                 distance_with_features = (simulated_distance,
-                                          int(relocation_to_preferred or move_ok)*
+                                          int(move_ok_new or relocation_to_preferred) *
                                           (-int((x,y) in self.preferred_buildable_tile_xy_set) -int((x,y) in self.probably_buildable_tile_xy_set)),
                                           distance +
                                           self.distance_from_opponent_assets[y,x] + self.distance_from_resource_median[y,x])

@@ -352,7 +352,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                                    game_state.distance_from_probably_buildable[unit.pos.y, unit.pos.x] <= 1 and
                                    unit.get_cargo_space_used() == 100 and 5 < game_state.turn%40 < 28 and
                                    game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 3 and
-                                   game_state.turn > 20
+                                   game_state.turn > 40
                                   ) or (
                                    game_state.distance_from_probably_buildable[unit.pos.y, unit.pos.x] == 0 and
                                    unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 <= 30
@@ -499,10 +499,10 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
     # if the unit is not able to make an action over two turns, delete the mission
     for unit_id in units_with_mission_but_no_action:
         mission: Mission = missions[unit_id]
-        mission.delays += 1
-        if mission.delays >= 2:
+        if mission.delays > 4:
             print("delete mission unable to move", unit_id, mission.target_position)
             del missions[unit_id]
+        mission.delays += 1
 
     return missions, actions
 
@@ -786,7 +786,7 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
     return actions
 
 
-def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> DIRECTIONS:
+def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, delay=0) -> DIRECTIONS:
 
     smallest_cost = [2,2,2,2,2]
     closest_dir = DIRECTIONS.CENTER
@@ -818,12 +818,11 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position) -> 
                     # only in early game
                     cost[0] = 1
 
-        # if targeting same cluster, do not walk on tiles without resources unless you will be closer to enemy unit
+        # if targeting same cluster, do not walk on tiles without resources unless
         targeting_same_cluster = game_state.xy_to_resource_group_id.find(tuple(target_pos)) == game_state.xy_to_resource_group_id.find(tuple(unit.pos))
         if targeting_same_cluster:
-            if game_state.retrieve_distance(newpos.x, newpos.y, target_pos.x, target_pos.y) >= game_state.distance_from_opponent_units[target_pos.y, target_pos.x]:
-                if tuple(newpos) not in game_state.convolved_collectable_tiles_xy_set:
-                    cost[0] = 3
+            if tuple(newpos) not in game_state.convolved_collectable_tiles_xy_set:
+                cost[0] = 3
 
         # discourage going into a fueled city tile if you are carrying substantial coal and uranium
         if unit.cargo.coal + unit.cargo.uranium * 2 > 20:
