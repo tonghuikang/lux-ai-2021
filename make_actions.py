@@ -343,14 +343,16 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         sufficient_resources = unit.cargo.wood >= 60 or unit.cargo.wood + unit.cargo.coal >= 90 or unit.get_cargo_space_used() >= 96
         prepare_housing = targeting_current_cluster and sufficient_resources and \
                           game_state.distance_from_buildable_tile[unit.pos.y, unit.pos.x] <= 1
-        full_resources_not_on_next_turn = (unit.get_cargo_space_used() + game_state.resource_collection_rate[unit.pos.y, unit.pos.x] < 100)
+        full_resources_not_on_next_turn = (unit.get_cargo_space_used() + game_state.resource_collection_rate[unit.pos.y, unit.pos.x] < 100
+                                          ) or (31 < game_state.turn%40 <= 37)
         relocation_to_preferred = (game_state.distance_from_preferred_buildable[unit.pos.y, unit.pos.x] <= 1 and
                                    unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 < 28 and
                                    game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 2
                                   ) or (
                                    game_state.distance_from_probably_buildable[unit.pos.y, unit.pos.x] <= 1 and
-                                   unit.get_cargo_space_used() == 100 and 10 < game_state.turn%40 < 28 and
-                                   game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 3
+                                   unit.get_cargo_space_used() == 100 and 5 < game_state.turn%40 < 28 and
+                                   game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 3 and
+                                   game_state.turn > 20
                                   ) or (
                                    game_state.distance_from_probably_buildable[unit.pos.y, unit.pos.x] == 0 and
                                    unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 <= 30

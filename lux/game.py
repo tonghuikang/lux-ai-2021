@@ -732,7 +732,7 @@ class Game:
 
         if self.player.researched_coal():
             self.collectable_tiles_matrix += self.coal_exist_matrix
-            self.resource_collection_rate += self.coal_exist_matrix.copy() * 5 * 5
+            self.resource_collection_rate += self.coal_exist_matrix.copy() * 5
             self.fuel_collection_rate += self.coal_exist_matrix.copy() * 5 * 5
 
         if self.player.researched_coal_projected():
@@ -740,7 +740,7 @@ class Game:
 
         if self.player.researched_uranium():
             self.collectable_tiles_matrix += self.uranium_exist_matrix
-            self.resource_collection_rate += self.uranium_exist_matrix.copy() * 2 * 20
+            self.resource_collection_rate += self.uranium_exist_matrix.copy() * 2
             self.fuel_collection_rate += self.uranium_exist_matrix.copy() * 2 * 20
 
         if self.player.researched_uranium_projected():
@@ -749,6 +749,9 @@ class Game:
         # adjacent cells collect from the cell as well
         self.convolved_collectable_tiles_matrix = self.convolve(self.collectable_tiles_matrix)
         self.convolved_collectable_tiles_matrix_projected = self.convolve(self.collectable_tiles_matrix_projected)
+
+        self.resource_collection_rate = self.convolve(self.resource_collection_rate)
+        self.fuel_collection_rate = self.convolve(self.fuel_collection_rate)
 
         self.collectable_tiles_xy_set = set()  # exclude adjacent
         self.populate_set(self.collectable_tiles_matrix, self.collectable_tiles_xy_set)
@@ -930,8 +933,9 @@ class Game:
 
                 # among tied distances we want to pick a better location
                 distance_with_features = (simulated_distance,
-                                          -int((x,y) in self.preferred_buildable_tile_xy_set) -int((x,y) in self.probably_buildable_tile_xy_set),
-                                          distance,
+                                          int(relocation_to_preferred or move_ok)*
+                                          (-int((x,y) in self.preferred_buildable_tile_xy_set) -int((x,y) in self.probably_buildable_tile_xy_set)),
+                                          distance +
                                           self.distance_from_opponent_assets[y,x] + self.distance_from_resource_median[y,x])
 
                 # update best location
