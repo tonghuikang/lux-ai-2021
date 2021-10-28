@@ -120,9 +120,9 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                         target_bonus = target_bonus * 0.1
 
                     # if none of your units is targeting the cluster and definitely reachable
-                    if units_targeting_or_mining_on_target_cluster == 0:
+                    if len(units_targeting_or_mining_on_target_cluster) == 0:
                         if distance <= game_state.distance_from_opponent_assets[y,x]:
-                            target_bonus = target_bonus * 5
+                            target_bonus = target_bonus * 10
 
                     # discourage targeting depending are you the closest unit to the resource
                     distance_bonus = max(1,game_state.distance_from_player_assets[y,x])/max(1,distance)

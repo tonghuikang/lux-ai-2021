@@ -349,7 +349,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                                    game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 2
                                   ) or (
                                    game_state.distance_from_probably_buildable[unit.pos.y, unit.pos.x] <= 1 and
-                                   unit.get_cargo_space_used() == 100 and 10 < game_state.turn%40 < 25 and
+                                   unit.get_cargo_space_used() == 100 and 10 < game_state.turn%40 < 28 and
                                    game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 3
                                   ) or (
                                    game_state.distance_from_probably_buildable[unit.pos.y, unit.pos.x] == 0 and
