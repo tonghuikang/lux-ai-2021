@@ -210,11 +210,11 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                             continue
 
                     # discourage if the target is one unit closer to the enemy, in the early game
-                    # specific case to avoid this sort of targeting
+                    # specific case to avoid this sort of targeting (A -> X)
                     #    X
                     # WABW
                     # WWWW
-                    if game_state.distance_from_opponent_units[y,x] + 1 == game_state.distance_from_player_units[y,x]:
+                    if game_state.distance_from_opponent_assets[y,x] + 1 == game_state.distance_from_player_units[y,x]:
                         if game_state.turn < 80:
                             cell_value[2] -= 2
 

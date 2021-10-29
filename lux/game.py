@@ -930,7 +930,7 @@ class Game:
 
                 move_ok_new = False
                 if move_ok and (x,y) in self.convolved_collectable_tiles_xy_set:
-                    if self.distance_from_opponent_assets[y,x] <= self.distance_from_opponent_assets[current_position.y,current_position.x]:
+                    if self.distance_from_opponent_assets[y,x] < self.distance_from_opponent_assets[current_position.y,current_position.x]:
                         move_ok_new = True
                         simulated_distance = max(1, distance)
 

@@ -810,7 +810,7 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, del
     closest_dir = DIRECTIONS.CENTER
     closest_pos = unit.pos
 
-    for direction in game_state.dirs:
+    for direction in game_state.dirs[:-1]:
         newpos = unit.pos.translate(direction, 1)
 
         cost = [0,0,0,0,0]
@@ -836,7 +836,7 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, del
                     # only in early game
                     cost[0] = 1
 
-        # if targeting same cluster, do not walk on tiles without resources unless
+        # if targeting same cluster, discourage walking on tiles without resources
         targeting_same_cluster = game_state.xy_to_resource_group_id.find(tuple(target_pos)) == game_state.xy_to_resource_group_id.find(tuple(unit.pos))
         if targeting_same_cluster:
             if tuple(newpos) not in game_state.convolved_collectable_tiles_xy_set:
