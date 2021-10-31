@@ -331,20 +331,26 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                         continue
 
         # do not make missions if you could mine uranium from a citytile that is not fueled for the night
-        if game_state.matrix_player_cities_nights_of_fuel_required_for_night[unit.pos.y, unit.pos.x] > 0:
+        if game_state.matrix_player_cities_nights_of_fuel_required_for_night[unit.pos.y, unit.pos.x] > 0 or (
+            game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] <= 3 and
+            game_state.matrix_player_cities_nights_of_fuel_required_for_game[unit.pos.y, unit.pos.x] > 0):
             if game_state.player.researched_uranium():
                 if game_state.convolved_uranium_exist_matrix[unit.pos.y, unit.pos.x] > 0:
                     if tuple(unit.pos) not in game_state.citytiles_with_new_units_xy_set:
-                        # unless the citytile is producing new units
-                        continue
+                        if game_state.player_units_matrix[unit.pos.y, unit.pos.x] == 1:
+                            # unless the citytile is producing new units
+                            continue
 
         # do not make missions if you could mine coal from a citytile that is not fueled for the night
-        if game_state.matrix_player_cities_nights_of_fuel_required_for_night[unit.pos.y, unit.pos.x] > 0:
+        if game_state.matrix_player_cities_nights_of_fuel_required_for_night[unit.pos.y, unit.pos.x] > 0 or (
+            game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] <= 3 and
+            game_state.matrix_player_cities_nights_of_fuel_required_for_game[unit.pos.y, unit.pos.x] > 0):
             if game_state.player.researched_coal():
                 if game_state.convolved_coal_exist_matrix[unit.pos.y, unit.pos.x] > 0:
                     if tuple(unit.pos) not in game_state.citytiles_with_new_units_xy_set:
-                        # unless the citytile is producing new units
-                        continue
+                        if game_state.player_units_matrix[unit.pos.y, unit.pos.x] == 1:
+                            # unless the citytile is producing new units
+                            continue
 
         # if you are targeting your own cluster you are at and you have at least 60 wood and close to edge
         targeting_current_cluster = unit.id not in missions or (unit.id in missions and \
@@ -512,8 +518,6 @@ def make_unit_actions(game_state: Game, missions: Missions, incur_delay=False, D
         if mission.delays <= 0:
             print("delete mission unable to move", unit_id, mission.target_position)
             del missions[unit_id]
-        if incur_delay:
-            mission.delays -= 1
 
     return missions, actions
 
@@ -783,6 +787,7 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
         if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
             continue
         if unit.fuel_potential == 0:
+            continue
             # suicide mission
             make_random_move_to_void(unit, "KS")
         else:

@@ -20,7 +20,7 @@ class Mission:
         self.target_position: Position = target_position
         self.target_action: str = target_action
         self.unit_id: str = unit_id
-        self.delays: int = delays + 2
+        self.delays: int = 2*delays
         self.details: str = details  # block deletion of mission if no resource
         # [TODO] some expiry date for each mission
 
@@ -1079,6 +1079,8 @@ def cleanup_missions(game_state: Game, missions: Missions, DEBUG=False):
 
 def update_mission_delay(game_state: Game, missions: Missions):
     # update mission.delay based on the units had colliding act
-    for unit_id in game_state.units_did_not_act:
-        if unit_id in missions:
-            missions[unit_id].delays += 1
+    for unit in game_state.player.units:
+        if unit.id in missions:
+            mission: Mission = missions[unit.id]
+            if mission.target_position != unit.pos:
+                mission.delays -= 1
