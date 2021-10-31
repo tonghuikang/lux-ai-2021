@@ -412,7 +412,6 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             continue
 
         # preemptive homing mission
-        preemptive_homing_mission_planned = False
         if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set or game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 5:
           if unit.cargo.uranium > 0:
             # if there is a citytile nearby already
@@ -420,20 +419,27 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 unit, require_reachable=True, require_night=True, enforce_night=True, enforce_night_addn=10,
                 minimum_size=10, maximum_distance=unit.cargo.uranium//3)
             if unit.pos != homing_position:
+                print("homing two", unit.id, unit.pos, homing_position)
                 mission = Mission(unit.id, homing_position, details="homing two", delays=homing_distance)
                 missions.add(mission)
                 unit_ids_with_missions_assigned_this_turn.add(unit.id)
-                preemptive_homing_mission_planned = True
+                annotation = annotate.text(unit.pos.x, unit.pos.y, "H2")
+                cluster_annotations.append(annotation)
+                continue
 
-          if unit.cargo.uranium > 0 and not preemptive_homing_mission_planned:
+          if unit.cargo.uranium > 0:
             # if there is a citytile nearby already
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
                 unit, require_reachable=True, require_night=True, enforce_night=True,
                 minimum_size=3, maximum_distance=unit.cargo.uranium//3)
             if unit.pos != homing_position:
+                print("homing one", unit.id, unit.pos, homing_position)
                 mission = Mission(unit.id, homing_position, details="homing", delays=homing_distance)
                 missions.add(mission)
                 unit_ids_with_missions_assigned_this_turn.add(unit.id)
+                annotation = annotate.text(unit.pos.x, unit.pos.y, "H1")
+                cluster_annotations.append(annotation)
+                continue
 
         if unit.id in missions:
             mission: Mission = missions[unit.id]
@@ -468,7 +474,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
     return actions_ejections + cluster_annotations
 
 
-def make_unit_actions(game_state: Game, missions: Missions, incur_delay=False, DEBUG=False) -> Tuple[Missions, List[str]]:
+def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tuple[Missions, List[str]]:
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
@@ -516,7 +522,7 @@ def make_unit_actions(game_state: Game, missions: Missions, incur_delay=False, D
             continue
 
         # attempt to move the unit
-        direction = attempt_direction_to(game_state, unit, mission.target_position)
+        direction = attempt_direction_to(game_state, unit, mission.target_position, avoid_opponent_units=("homing" in mission.details))
         if direction != "c":
             units_with_mission_but_no_action.discard(unit.id)
             action = unit.move(direction)
@@ -697,6 +703,11 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
                 if city and city.fuel_needed_for_game < 0:
                     continue
 
+            # if you are on buildable, do not transfer to nonbuildable and noncity
+            if tuple(unit.pos) in game_state.buildable_tile_xy_set:
+                if (xx,yy) not in game_state.buildable_tile_xy_set and (xx,yy) not in game_state.player_city_tile_xy_set:
+                    continue
+
             print("random transfer", unit.id, unit.pos, "->", adj_unit.id, xx, yy)
             action = unit.transfer(adj_unit.id, unit.cargo.get_most_common_resource(), 2000)
             actions.append(action)
@@ -823,7 +834,7 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
     return actions
 
 
-def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, delay=0) -> DIRECTIONS:
+def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, avoid_opponent_units=False) -> DIRECTIONS:
 
     smallest_cost = [2,2,2,2,2]
     closest_dir = DIRECTIONS.CENTER
@@ -843,6 +854,10 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, del
             if tuple(newpos) not in game_state.player_city_tile_xy_set:
                 if tuple(newpos) != tuple(unit.pos):
                     cost[0] = 3
+
+        if avoid_opponent_units:
+            if tuple(newpos) in game_state.opponent_units_xy_set:
+                cost[0] = 1
 
         # no entering opponent citytile
         if tuple(newpos) in game_state.opponent_city_tile_xy_set:

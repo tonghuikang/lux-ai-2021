@@ -962,6 +962,9 @@ class Game:
         closest_distance: int = 10**9 + 7
         closest_position = unit.pos
 
+        if unit.fuel_potential >= 90*20:
+            unit.fuel_potential = 10**9+7
+
         cities: List[City] = list(self.player.cities.values())
         cities.sort(key = lambda city: (
             city.citytiles[0].pos.x * self.x_order_coefficient,
@@ -975,21 +978,21 @@ class Game:
                     distance = self.retrieve_distance(unit.pos.x, unit.pos.y, citytile.pos.x, citytile.pos.y)
                     if require_reachable:
                         # the city should not die before the unit can reach
-                        if self.turns_to_night + (city.night_fuel_duration // 10)*40 + city.night_fuel_duration <= distance * 2:
+                        if distance * 2 >= self.turns_to_night + (city.night_fuel_duration // 10)*40 + city.night_fuel_duration:
                             continue
                     if require_night:
                         # require fuel to be able to save city for the night
-                        if unit.fuel_potential < city.fuel_needed_for_night - enforce_night_addn * city.get_light_upkeep():
+                        if unit.fuel_potential < city.fuel_needed_for_night + enforce_night_addn * city.get_light_upkeep():
                             continue
+                    if distance > maximum_distance:
+                        continue
                     if prefer_night:
                         if city.fuel_needed_for_night > 0:
                             # prefer to save cities from the night
                             distance -= 1000
                     if enforce_night:
-                        if city.fuel_needed_for_night < - enforce_night_addn * city.get_light_upkeep():
+                        if city.fuel_needed_for_night - enforce_night_addn * city.get_light_upkeep() < 0:
                             continue
-                    if distance > maximum_distance:
-                        continue
                     if distance < closest_distance:
                         closest_distance = distance
                         closest_position = citytile.pos

@@ -142,10 +142,6 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
 
                     target_bonus = target_bonus * distance_bonus**2
 
-                    if distance_bonus <= 1/2:
-                        # if you are far from being the closest to the new cluster, force target bonus to be close to one
-                        target_bonus = target_bonus**0.0001
-
                     if distance_bonus == 1:
                         # extra bonus if you are closest to the target
                         target_bonus = target_bonus * 10
