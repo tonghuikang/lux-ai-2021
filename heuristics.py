@@ -17,7 +17,8 @@ from lux.game_position import Position
 from lux.game_constants import GAME_CONSTANTS
 
 
-def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
+def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, require_empty_target=False):
+
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
@@ -110,6 +111,11 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                         game_state.resource_leader_to_locating_units[target_leader] | \
                         game_state.resource_leader_to_targeting_units[target_leader]
 
+                    if require_empty_target and units_targeting_or_mining_on_target_cluster:
+                        continue
+                    if require_empty_target and len(units_mining_on_current_cluster) <= 2:
+                        continue
+
                     resource_size_of_target_cluster = game_state.xy_to_resource_group_id.get_point(target_leader)
 
                     # target bonus depends on how many resource tiles and how many units that are mining or targeting
@@ -128,12 +134,15 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False):
                     # discourage targeting depending are you the closest unit to the resource
                     distance_bonus = max(1,game_state.distance_from_player_assets[y,x])/max(1,distance)
 
+                    if require_empty_target and distance_bonus < 1:
+                        continue
+
                     if consider_different_cluster_must:
                         distance_bonus = max(1/2, distance_bonus)
 
                     target_bonus = target_bonus * distance_bonus**2
 
-                    if distance_bonus < 1/2:
+                    if distance_bonus <= 1/2:
                         # if you are far from being the closest to the new cluster, force target bonus to be close to one
                         target_bonus = target_bonus**0.0001
 

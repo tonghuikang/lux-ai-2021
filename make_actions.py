@@ -374,6 +374,19 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                                    unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 <= 30
                                   )
 
+        # if far away from enemy units, attempt to send units to empty cluster
+        if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 10:
+            if full_resources_not_on_next_turn:
+                best_position, best_cell_value, cluster_annotation = find_best_cluster(game_state, unit, DEBUG=DEBUG, require_empty_target=True)
+                distance_from_best_position = game_state.retrieve_distance(unit.pos.x, unit.pos.y, best_position.x, best_position.y)
+                if best_cell_value > [0,0,0,0]:
+                    print("force empty cluster", unit.id, unit.pos, "->", best_position, best_cell_value)
+                    mission = Mission(unit.id, best_position, delays=distance_from_best_position)
+                    missions.add(mission)
+                    unit_ids_with_missions_assigned_this_turn.add(unit.id)
+                    cluster_annotations.extend(cluster_annotation)
+                    continue
+
         # if the unit is waiting for dawn at the side of resource
         # stay_up_till_dawn = (unit.get_cargo_space_left() <= 4 and (game_state.turn%40 >= 32 or game_state.turn%40 == 0))
         # if the unit is full and it is going to be day the next few days
