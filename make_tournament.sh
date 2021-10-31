@@ -14,7 +14,7 @@ rm -rf replays
 # fi
 
 # play game until you lose, and then visualise
-while lux-ai-2021 --loglevel 1 --maxtime 30000 --height 12 --width 12 --out replay.json  ./main.py ../i2/main.py | tee "$(tty)" | grep -q 'rank: 1, agentID: 0'; do
+while GFOOTBALL_DATA_DIR=C lux-ai-2021 --loglevel 1 --maxtime 30000 --height 32 --width 32 --out replay.json  ./main.py ../i2/main.py | tee "$(tty)" | grep -q 'rank: 1, agentID: 0'; do
     true
 done; lux-ai-vis replay.json
 # while lux-ai-2021 --loglevel 1 --maxtime 30000 --out replay.json  ./main.py ../i1/main.py | tee "$(tty)" | grep -q 'rank: 1, agentID: 0'; do

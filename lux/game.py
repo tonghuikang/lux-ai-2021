@@ -16,11 +16,11 @@ INPUT_CONSTANTS = Constants.INPUT_CONSTANTS
 
 
 class Mission:
-    def __init__(self, unit_id: str, target_position: Position, target_action: str = "", details: str = ""):
+    def __init__(self, unit_id: str, target_position: Position, target_action: str = "", details: str = "", delays=99):
         self.target_position: Position = target_position
         self.target_action: str = target_action
         self.unit_id: str = unit_id
-        self.delays: int = 0
+        self.delays: int = delays + 2
         self.details: str = details  # block deletion of mission if no resource
         # [TODO] some expiry date for each mission
 

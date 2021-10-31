@@ -64,7 +64,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
                         cooldown=6, wood=0, coal=0, uranium=0)  # add dummy unit for targeting purposes
             game_state.players[game_state.player_id].units.append(unit)
             game_state.player.units_by_id[city_tile.cityid] = unit
-            mission = Mission(city_tile.cityid, city_tile.pos, details="born")
+            mission = Mission(city_tile.cityid, city_tile.pos, details="born", delays=99)
             missions.add(mission)
             print(missions)
 
@@ -300,7 +300,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             # if successful
             if adj_unit.id in missions:
                 del missions[adj_unit.id]
-            mission = Mission(adj_unit.id, best_position)
+            mission = Mission(adj_unit.id, best_position, delays=distance_of_best)
             missions.add(mission)
             unit_ids_with_missions_assigned_this_turn.add(adj_unit.id)
             game_state.ejected_units_set.add(adj_unit.id)
@@ -385,7 +385,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 pass
             else:
                 print("plan mission to build citytile", unit.id, unit.pos, "->", nearest_position, distance_with_features)
-                mission = Mission(unit.id, nearest_position, unit.build_city())
+                mission = Mission(unit.id, nearest_position, unit.build_city(), delays=distance_with_features[0])
                 missions.add(mission)
                 continue
 
@@ -401,7 +401,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 unit, require_reachable=True, require_night=True, enforce_night=True, enforce_night_addn=10,
                 minimum_size=10, maximum_distance=unit.cargo.uranium//3)
             if unit.pos != homing_position:
-                mission = Mission(unit.id, homing_position, details="homing two")
+                mission = Mission(unit.id, homing_position, details="homing two", delays=homing_distance)
                 missions.add(mission)
                 unit_ids_with_missions_assigned_this_turn.add(unit.id)
                 preemptive_homing_mission_planned = True
@@ -412,7 +412,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 unit, require_reachable=True, require_night=True, enforce_night=True,
                 minimum_size=3, maximum_distance=unit.cargo.uranium//3)
             if unit.pos != homing_position:
-                mission = Mission(unit.id, homing_position, details="homing")
+                mission = Mission(unit.id, homing_position, details="homing", delays=homing_distance)
                 missions.add(mission)
                 unit_ids_with_missions_assigned_this_turn.add(unit.id)
 
@@ -431,7 +431,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         distance_from_best_position = game_state.retrieve_distance(unit.pos.x, unit.pos.y, best_position.x, best_position.y)
         if best_cell_value > [0,0,0,0]:
             print("plan mission adaptative", unit.id, unit.pos, "->", best_position, best_cell_value)
-            mission = Mission(unit.id, best_position)
+            mission = Mission(unit.id, best_position, delays=distance_from_best_position)
             missions.add(mission)
             unit_ids_with_missions_assigned_this_turn.add(unit.id)
             cluster_annotations.extend(cluster_annotation)
@@ -441,7 +441,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         if unit.get_cargo_space_used() > 0:
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(unit)
             print("homing mission", unit.id, unit.pos, "->", homing_position, homing_distance)
-            mission = Mission(unit.id, homing_position, "", details="homing")
+            mission = Mission(unit.id, homing_position, "", details="homing", delays=homing_distance)
             missions.add(mission)
             unit_ids_with_missions_assigned_this_turn.add(unit.id)
             continue
@@ -449,7 +449,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
     return actions_ejections + cluster_annotations
 
 
-def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tuple[Missions, List[str]]:
+def make_unit_actions(game_state: Game, missions: Missions, incur_delay=False, DEBUG=False) -> Tuple[Missions, List[str]]:
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
@@ -509,10 +509,11 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
     # if the unit is not able to make an action over two turns, delete the mission
     for unit_id in units_with_mission_but_no_action:
         mission: Mission = missions[unit_id]
-        if mission.delays > 4:
+        if mission.delays <= 0:
             print("delete mission unable to move", unit_id, mission.target_position)
             del missions[unit_id]
-        mission.delays += 1
+        if incur_delay:
+            mission.delays -= 1
 
     return missions, actions
 
