@@ -96,6 +96,9 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
                 if (x,y) in game_state.player_city_tile_xy_set:
                     continue
 
+            if require_empty_target and len(units_mining_on_current_cluster) <= 2:
+                continue
+
             distance = game_state.retrieve_distance(unit.pos.x, unit.pos.y, x, y)
 
             # cluster targeting logic
@@ -113,9 +116,6 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
 
                     if require_empty_target and units_targeting_or_mining_on_target_cluster:
                         continue
-                    if require_empty_target and len(units_mining_on_current_cluster) <= 2:
-                        continue
-
                     resource_size_of_target_cluster = game_state.xy_to_resource_group_id.get_point(target_leader)
 
                     # target bonus depends on how many resource tiles and how many units that are mining or targeting

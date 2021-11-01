@@ -376,7 +376,9 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
 
         # if far away from enemy units, attempt to send units to empty cluster
         if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 10:
-            if full_resources_not_on_next_turn:
+            if not unit.can_act():
+                pass
+            elif full_resources_not_on_next_turn:
                 best_position, best_cell_value, cluster_annotation = find_best_cluster(game_state, unit, DEBUG=DEBUG, require_empty_target=True)
                 distance_from_best_position = game_state.retrieve_distance(unit.pos.x, unit.pos.y, best_position.x, best_position.y)
                 if best_cell_value > [0,0,0,0]:

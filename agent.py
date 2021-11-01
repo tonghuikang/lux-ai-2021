@@ -37,12 +37,13 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     movement_annotations = annotate_movements(game_state, actions_by_units)
 
     print("actions_by_cities", actions_by_cities)
+    print("actions_by_units_initial", actions_by_units_initial)
     print("cluster_annotations_and_ejections_pre", cluster_annotations_and_ejections_pre)
     print("pre_actions_by_units", pre_actions_by_units)
     print("cluster_annotations_and_ejections", cluster_annotations_and_ejections)
     print("mission_annotations", mission_annotations)
     print("actions_by_units", actions_by_units)
-    print("actions_by_units", actions_by_units_supplementary)
+    print("actions_by_units_supplementary", actions_by_units_supplementary)
     print("state_annotations", state_annotations)
     print("movement_annotations", movement_annotations)
     actions = actions_by_cities + actions_by_units_initial + pre_actions_by_units + actions_by_units + actions_by_units_supplementary
