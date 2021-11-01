@@ -25,7 +25,7 @@ class Mission:
         # [TODO] some expiry date for each mission
 
     def __str__(self):
-        return " ".join([str(self.target_position), self.target_action])
+        return " ".join([str(self.target_position), self.target_action, str(self.delays)])
 
 
 class Missions(defaultdict):
@@ -36,7 +36,7 @@ class Missions(defaultdict):
         self[mission.unit_id] = mission
 
     def __str__(self):
-        return " | ".join([unit_id + " " + str(x) for unit_id,x in self.items()])
+        return " | ".join([unit_id + " " + str(mission) for unit_id,mission in self.items()])
 
     def get_targets(self):
         return [mission.target_position for unit_id, mission in self.items()]
@@ -1065,7 +1065,7 @@ def cleanup_missions(game_state: Game, missions: Missions, DEBUG=False):
                     continue
 
         # if your target no longer have resource, reconsider your mission
-        if tuple(mission.target_position) not in game_state.convolved_collectable_tiles_xy_set:
+        if tuple(mission.target_position) not in game_state.convolved_collectable_tiles_projected_xy_set:
             # do not delete for homing mission
             if not mission.details:
                 print("deleting mission for empty target", unit_id)
