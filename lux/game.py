@@ -314,6 +314,7 @@ class Game:
             self.dirs[3], self.dirs[0:3] = self.dirs[0], self.dirs[1:4]
             self.dirs_dxdy[3], self.dirs_dxdy[0:3] = self.dirs_dxdy[0], self.dirs_dxdy[1:4]
 
+        self.unit_ids_with_missions_assigned_this_turn: Set = set()
 
     def calculate_features(self, missions: Missions):
 
@@ -760,6 +761,9 @@ class Game:
         self.convolved_collectable_tiles_projected_xy_set = set()  # include adjacent
         self.populate_set(self.convolved_collectable_tiles_matrix_projected, self.convolved_collectable_tiles_projected_xy_set)
 
+        self.convolved_collectable_tiles_xy_set
+        self.buildable_and_convolved_collectable_tile_xy_set = self.buildable_tile_xy_set & self.convolved_collectable_tiles_xy_set
+
         for unit in self.opponent.units:
             # if the opponent can move
             if unit.can_act():
@@ -890,66 +894,6 @@ class Game:
             leader = self.xy_to_resource_group_id.find(target_position)
             if leader:
                 self.resource_leader_to_targeting_units[leader].add(unit_id)
-
-
-    def get_nearest_empty_tile_and_distance(self, current_position: Position, current_target: Position=None,
-                                            move_ok=False, relocation_to_preferred=False) -> Tuple[Position, int]:
-        best_distance_with_features = (10**9+7,0,0)
-        nearest_position: Position = current_position
-
-        if self.all_resource_amount_matrix[current_position.y, current_position.x] == 0 and not move_ok:
-            if tuple(current_position) not in self.player_city_tile_xy_set:
-                if self.distance_from_collectable_resource[current_position.y,current_position.x] == 1:
-                    best_distance_with_features = (0,0,0,0)
-                    if not relocation_to_preferred:
-                        return nearest_position, best_distance_with_features
-                    if relocation_to_preferred:
-                        best_distance_with_features = (1,0,0,0)
-
-        for y in self.y_iteration_order:
-            for x in self.x_iteration_order:
-                if (x,y) not in self.buildable_tile_xy_set:
-                    continue
-
-                if (x,y) in self.targeted_for_building_xy_set:
-                    # we allow units to build at a tile that is targeted but not for building
-                    if not current_target:
-                        continue
-                    if (x,y) != tuple(current_target):
-                        continue
-
-                # only build beside a collectable resource
-                if self.distance_from_collectable_resource[y,x] != 1:
-                    if not relocation_to_preferred or (x,y) not in self.probably_buildable_tile_xy_set:
-                        continue
-
-                position = Position(x, y)
-                distance = self.retrieve_distance(current_position.x, current_position.y, position.x, position.y)
-
-                simulated_distance = distance
-
-                move_ok_new = False
-                if move_ok and (x,y) in self.convolved_collectable_tiles_xy_set:
-                    if self.distance_from_opponent_assets[y,x] < self.distance_from_opponent_assets[current_position.y,current_position.x]:
-                        move_ok_new = True
-                        simulated_distance = max(1, distance)
-
-                if relocation_to_preferred:
-                    simulated_distance = max(1, distance)
-
-                # among tied distances we want to pick a better location
-                distance_with_features = (simulated_distance,
-                                          int(move_ok_new or relocation_to_preferred) *
-                                          (-int((x,y) in self.preferred_buildable_tile_xy_set) -int((x,y) in self.probably_buildable_tile_xy_set)),
-                                          distance +
-                                          self.distance_from_opponent_assets[y,x] + self.distance_from_resource_median[y,x])
-
-                # update best location
-                if distance_with_features < best_distance_with_features:
-                    best_distance_with_features = distance_with_features
-                    nearest_position = position
-
-        return nearest_position, best_distance_with_features
 
 
     def find_nearest_city_requiring_fuel(self, unit: Unit, require_reachable=True,
