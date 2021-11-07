@@ -223,8 +223,19 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
                         if game_state.turn < 80:
                             cell_value[2] -= 2
 
+                    # discourage if you are in the citytile, and you are targeting the location beside you with one wood side
+                    # specific case to avoid this sort of targeting (A -> X), probably encourage (A -> Z) or (A -> Y)
+                    #
+                    #   AX
+                    #  ZWWY
+                    if tuple(unit.pos) in game_state.player_city_tile_xy_set:
+                        if Position(x,y) - unit.pos == 1:
+                            if game_state.convolved_wood_exist_matrix[y,x] == 1 and game_state.resource_collection_rate[y,x] == 20:
+                                if game_state.distance_from_opponent_units[y,x] > 2:
+                                    cell_value[2] -= 5
+
                     # for debugging
-                    score_matrix_wrt_pos[y,x] = cell_value[0]
+                    score_matrix_wrt_pos[y,x] = cell_value[2]
 
                     # update best target
                     if cell_value > best_cell_value:
