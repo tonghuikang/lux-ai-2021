@@ -407,6 +407,9 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                     if (xx,yy) in xy_set:
                         if (xx,yy) in game_state.targeted_for_building_xy_set:
                             # we allow units to build at a tile that is targeted but not for building
+                            if not current_target:
+                                # definitely you are not the one targeting it
+                                continue
                             if current_target and (xx,yy) != tuple(current_target):
                                 continue
                         if unit.get_cargo_space_used() + 2*game_state.resource_collection_rate[yy, xx] >= 100:
@@ -421,12 +424,12 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
 
 
             relocation_to_preferred = (game_state.distance_from_preferred_buildable[unit.pos.y, unit.pos.x] <= 1 and
-                                    unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 < 28 and
-                                    game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 2
-                                    ) or (
-                                    game_state.distance_from_preferred_buildable[unit.pos.y, unit.pos.x] == 0 and
-                                    unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 <= 31
-                                    )
+                                       unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 < 28 and
+                                       game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 2
+                                       ) or (
+                                       game_state.distance_from_preferred_buildable[unit.pos.y, unit.pos.x] == 0 and
+                                       unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 <= 31
+                                       )
 
             # if you can move one step to a building that can survive a night, build there
             if relocation_to_preferred:
@@ -440,13 +443,13 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
 
 
             relocation_to_probable =  (game_state.distance_from_probably_buildable[unit.pos.y, unit.pos.x] <= 1 and
-                                    unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 < 28 and
-                                    game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 3 and
-                                    game_state.turn > 40 and current_cluster_load > 1/2
-                                    ) or (
-                                    game_state.distance_from_probably_buildable[unit.pos.y, unit.pos.x] == 0 and
-                                    unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 <= 30
-                                    )
+                                       unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 < 28 and
+                                       game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 3 and
+                                       game_state.turn > 40 and current_cluster_load > 1/2
+                                       ) or (
+                                       game_state.distance_from_probably_buildable[unit.pos.y, unit.pos.x] == 0 and
+                                       unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 <= 30
+                                       )
 
             # if the cluster is crowded, consider building at a corner (which is not directly collecting resources)
             if relocation_to_probable:
@@ -607,10 +610,10 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             continue
         mission: Mission = missions[unit.id]
         if mission.delays <= 0:
-            print("delete mission delay timer over", unit.id, mission.target_position)
+            print("delete mission delay timer over", unit.id, unit.pos, "->", mission.target_position)
             del missions[unit.id]
         elif mission.delays < 2 * (unit.pos - mission.target_position):
-            print("delete mission cannot reach in time", unit.id, mission.target_position)
+            print("delete mission cannot reach in time", unit.id, unit.pos, "->", mission.target_position)
             del missions[unit.id]
 
     return missions, actions
@@ -641,7 +644,7 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.occupied_xy_set and (xx,yy) not in game_state.player_city_tile_xy_set:
-                if game_state.distance_from_opponent_assets[yy,xx] < game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x]:
+                if game_state.distance_from_collectable_resource[yy,xx] < game_state.distance_from_collectable_resource[unit.pos.y,unit.pos.x]:
                     # attempt to move toward enemy assets
                     break
 
@@ -886,9 +889,9 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
         if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
             continue
         if unit.fuel_potential == 0:
-            continue
-            # suicide mission
-            make_random_move_to_void(unit, "KS")
+            if game_state.is_day_time:
+                # suicide mission
+                make_random_move_to_void(unit, "KS")
         else:
             # move to center so as to consolidate resources
             make_random_move_to_center(unit, "KP")

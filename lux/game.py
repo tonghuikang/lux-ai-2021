@@ -1030,4 +1030,7 @@ def update_mission_delay(game_state: Game, missions: Missions):
         if unit.id in missions:
             mission: Mission = missions[unit.id]
             if mission.target_position != unit.pos:
-                mission.delays -= 1
+                if game_state.is_day_time:
+                    mission.delays -= 1
+                else:
+                    mission.delays -= 1/2

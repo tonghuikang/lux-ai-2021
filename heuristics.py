@@ -241,7 +241,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
 
     # annotate if target bonus is more than one
     if best_cell_value[0] > target_bonus_for_current_cluster_logging > -999:
-        for cell_value,x,y in best_citytile_of_cluster.values():
+        for cell_value,x,y in sorted(best_citytile_of_cluster.values())[:10]:
             annotation = annotate.text(x,y,f"{int(cell_value[0])}")
             cluster_annotation.append(annotation)
             annotation = annotate.line(unit.pos.x,unit.pos.y,x,y)

@@ -31,7 +31,7 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     cluster_annotations_and_ejections_pre = make_unit_missions(game_state, missions, is_initial_plan=True, DEBUG=DEBUG)
     missions, pre_actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
     cluster_annotations_and_ejections = make_unit_missions(game_state, missions, DEBUG=DEBUG)
-    mission_annotations = annotate_missions(game_state, missions)
+    mission_annotations = annotate_missions(game_state, missions, DEBUG=DEBUG)
     missions, actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
     actions_by_units_supplementary = make_unit_actions_supplementary(game_state, missions, DEBUG=DEBUG)
     movement_annotations = annotate_movements(game_state, actions_by_units)
