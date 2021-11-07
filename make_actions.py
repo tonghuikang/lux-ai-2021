@@ -316,6 +316,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             continue
         # mission is planned regardless whether the unit can act
         current_mission: Mission = missions[unit.id] if unit.id in missions else None
+        current_target = current_mission.target_position if current_mission else None
 
         # avoid sharing the same target
         game_state.repopulate_targets(missions)
@@ -358,6 +359,15 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         resource_size_of_current_cluster = game_state.xy_to_resource_group_id.get_point(current_leader)
         current_cluster_load = len(units_mining_on_current_cluster) / (0.01+resource_size_of_current_cluster)
 
+        # if you are targeting your own cluster you are at and you have at least 60 wood and close to edge
+        targeting_current_cluster = unit.id not in missions or (unit.id in missions and \
+                                    game_state.xy_to_resource_group_id.find(tuple(unit.pos)) == \
+                                    game_state.xy_to_resource_group_id.find(tuple(missions.get_target_of_unit(unit.id))))
+        full_resources_on_next_turn = not ((unit.get_cargo_space_used() + game_state.resource_collection_rate[unit.pos.y, unit.pos.x] < 100
+                                           ) or (31 < game_state.turn%40 <= 37))
+
+        print(unit.id, unit.pos, targeting_current_cluster, full_resources_on_next_turn)
+
         # if far away from enemy units, attempt to send units to empty cluster
         if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 10:
             if not unit.can_act():
@@ -373,13 +383,6 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                     cluster_annotations.extend(cluster_annotation)
                     continue
 
-
-        # if you are targeting your own cluster you are at and you have at least 60 wood and close to edge
-        targeting_current_cluster = unit.id not in missions or (unit.id in missions and \
-                                    game_state.xy_to_resource_group_id.find(tuple(unit.pos)) == \
-                                    game_state.xy_to_resource_group_id.find(tuple(missions.get_target_of_unit(unit.id))))
-        full_resources_on_next_turn = not ((unit.get_cargo_space_used() + game_state.resource_collection_rate[unit.pos.y, unit.pos.x] < 100
-                                           ) or (31 < game_state.turn%40 <= 37))
 
         # you consider building a citytile only if you are currently targeting the cluster you are in
         if targeting_current_cluster:
@@ -402,14 +405,20 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 for dx,dy in game_state.dirs_dxdy[:-1]:
                     xx,yy = unit.pos.x+dx, unit.pos.y+dy
                     if (xx,yy) in xy_set:
-                        heuristic = - game_state.distance_from_opponent_assets[yy,xx] - game_state.distance_from_resource_median[yy,xx]
-                        if heuristic > best_heuristic:
-                            best_heuristic = heuristic
-                            nearest_position = Position(xx,yy)
+                        if (xx,yy) in game_state.targeted_for_building_xy_set:
+                            # we allow units to build at a tile that is targeted but not for building
+                            if current_target and (xx,yy) != tuple(current_target):
+                                continue
+                        if unit.get_cargo_space_used() + 2*game_state.resource_collection_rate[yy, xx] >= 100:
+                            heuristic = - game_state.distance_from_opponent_assets[yy,xx] - game_state.distance_from_resource_median[yy,xx]
+                            if heuristic > best_heuristic:
+                                best_heuristic = heuristic
+                                nearest_position = Position(xx,yy)
                 if best_heuristic > -999:
                     return True, nearest_position
                 else:
                     return False, None
+
 
             relocation_to_preferred = (game_state.distance_from_preferred_buildable[unit.pos.y, unit.pos.x] <= 1 and
                                     unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 < 28 and
@@ -453,6 +462,15 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 has_found, new_pos = get_best_eligible_tile(game_state.buildable_and_convolved_collectable_tile_xy_set)
                 if has_found:
                     print("relocation to better one", unit.id, unit.pos, "->", new_pos)
+                    mission = Mission(unit.id, new_pos, unit.build_city(), delays=2)
+                    missions.add(mission)
+                    game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
+                    continue
+
+            if full_resources_on_next_turn:
+                has_found, new_pos = get_best_eligible_tile(game_state.buildable_and_convolved_collectable_tile_xy_set)
+                if has_found:
+                    print("build now", unit.id, unit.pos, "->", new_pos)
                     mission = Mission(unit.id, new_pos, unit.build_city(), delays=2)
                     missions.add(mission)
                     game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
@@ -584,11 +602,16 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             continue
 
     # if the unit is not able to make an action over two turns, delete the mission
-    for unit_id in units_with_mission_but_no_action:
-        mission: Mission = missions[unit_id]
+    for unit in game_state.player.units:
+        if unit.id not in missions:
+            continue
+        mission: Mission = missions[unit.id]
         if mission.delays <= 0:
-            print("delete mission unable to move", unit_id, mission.target_position)
-            del missions[unit_id]
+            print("delete mission delay timer over", unit.id, mission.target_position)
+            del missions[unit.id]
+        elif mission.delays < 2 * (unit.pos - mission.target_position):
+            print("delete mission cannot reach in time", unit.id, mission.target_position)
+            del missions[unit.id]
 
     return missions, actions
 
