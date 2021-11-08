@@ -371,7 +371,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         full_resources_on_next_turn = not ((unit.get_cargo_space_used() + game_state.resource_collection_rate[unit.pos.y, unit.pos.x] < 100
                                            ) or (31 < game_state.turn%40 <= 37))
 
-        print(unit.id, unit.pos, targeting_current_cluster, full_resources_on_next_turn)
+        print("housing test", unit.id, unit.pos, unit.id in missions, targeting_current_cluster, full_resources_on_next_turn)
 
         # if far away from enemy units, attempt to send units to empty cluster
         if game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 10:
@@ -391,17 +391,6 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
 
         # you consider building a citytile only if you are currently targeting the cluster you are in
         if targeting_current_cluster:
-
-            # if you will have full resources on the next turn and on buildable tile, stay and build
-            if full_resources_on_next_turn and tuple(unit.pos) in game_state.buildable_tile_xy_set:
-                if game_state.distance_from_player_citytiles[unit.pos.y, unit.pos.x] == 1 or \
-                    game_state.distance_from_collectable_resource[unit.pos.y, unit.pos.x] == 1:
-                    print("stay on location", unit.id, unit.pos)
-                    mission = Mission(unit.id, unit.pos, unit.build_city(), delays=2)
-                    missions.add(mission)
-                    game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
-                    continue
-
 
             def get_best_eligible_tile(xy_set: Set) -> Tuple[Position, int]:
 
@@ -439,13 +428,14 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             # if you can move one step to a building that can survive a night, build there
             if relocation_to_preferred:
                 has_found, new_pos = get_best_eligible_tile(game_state.preferred_buildable_tile_xy_set)
+                if tuple(unit.pos) in game_state.preferred_buildable_tile_xy_set:
+                    has_found, new_pos = True, unit.pos
                 if has_found:
                     print("relocation_to_preferred", unit.id, unit.pos, "->", new_pos)
                     mission = Mission(unit.id, new_pos, unit.build_city(), delays=2)
                     missions.add(mission)
                     game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
                     continue
-
 
             relocation_to_probable =  (game_state.distance_from_probably_buildable[unit.pos.y, unit.pos.x] <= 1 and
                                        unit.get_cargo_space_used() == 100 and 0 < game_state.turn%40 < 28 and
@@ -459,9 +449,21 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             # if the cluster is crowded, consider building at a corner (which is not directly collecting resources)
             if relocation_to_probable:
                 has_found, new_pos = get_best_eligible_tile(game_state.probably_buildable_tile_xy_set)
+                if tuple(unit.pos) in game_state.probably_buildable_tile_xy_set:
+                    has_found, new_pos = True, unit.pos
                 if has_found:
                     print("relocation_to_probable", unit.id, unit.pos, "->", new_pos)
                     mission = Mission(unit.id, new_pos, unit.build_city(), delays=2)
+                    missions.add(mission)
+                    game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
+                    continue
+
+            # if you will have full resources on the next turn and on buildable tile, stay and build
+            if full_resources_on_next_turn and tuple(unit.pos) in game_state.buildable_tile_xy_set:
+                if game_state.distance_from_player_citytiles[unit.pos.y, unit.pos.x] == 1 or \
+                    game_state.distance_from_collectable_resource[unit.pos.y, unit.pos.x] == 1:
+                    print("stay on location", unit.id, unit.pos)
+                    mission = Mission(unit.id, unit.pos, unit.build_city(), delays=2)
                     missions.add(mission)
                     game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
                     continue
@@ -941,6 +943,16 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, avo
 
         if avoid_opponent_units:
             if tuple(newpos) in game_state.opponent_units_xy_set:
+                cost[0] = 1
+
+        # discourage going into a city tile if you are carrying substantial wood
+        if unit.cargo.wood >= 96:
+            if tuple(newpos) in game_state.player_city_tile_xy_set:
+                cost[0] = 1
+
+        # discourage going into a city tile if you are carrying substantial wood
+        if unit.cargo.wood >= 60:
+            if tuple(newpos) in game_state.player_city_tile_xy_set:
                 cost[0] = 1
 
         # no entering opponent citytile

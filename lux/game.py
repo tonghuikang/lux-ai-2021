@@ -1030,6 +1030,9 @@ def cleanup_missions(game_state: Game, missions: Missions, DEBUG=False):
                 del missions[unit_id]
                 continue
 
+    print("cleanup_missions")
+    print(missions)
+
 
 def update_mission_delay(game_state: Game, missions: Missions):
     # update mission.delay based on the units had colliding act
