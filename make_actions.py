@@ -211,6 +211,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
 
     # attempt to eject, unit is the one ejecting
     for unit in player.units:
+        # unit is the one ejecting
         unit: Unit = unit
         if not unit.can_act():
             continue
@@ -219,7 +220,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             continue
 
         # source unit not in empty tile
-        if tuple(unit.pos) in game_state.empty_tile_xy_set:
+        if tuple(unit.pos) in game_state.buildable_tile_xy_set:
             continue
 
         # source unit has almost full resources
@@ -298,7 +299,11 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             print("plan mission ejection success", xx, yy)
 
             # if successful
+            if unit.id in missions:
+                print("delete mission because ejecting", unit.id, unit.pos)
+                del missions[unit.id]
             if adj_unit.id in missions:
+                print("delete mission because ejected", adj_unit.id, adj_unit.pos)
                 del missions[adj_unit.id]
             mission = Mission(adj_unit.id, best_position, delays=distance_of_best)
             missions.add(mission)
@@ -500,13 +505,13 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 continue
 
         if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set or game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 2:
-          if unit.cargo.uranium > 0:
+          if unit.cargo.uranium > 0 and unit.cargo.get_most_common_resource() == "uranium":
             # if there is a citytile nearby already
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
                 unit, require_reachable=True, require_night=True, enforce_night=True,
                 minimum_size=3, maximum_distance=unit.cargo.uranium//3)
             if unit.pos != homing_position:
-                print("homing one", unit.id, unit.pos, homing_position)
+                print("homing one", unit.id, unit.pos, homing_position, homing_distance)
                 mission = Mission(unit.id, homing_position, details="homing", delays=homing_distance)
                 missions.add(mission)
                 game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
@@ -591,6 +596,7 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             if action:
                 actions.append(action)
                 unit.cooldown += 2
+            print("mission complete and deleted", unit.id, unit.pos)
             del missions[unit.id]
             continue
 
@@ -945,10 +951,12 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, avo
         targeting_same_cluster = game_state.xy_to_resource_group_id.find(tuple(target_pos)) == game_state.xy_to_resource_group_id.find(tuple(unit.pos))
         if targeting_same_cluster:
             if tuple(newpos) not in game_state.convolved_collectable_tiles_xy_set:
-                cost[0] = 3
+                # unless you have researched uranium
+                if not game_state.player.researched_uranium_projected():
+                    cost[0] = 3
 
         # discourage going into a fueled city tile if you are carrying substantial coal and uranium
-        if unit.cargo.coal + unit.cargo.uranium * 2 > 20:
+        if unit.cargo.coal + unit.cargo.uranium >= 10:
             if game_state.matrix_player_cities_nights_of_fuel_required_for_game[newpos.y, newpos.x] < 0:
                 if tuple(newpos) in game_state.player_city_tile_xy_set:
                     cost[0] = 1

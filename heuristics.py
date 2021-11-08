@@ -234,6 +234,12 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
                                 if game_state.distance_from_opponent_units[y,x] > 2:
                                     cell_value[2] -= 5
 
+
+                    # if more than 20 uranium do not target a wood cluster so that it can home
+                    if unit.cargo.uranium > 20:
+                        if game_state.convolved_wood_exist_matrix[y,x]*20 == game_state.resource_collection_rate[y,x]:
+                            cell_value[0] = -1
+
                     # for debugging
                     score_matrix_wrt_pos[y,x] = cell_value[2]
 

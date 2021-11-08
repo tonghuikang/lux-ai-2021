@@ -903,8 +903,11 @@ class Game:
         # prefer_night - prefer refuelling a city that could not survive the night
         # enforce_night - only refuel city that could not survive the night
         # enforce_night_addn - only refuel city that could not survive the night + enforce_night_addn
-        closest_distance: int = 10**9 + 7
+        closest_distance_with_features: int = [0,10**9 + 7]
         closest_position = unit.pos
+
+        # passing game_state attributes to compute travel range
+        unit.compute_travel_range((self.turns_to_night, self.turns_to_dawn, self.is_day_time),)
 
         if unit.fuel_potential >= 90*20:
             unit.fuel_potential = 10**9+7
@@ -919,29 +922,32 @@ class Game:
                 continue
             if city.night_fuel_duration < self.night_turns_left:
                 for citytile in city.citytiles:
-                    distance = self.retrieve_distance(unit.pos.x, unit.pos.y, citytile.pos.x, citytile.pos.y)
+                    distance_with_features = [0,self.retrieve_distance(unit.pos.x, unit.pos.y, citytile.pos.x, citytile.pos.y)]
                     if require_reachable:
                         # the city should not die before the unit can reach
-                        if distance * 2 >= self.turns_to_night + (city.night_fuel_duration // 10)*40 + city.night_fuel_duration:
+                        if distance_with_features[1] * 2 >= self.turns_to_night + (city.night_fuel_duration // 10)*40 + city.night_fuel_duration:
+                            continue
+                        # the unit should not die before the unit can reach the city
+                        if distance_with_features[1] >= unit.travel_range:
                             continue
                     if require_night:
                         # require fuel to be able to save city for the night
                         if unit.fuel_potential < city.fuel_needed_for_night + enforce_night_addn * city.get_light_upkeep():
                             continue
-                    if distance > maximum_distance:
+                    if distance_with_features[1] > maximum_distance:
                         continue
                     if prefer_night:
                         if city.fuel_needed_for_night > 0:
                             # prefer to save cities from the night
-                            distance -= 1000
+                            distance_with_features[0] = -1
                     if enforce_night:
                         if city.fuel_needed_for_night - enforce_night_addn * city.get_light_upkeep() < 0:
                             continue
-                    if distance < closest_distance:
-                        closest_distance = distance
+                    if distance_with_features < closest_distance_with_features:
+                        closest_distance_with_features = distance_with_features
                         closest_position = citytile.pos
 
-        return closest_distance, closest_position
+        return closest_distance_with_features[1], closest_position
 
 
     def is_symmetrical(self, censoring: bool = True) -> bool:
@@ -983,6 +989,7 @@ def cleanup_missions(game_state: Game, missions: Missions, DEBUG=False):
         # if dead, delete from list
         if unit_id not in game_state.player.units_by_id:
             del missions[unit_id]
+            print("delete mission because unit died", unit_id)
             continue
 
         unit: Unit = game_state.player.units_by_id[unit_id]
