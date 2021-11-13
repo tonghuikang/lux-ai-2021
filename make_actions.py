@@ -603,7 +603,9 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             continue
 
         # attempt to move the unit
-        direction = attempt_direction_to(game_state, unit, mission.target_position, avoid_opponent_units=("homing" in mission.details))
+        direction = attempt_direction_to(game_state, unit, mission.target_position,
+                                         avoid_opponent_units=("homing" in mission.details),
+                                         DEBUG=DEBUG)
         if direction != "c":
             units_with_mission_but_no_action.discard(unit.id)
             action = unit.move(direction)
@@ -920,13 +922,15 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
     return actions
 
 
-def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, avoid_opponent_units=False) -> DIRECTIONS:
+def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, avoid_opponent_units=False, DEBUG=False) -> DIRECTIONS:
+    if DEBUG: print = __builtin__.print
+    else: print = lambda *args: None
 
     smallest_cost = [2,2,2,2,2]
     closest_dir = DIRECTIONS.CENTER
     closest_pos = unit.pos
 
-    for direction in game_state.dirs[:-1]:
+    for direction in game_state.dirs:
         newpos = unit.pos.translate(direction, 1)
 
         cost = [0,0,0,0,0]
@@ -935,15 +939,19 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, avo
         if tuple(newpos) in game_state.xy_out_of_map:
             continue
 
-        # discourage if new position is occupied, not your city tile and not your current position
+        # discourage collision among yourself
+        # discourage if new position is occupied, not your city tile and not your current position and not your enemy units
         if tuple(newpos) in game_state.occupied_xy_set:
             if tuple(newpos) not in game_state.player_city_tile_xy_set:
-                if tuple(newpos) != tuple(unit.pos):
-                    cost[0] = 3
+                if tuple(newpos) not in game_state.opponent_units_xy_set:
+                    if tuple(newpos) != tuple(unit.pos):
+                        cost[0] = 3
 
-        if avoid_opponent_units:
-            if tuple(newpos) in game_state.opponent_units_xy_set:
+        if tuple(newpos) in game_state.opponent_units_xy_set:
+            if avoid_opponent_units:
                 cost[0] = 1
+            if tuple(newpos) not in game_state.opponent_units_moveable_xy_set:
+                cost[0] = 3
 
         # discourage going into a city tile if you are carrying substantial wood
         if unit.cargo.wood >= 96:
@@ -994,6 +1002,8 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, avo
             smallest_cost = cost
             closest_dir = direction
             closest_pos = newpos
+
+        print(newpos, cost)
 
     if closest_dir != DIRECTIONS.CENTER:
         if tuple(closest_pos) not in game_state.opponent_unit_adjacent_xy_set:

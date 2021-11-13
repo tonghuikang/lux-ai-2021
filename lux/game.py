@@ -521,6 +521,12 @@ class Game:
         self.populate_set(self.probably_buildable_tile_matrix, self.probably_buildable_tile_xy_set)
         self.populate_set(self.preferred_buildable_tile_matrix, self.preferred_buildable_tile_xy_set)
 
+        self.opponent_units_moveable_xy_set: Set = set()
+        for unit in self.opponent.units:
+            can_build = tuple(unit.pos) in self.buildable_tile_xy_set and unit.get_cargo_space_used() == 100
+            if unit.can_act() and not can_build:
+                self.opponent_units_moveable_xy_set.add(tuple(unit.pos))
+
         # used for distance calculation
         # out of map - yes
         # occupied by enemy units or city - yes
@@ -528,7 +534,7 @@ class Game:
         # occupied by self city - no (even if there are units)
         self.occupied_xy_set = (self.player_units_xy_set | self.opponent_units_xy_set | \
                                 self.opponent_city_tile_xy_set | self.xy_out_of_map) \
-                                - self.player_city_tile_xy_set
+                                - self.player_city_tile_xy_set - self.opponent_units_moveable_xy_set
 
         self.floodfill_by_player_city_set = self.get_floodfill(self.player_city_tile_xy_set)
         self.floodfill_by_opponent_city_set = self.get_floodfill(self.opponent_city_tile_xy_set)
