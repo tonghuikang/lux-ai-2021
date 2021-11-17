@@ -163,87 +163,113 @@ cells.append(nbf.new_code_cell(debugging_code, metadata={"_kg_hide-input": True}
 
 preamble_evaluation = """\
 # Evaluation
-We run the agent against the imitation agent for a few matches.
+If you want measure the winrate between two agents, you need to play many matches.
+
+For each map size, we play a number of matches. For larger maps, we play a smaller number of matches.
+
+To make scores more comparable, the seed of the matches will have to be consistent over different plays.\
 """
 cells.append(nbf.new_markdown_cell(preamble_evaluation))
 
 
-evaluation_code = """\
+cells.append(nbf.new_code_cell("""\
 !npm install -g @lux-ai/2021-challenge@latest &> /dev/null
 !pip install kaggle-environments -U &> /dev/null\
-"""
-cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True}))
+""", metadata={"_kg_hide-input": True}))
 
 
-evaluation_code = """\
+cells.append(nbf.new_code_cell("""\
 %%bash
-REF_DIR="/kaggle/input/lux-ai-imitation-learning/submission.tar.gz"
+REF_DIR="/kaggle/input/lux-ai-published-agents/realneuralnetwork/lux-ai-with-il-decreasing-learning-rate/v3/*"
 mkdir -p ref/  # imitation agent
 cp -r $REF_DIR ref/
-cd ref && tar -xvzf *.tar.gz &> /dev/null\
-"""
-cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True}))
+""", metadata={"_kg_hide-input": True}))
 
 
-evaluation_code = """\
+cells.append(nbf.new_code_cell("""\
+!cd ref/ && tar -xvzf *.tar.gz &> /dev/null
 !cp main.py ref/main.py  # fix main.py\
-"""
-cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True}))
+""", metadata={"_kg_hide-input": True}))
 
 
-evaluation_code = """\
+cells.append(nbf.new_code_cell("""\
 !GFOOTBALL_DATA_DIR=C lux-ai-2021 --loglevel 0 --width 12 --height 12 main.py ref/main.py\
-"""
-cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True}))
+""", metadata={"_kg_hide-input": True}))
 
 
-evaluation_code = """\
-%%bash
-MAP_SIZE=12
-for run in {1..500};
+cells.append(nbf.new_code_cell("""\
+%%writefile evaluate_for_map_size.sh
+
+MAP_SIZE=$1
+for run in {1..200};
     do GFOOTBALL_DATA_DIR=C lux-ai-2021 --seed $run --loglevel 1 --maxtime 10000 \\
     --height $MAP_SIZE --width $MAP_SIZE --storeReplay=false --storeLogs=false \\
-    main.py ref/main.py >> logs-$MAP_SIZE.txt;
+    ./main.py ./ref/main.py >> logs-$MAP_SIZE.txt;
 done\
-"""
-cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True}))
+""", metadata={"_kg_hide-input": True}))
 
 
-evaluation_code = '''\
+cells.append(nbf.new_code_cell("""\
+!chmod +x ./evaluate_for_map_size.sh\
+""", metadata={"_kg_hide-input": True}))
+
+
+cells.append(nbf.new_code_cell("""\
+!timeout 30m bash ./evaluate_for_map_size.sh 12\
+""", metadata={"_kg_hide-input": True}))
+
+
+cells.append(nbf.new_code_cell("""\
+!timeout 1h bash ./evaluate_for_map_size.sh 16\
+""", metadata={"_kg_hide-input": True}))
+
+
+cells.append(nbf.new_code_cell("""\
+!timeout 2h bash ./evaluate_for_map_size.sh 24\
+""", metadata={"_kg_hide-input": True}))
+
+
+cells.append(nbf.new_code_cell("""\
+!timeout 5h bash ./evaluate_for_map_size.sh 32\
+""", metadata={"_kg_hide-input": True}))
+
+
+cells.append(nbf.new_code_cell('''\
+import os
+
 wins_template = """
-    { rank: 1, agentID: 0, name: 'main.py' },
-    { rank: 2, agentID: 1, name: 'ref/main.py' }
+    { rank: 1, agentID: 0, name: './main.py' },
+    { rank: 2, agentID: 1, name: './ref/main.py' }
 """
 
 draw_template = """
-    { rank: 1, agentID: 0, name: 'main.py' },
+    { rank: 1, agentID: 0, name: './main.py' },
     { rank: 1, agentID: 1, name: 'ref/main.py' }
 """
 
 lose_template = """
-    { rank: 1, agentID: 1, name: 'ref/main.py' },
-    { rank: 2, agentID: 0, name: 'main.py' }
+    { rank: 1, agentID: 1, name: './ref/main.py' },
+    { rank: 2, agentID: 0, name: './main.py' }
 """
 
-map_sizes = [12]
+map_sizes = [12,16,24,32]
+map_size_count = 0
 total_score = 0
 for map_size in map_sizes:
     logfile_name = f"logs-{map_size}.txt"
-    with open(logfile_name) as f:
-        data_string = f.read()
-        wins = data_string.count(wins_template)
-        lose = data_string.count(draw_template)
-        draw = data_string.count(lose_template)
-        score = (wins + lose / 2)/(wins + lose + draw)*100
-        total_score += score/len(map_sizes)
-        print(f"Map size: {map_size}, Score: {score:.3f}, Stats: {wins}/{lose}/{draw}")
+    if os.path.isfile(logfile_name):
+        map_size_count += 1
+        with open(logfile_name) as f:
+            data_string = f.read()
+            wins = data_string.count(wins_template)
+            draw = data_string.count(draw_template)
+            lose = data_string.count(lose_template)
+            score = (wins + draw / 2)/(wins + draw + lose)*100
+            total_score += score
+            print(f"Map size: {map_size}, Score: {score:.3f}, Stats: {wins}/{draw}/{lose}")
+total_score = total_score/map_size_count
 print(f"Total score: {total_score:.3f}")\
-'''
-
-cells.append(nbf.new_code_cell(evaluation_code, metadata={"_kg_hide-input": True}))
-
-
-cells.append(nbf.new_markdown_cell("# Make Submission"))
+''', metadata={"_kg_hide-input": True}))
 
 
 zip_code = """\

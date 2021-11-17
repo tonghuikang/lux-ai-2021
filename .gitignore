@@ -19,3 +19,4 @@ errorlogs/
 replays/
 replay.json
 logs.txt
+evaluate_for_map_size.sh
