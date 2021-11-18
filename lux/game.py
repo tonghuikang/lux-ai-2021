@@ -373,9 +373,13 @@ class Game:
         self.probably_buildable_tile_matrix = self.init_matrix()
         self.preferred_buildable_tile_matrix = self.init_matrix()
 
+        self.road_level_matrix = self.init_matrix()
+
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 cell = self.map.get_cell(x, y)
+
+                self.road_level_matrix[y,x] = cell.road
 
                 is_empty = True
                 is_buildable = True
@@ -711,6 +715,8 @@ class Game:
                         if (xx,yy) in self.occupied_xy_set:
                             edge_length = blockade_multiplier_value_for_syx
                         if (xx,yy) in self.opponent_city_tile_xy_set:
+                            edge_length = blockade_multiplier_value_for_syx * 50
+                        if self.matrix_player_cities_nights_of_fuel_required_for_game[yy,xx] < 0:
                             edge_length = blockade_multiplier_value_for_syx * 50
 
                         heapq.heappush(heap, (curdist + edge_length, (xx,yy)))

@@ -578,7 +578,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 minimum_size=10, maximum_distance=unit.cargo.uranium//3)
             if unit.pos != homing_position:
                 print("homing two", unit.id, unit.pos, homing_position)
-                mission = Mission(unit.id, homing_position, details="homing two", delays=homing_distance)
+                mission = Mission(unit.id, homing_position, details="homing two", delays=homing_distance + 2)
                 missions.add(mission)
                 game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
                 annotation = annotate.text(unit.pos.x, unit.pos.y, "H2")
@@ -593,7 +593,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 minimum_size=3, maximum_distance=unit.cargo.uranium//3)
             if unit.pos != homing_position:
                 print("homing one", unit.id, unit.pos, homing_position, homing_distance)
-                mission = Mission(unit.id, homing_position, details="homing", delays=homing_distance)
+                mission = Mission(unit.id, homing_position, details="homing", delays=homing_distance + 2)
                 missions.add(mission)
                 game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
                 annotation = annotate.text(unit.pos.x, unit.pos.y, "H1")
@@ -625,7 +625,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         if unit.get_cargo_space_used() > 0:
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(unit)
             print("homing mission", unit.id, unit.pos, "->", homing_position, homing_distance)
-            mission = Mission(unit.id, homing_position, "", details="homing", delays=homing_distance)
+            mission = Mission(unit.id, homing_position, "", details="homing", delays=homing_distance + 2)
             missions.add(mission)
             game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
             continue
@@ -721,24 +721,39 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
     def make_random_move_to_void(unit: Unit, annotation: str = ""):
         if not unit.can_act():
             return
-        (xx,yy) = (-1,-1)
+        (xxx,yyy) = (-1,-1)
 
+        # in increasing order of priority
+
+        # attempt to move away from your assets
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.occupied_xy_set:
                 if game_state.distance_from_player_assets[yy,xx] < game_state.distance_from_player_assets[unit.pos.y,unit.pos.x]:
-                    # attempt to move away from your assets
+                    xxx,yyy = xx,yy
                     break
 
+        # attempt to move toward enemy assets
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.occupied_xy_set and (xx,yy) not in game_state.player_city_tile_xy_set:
                 if game_state.distance_from_collectable_resource[yy,xx] < game_state.distance_from_collectable_resource[unit.pos.y,unit.pos.x]:
-                    # attempt to move toward enemy assets
+                    xxx,yyy = xx,yy
                     break
 
-        if (xx,yy) == (-1,-1):
+        # cart pave roads
+        if unit.is_cart():
+            for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
+                xx,yy = unit.pos.x + dx, unit.pos.y + dy
+                if (xx,yy) not in game_state.occupied_xy_set:
+                    if game_state.road_level_matrix[yy,xx] < game_state.road_level_matrix[unit.pos.y,unit.pos.x]:
+                        xxx,yyy = xx,yy
+                        break
+
+        if (xxx,yyy) == (-1,-1):
             return
+
+        xx,yy = xxx,yyy
 
         if (xx,yy) not in game_state.occupied_xy_set:
             if (xx,yy) not in game_state.player_city_tile_xy_set:
