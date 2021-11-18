@@ -210,7 +210,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         unit.encode_tuple_for_cmp()))
 
 
-    # attempt to eject uranium, unit is the one ejecting
+    # attempt to eject coal/uranium, unit is the one ejecting
     for unit in player.units:
         # unit is the one ejecting
         unit: Unit = unit
@@ -222,7 +222,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             continue
 
         # source unit not in empty tile
-        if tuple(unit.pos) in game_state.buildable_tile_xy_set:
+        if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set:
             continue
 
         for adj_unit in player.units:
