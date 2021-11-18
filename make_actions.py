@@ -209,6 +209,85 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         unit.pos.y*game_state.y_order_coefficient,
         unit.encode_tuple_for_cmp()))
 
+
+    # attempt to eject uranium, unit is the one ejecting
+    for unit in player.units:
+        # unit is the one ejecting
+        unit: Unit = unit
+        if not unit.can_act():
+            continue
+
+        # source unit has lots of fuel (full coal or 50 uranium)
+        if not (unit.cargo.uranium > 50 or unit.cargo.coal >= 100):
+            continue
+
+        # source unit not in empty tile
+        if tuple(unit.pos) in game_state.buildable_tile_xy_set:
+            continue
+
+        for adj_unit in player.units:
+            # adj_unit is the one being ejected
+            adj_unit: Unit = adj_unit
+            if not adj_unit.can_act():
+                continue
+
+            # source unit is not the target unit
+            if adj_unit.id == unit.id:
+                continue
+
+            # source unit is not beside target unit
+            if adj_unit.pos - unit.pos != 1:
+                continue
+
+            # adjacent unit is in city tile
+            if tuple(adj_unit.pos) not in game_state.player_city_tile_xy_set:
+                continue
+
+            # adjacent unit is beside an empty tile
+            if game_state.distance_from_empty_tile[adj_unit.pos.y, adj_unit.pos.x] != 1:
+                continue
+
+            # adjacent unit is inside a city that can survive the night
+            if game_state.matrix_player_cities_nights_of_fuel_required_for_night[adj_unit.pos.y, adj_unit.pos.x] >= 0:
+                continue
+
+            # execute actions for ejection
+            action_1 = unit.transfer(adj_unit.id, unit.cargo.get_most_common_resource(), 100)
+            for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
+                xx,yy = adj_unit.pos.x + dx, adj_unit.pos.y + dy
+                if (xx,yy) in game_state.empty_tile_xy_set:
+                    print("ejecting", unit.id, unit.pos, adj_unit.id, adj_unit.pos, "->")
+                    action_2 = adj_unit.move(direction)
+                    actions_ejections.append(action_1)
+                    actions_ejections.append(action_2)
+                    actions_ejections.append(annotate.text(unit.pos.x, unit.pos.y, "🟡", 50))
+                    unit.cargo = Cargo()
+                    adj_unit.cargo.wood += 100  # not correct, but simulated
+                    unit.cooldown += 2
+                    adj_unit.cooldown += 2
+                    game_state.player_units_matrix[adj_unit.pos.y,adj_unit.pos.x] -= 1
+                    break
+            else:
+                break
+
+           # add missions for ejection
+            print("plan mission ejection success", xx, yy)
+
+            # if successful
+            if unit.id in missions:
+                print("delete mission because ejecting", unit.id, unit.pos)
+                del missions[unit.id]
+            if adj_unit.id in missions:
+                print("delete mission because ejected", adj_unit.id, adj_unit.pos)
+                del missions[adj_unit.id]
+            game_state.unit_ids_with_missions_assigned_this_turn.add(adj_unit.id)
+            game_state.ejected_units_set.add(adj_unit.id)
+
+            # break loop since partner for unit is found
+            if not unit.can_act():
+                break
+
+
     # attempt to eject, unit is the one ejecting
     for unit in player.units:
         # unit is the one ejecting
@@ -271,7 +350,6 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             print("plan mission ejection", adj_unit.id, adj_unit.pos, "->", best_position, best_cell_value)
 
             # execute actions for ejection
-            # the amount is a stopgap measure to prevent the unit planning bcity mission immediately after ejection
             action_1 = unit.transfer(adj_unit.id, unit.cargo.get_most_common_resource(), 100)
             for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
                 xx,yy = adj_unit.pos.x + dx, adj_unit.pos.y + dy
@@ -288,6 +366,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                     actions_ejections.append(action_2)
                     actions_ejections.append(annotate.text(unit.pos.x, unit.pos.y, "🔴", 50))
                     unit.cargo = Cargo()
+                    adj_unit.cargo.wood += 100  # not correct, but simulated
                     unit.cooldown += 2
                     adj_unit.cooldown += 2
                     game_state.player_units_matrix[adj_unit.pos.y,adj_unit.pos.x] -= 1
