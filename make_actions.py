@@ -394,7 +394,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             if not unit.can_act():
                 break
 
-
+    # main sequence
     for unit in player.units:
         if unit.id in game_state.unit_ids_with_missions_assigned_this_turn:
             continue
@@ -424,6 +424,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 if game_state.convolved_uranium_exist_matrix[unit.pos.y, unit.pos.x] > 0:
                     if tuple(unit.pos) not in game_state.citytiles_with_new_units_xy_set:
                         if game_state.player_units_matrix[unit.pos.y, unit.pos.x] == 1:
+                            print("stay and mine uranium", unit.id, unit.pos)
                             # unless the citytile is producing new units
                             continue
 
@@ -435,6 +436,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 if game_state.convolved_coal_exist_matrix[unit.pos.y, unit.pos.x] > 0:
                     if tuple(unit.pos) not in game_state.citytiles_with_new_units_xy_set:
                         if game_state.player_units_matrix[unit.pos.y, unit.pos.x] == 1:
+                            print("stay and mine coal", unit.id, unit.pos)
                             # unless the citytile is producing new units
                             continue
 
@@ -478,6 +480,8 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 for dx,dy in game_state.dirs_dxdy[:-1]:
                     xx,yy = unit.pos.x+dx, unit.pos.y+dy
                     if (xx,yy) in xy_set:
+                        if (xx,yy) in game_state.player_units_xy_set and (xx,yy) != tuple(unit.pos):
+                            continue
                         if (xx,yy) in game_state.targeted_for_building_xy_set:
                             # we allow units to build at a tile that is targeted but not for building
                             if not current_target:
