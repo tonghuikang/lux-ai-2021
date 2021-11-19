@@ -47,6 +47,17 @@ class Missions(defaultdict):
     def get_targets_and_actions(self):
         return [(mission.target_position, mission.target_action) for unit_id, mission in self.items()]
 
+    def reset_missions(self, research_points, convolved_coal_exist_matrix, convolved_uranium_exist_matrix):
+        for unit_id in list(self.keys()):
+            x,y = tuple(self[unit_id].target_position)
+            if research_points >= 200:
+                if convolved_uranium_exist_matrix[y,x] == 0:
+                    del self[unit_id]
+                    continue
+            elif research_points >= 50:
+                if convolved_coal_exist_matrix[y,x] == 0:
+                    del self[unit_id]
+                    continue
 
 class DisjointSet:
     def __init__(self):
@@ -770,6 +781,8 @@ class Game:
         self.populate_set(self.collectable_tiles_matrix, self.collectable_tiles_xy_set)
         self.convolved_collectable_tiles_xy_set = set()  # include adjacent
         self.populate_set(self.convolved_collectable_tiles_matrix, self.convolved_collectable_tiles_xy_set)
+        self.collectable_tiles_projected_xy_set = set()  # exclude adjacent
+        self.populate_set(self.collectable_tiles_matrix_projected, self.collectable_tiles_projected_xy_set)
         self.convolved_collectable_tiles_projected_xy_set = set()  # include adjacent
         self.populate_set(self.convolved_collectable_tiles_matrix_projected, self.convolved_collectable_tiles_projected_xy_set)
 
@@ -817,7 +830,7 @@ class Game:
         # merge adjacent resource tiles and citytiles
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
-                if (x,y) in self.collectable_tiles_xy_set:
+                if (x,y) in self.collectable_tiles_projected_xy_set:
                     # if self.xy_to_resource_group_id.get_tiles((x,y)) > self.map_height/2:
                     #     continue
                     for dy,dx in self.dirs_dxdy[:-1]:
@@ -825,7 +838,7 @@ class Game:
                         # if self.xy_to_resource_group_id.get_tiles((xx,yy)) > self.map_height/2:
                         #     continue
                         if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
-                            if (xx,yy) in self.collectable_tiles_xy_set:
+                            if (xx,yy) in self.collectable_tiles_projected_xy_set:
                                 self.xy_to_resource_group_id.union((x,y), (xx,yy))
                             if (xx,yy) in self.player_city_tile_xy_set:
                                 if self.xy_to_resource_group_id.get_tiles((xx,yy),) == 0:
@@ -834,12 +847,12 @@ class Game:
         # consider resources two steps away as part of the cluster, if cluster size is not exceeded or map is large
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
-                if (x,y) in self.collectable_tiles_xy_set:
+                if (x,y) in self.collectable_tiles_projected_xy_set:
                     for dy1,dx1 in self.dirs_dxdy[:-1]:
                         for dy2,dx2 in self.dirs_dxdy[:-1]:
                             xx, yy = x+dx1+dx2, y+dy1+dy2
                             if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
-                                if (xx,yy) in self.collectable_tiles_xy_set:
+                                if (xx,yy) in self.collectable_tiles_projected_xy_set:
                                     if self.xy_to_resource_group_id.get_tiles((xx,yy)) <= 2:
                                         self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
@@ -847,7 +860,7 @@ class Game:
         for group in self.xy_to_resource_group_id.get_groups_sorted_by_citytile_size():
             # might break symmetry
             for x,y in group:
-                if (x,y) in self.collectable_tiles_xy_set:
+                if (x,y) in self.collectable_tiles_projected_xy_set:
                     for dy,dx in self.dirs_dxdy[:-1]:
                         xx, yy = x+dx, y+dy
                         if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
@@ -859,11 +872,11 @@ class Game:
         for group in self.xy_to_resource_group_id.get_groups_sorted_by_citytile_size():
             # might break symmetry
             for x,y in group:
-                if (x,y) in self.collectable_tiles_xy_set:
+                if (x,y) in self.collectable_tiles_projected_xy_set:
                     for dy,dx in self.dirs_dxdy[:-1]:
                         xx, yy = x+dx, y+dy
                         if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
-                            if (xx,yy) not in self.collectable_tiles_xy_set:
+                            if (xx,yy) not in self.collectable_tiles_projected_xy_set:
                                 if self.xy_to_resource_group_id.find((xx,yy)) == (xx,yy):
                                     self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
@@ -1052,7 +1065,9 @@ def update_mission_delay(game_state: Game, missions: Missions):
         if unit.id in missions:
             mission: Mission = missions[unit.id]
             if mission.target_position != unit.pos:
-                if game_state.is_day_time:
+                if game_state.turn % 40 <= 3:
+                    mission.delays -= 1/2
+                elif game_state.is_day_time:
                     mission.delays -= 1
                 else:
                     mission.delays -= 1/2

@@ -25,7 +25,9 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     reset_missions, actions_by_cities = make_city_actions(game_state, missions, DEBUG=DEBUG)
     if reset_missions:
         print("reset_missions")
-        missions = Missions()
+        missions.reset_missions(game_state.player.research_points,
+                                game_state.convolve(game_state.coal_exist_matrix),
+                                game_state.convolve(game_state.uranium_exist_matrix))
         game_state.calculate_features(missions)
     actions_by_units_initial = make_unit_actions_supplementary(game_state, missions, initial=True, DEBUG=DEBUG)
     cluster_annotations_and_ejections_pre = make_unit_missions(game_state, missions, is_initial_plan=True, DEBUG=DEBUG)
