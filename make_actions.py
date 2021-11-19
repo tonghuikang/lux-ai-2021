@@ -331,7 +331,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             # temporarily augment night travel range
             adj_unit.cargo.wood += 100
             adj_unit.compute_travel_range()
-            best_position, best_cell_value, cluster_annotation = find_best_cluster(game_state, adj_unit, DEBUG=DEBUG, explore=True)
+            best_position, best_cell_value, cluster_annotation = find_best_cluster(game_state, adj_unit, DEBUG=DEBUG, explore=True, ref_pos=unit.pos)
             distance_of_best = game_state.retrieve_distance(adj_unit.pos.x, adj_unit.pos.y, best_position.x, best_position.y)
             adj_unit.cargo.wood -= 100
             adj_unit.compute_travel_range()

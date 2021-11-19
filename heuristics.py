@@ -17,7 +17,7 @@ from lux.game_position import Position
 from lux.game_constants import GAME_CONSTANTS
 
 
-def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, require_empty_target=False):
+def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, require_empty_target=False, ref_pos:Position=None):
 
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
@@ -88,6 +88,10 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
                 continue
             if (x,y) in game_state.opponent_city_tile_xy_set:
                 continue
+
+            if ref_pos:
+                if abs(ref_pos.x - x) + abs(ref_pos.y - y) < abs(unit.pos.x - x) + abs(unit.pos.y - y):
+                    continue
 
             # allow multi targeting of uranium mines
             if game_state.convolved_uranium_exist_matrix[y,x] == 0 or \

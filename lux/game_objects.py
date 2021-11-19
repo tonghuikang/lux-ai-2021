@@ -26,10 +26,10 @@ class Player:
         return self.research_points >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["URANIUM"]
 
     def researched_coal_projected(self) -> bool:
-        return self.research_points + self.city_tile_count * 2 >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["COAL"]
+        return self.research_points + self.city_tile_count * 2 + len(self.units) * 2 >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["COAL"]
 
     def researched_uranium_projected(self) -> bool:
-        return self.research_points + self.city_tile_count * 2 >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["URANIUM"]
+        return self.research_points + self.city_tile_count * 2 + len(self.units) * 2 >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["URANIUM"]
 
     def make_index_units_by_id(self):
         self.units_by_id: Dict[str, Unit] = {}
