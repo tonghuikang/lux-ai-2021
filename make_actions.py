@@ -733,7 +733,7 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
             if (xx,yy) not in game_state.occupied_xy_set:
-                if game_state.distance_from_player_assets[yy,xx] < game_state.distance_from_player_assets[unit.pos.y,unit.pos.x]:
+                if game_state.distance_from_player_assets[yy,xx] > game_state.distance_from_player_assets[unit.pos.y,unit.pos.x]:
                     xxx,yyy = xx,yy
                     break
 

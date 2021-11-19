@@ -88,6 +88,8 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
                 continue
             if (x,y) in game_state.opponent_city_tile_xy_set:
                 continue
+            if (x,y) in game_state.player_city_tile_xy_set:
+                continue
 
             if ref_pos:
                 if abs(ref_pos.x - x) + abs(ref_pos.y - y) < abs(unit.pos.x - x) + abs(unit.pos.y - y):
@@ -98,8 +100,6 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
                 not game_state.player.researched_uranium_projected() or \
                     game_state.matrix_player_cities_nights_of_fuel_required_for_night[y,x] <= 0:
                 if (x,y) in game_state.targeted_xy_set:
-                    continue
-                if (x,y) in game_state.player_city_tile_xy_set:
                     continue
 
             if require_empty_target and len(units_mining_on_current_cluster) <= 2:
