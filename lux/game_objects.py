@@ -101,8 +101,11 @@ class Cargo:
     def __str__(self) -> str:
         return f"Cargo | Wood: {self.wood}, Coal: {self.coal}, Uranium: {self.uranium}"
 
+    def get_most_common_resource_count(self) -> int:
+        return max(self.wood, self.coal, self.uranium)
+
     def get_most_common_resource(self) -> str:
-        most_commonn_resource_count = max(self.wood, self.coal, self.uranium)
+        most_commonn_resource_count = self.get_most_common_resource_count()
 
         if self.wood == most_commonn_resource_count:
             return "wood"

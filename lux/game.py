@@ -788,6 +788,7 @@ class Game:
 
         self.convolved_collectable_tiles_xy_set
         self.buildable_and_convolved_collectable_tile_xy_set = self.buildable_tile_xy_set & self.convolved_collectable_tiles_xy_set
+        self.buildable_and_convolved_collectable_tile_xy_set -= self.opponent_units_xy_set
 
         for unit in self.opponent.units:
             # if the opponent can move
