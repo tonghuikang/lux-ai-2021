@@ -37,17 +37,16 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
         # running out of time
         return best_position, best_cell_value, cluster_annotation
 
-    # if near enemy, if at night, if city is going to die, if staying can keep the city alive
-    if game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x] <= 2:
-        if not game_state.is_day_time:
-            cityid = game_state.map.get_cityid_of_cell(unit.pos.x, unit.pos.y)
-            if cityid:
-                city = game_state.player.cities[cityid]
+    # if at night, if near enemy or almost dawn, if city is going to die, if staying can keep the city alive
+    if not game_state.is_day_time:
+        cityid = game_state.map.get_cityid_of_cell(unit.pos.x, unit.pos.y)
+        if cityid:
+            city = game_state.player.cities[cityid]
+            if game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x] <= 2 or city.fuel_needed_for_night <= len(city.citytiles) * 120:
                 if city.fuel_needed_for_night > 0:
-                    net_gain = game_state.resource_collection_rate[unit.pos.y, unit.pos.x] - city.get_light_upkeep()
-                    if net_gain * game_state.turns_to_dawn >= city.fuel_needed_for_night:
-                        best_cell_value = [999,0,0,0]
-                        annotation = annotate.text(unit.pos.x, unit.pos.y,"SU")
+                    if city.fuel_needed_for_night - game_state.fuel_collection_rate[unit.pos.y, unit.pos.x] * game_state.turns_to_dawn <= 0:
+                        best_cell_value = [10**9,0,0,0]
+                        annotation = annotate.text(unit.pos.x, unit.pos.y, "SU")
                         cluster_annotation.append(annotation)
 
     # only consider other cluster if the current cluster has more than one agent mining
@@ -227,6 +226,15 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
                     # WWWW
                     if game_state.distance_from_opponent_assets[y,x] + 1 == game_state.distance_from_player_units[y,x]:
                         if game_state.turn < 80:
+                            cell_value[2] -= 2
+
+                    # for first target prefer B over A
+                    #   X
+                    # BWWW
+                    #  WWW
+                    #  AX
+                    if game_state.distance_from_opponent_assets[y,x] == 1 and game_state.distance_from_player_assets[y,x] > 2:
+                        if game_state.turn < 1:
                             cell_value[2] -= 2
 
                     # discourage if you are in the citytile, and you are targeting the location beside you with one wood side

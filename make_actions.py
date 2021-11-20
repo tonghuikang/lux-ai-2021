@@ -97,7 +97,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
     city_tiles.sort(key=lambda city_tile:(
         - calculate_city_cluster_bonus(city_tile.pos),
         - max(1, game_state.distance_from_player_units[city_tile.pos.y,city_tile.pos.x])  # max because we assume that it will leave
-        + game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x],
+        + max(3, game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x]),
         - game_state.distance_from_collectable_resource[city_tile.pos.y,city_tile.pos.x],
         - game_state.distance_from_edge[city_tile.pos.y,city_tile.pos.x],
         city_tile.pos.x * game_state.x_order_coefficient,
@@ -449,7 +449,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         targeting_current_cluster = unit.id not in missions or (unit.id in missions and \
                                     game_state.xy_to_resource_group_id.find(tuple(unit.pos)) == \
                                     game_state.xy_to_resource_group_id.find(tuple(missions.get_target_of_unit(unit.id))))
-        full_resources_on_next_turn = not ((unit.get_cargo_space_used() + game_state.resource_collection_rate[unit.pos.y, unit.pos.x] < 100
+        full_resources_on_next_turn = not ((unit.get_cargo_space_used() + game_state.resource_collection_rate[unit.pos.y, unit.pos.x] * (1 + int(unit.cooldown)) < 100
                                            ) or (31 < game_state.turn%40 <= 37))
 
         print("housing test", unit.id, unit.pos, unit.id in missions, targeting_current_cluster, full_resources_on_next_turn)
@@ -518,6 +518,8 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                     mission = Mission(unit.id, new_pos, unit.build_city(), delays=2)
                     missions.add(mission)
                     game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
+                    annotation = annotate.text(unit.pos.x, unit.pos.y, "R1")
+                    cluster_annotations.append(annotation)
                     continue
 
             relocation_to_probable =  (game_state.distance_from_probably_buildable[unit.pos.y, unit.pos.x] <= 1 and
@@ -539,6 +541,8 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                     mission = Mission(unit.id, new_pos, unit.build_city(), delays=2)
                     missions.add(mission)
                     game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
+                    annotation = annotate.text(unit.pos.x, unit.pos.y, "R2")
+                    cluster_annotations.append(annotation)
                     continue
 
             # if you will have full resources on the next turn and on buildable tile, stay and build
@@ -549,6 +553,8 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                     mission = Mission(unit.id, unit.pos, unit.build_city(), delays=2)
                     missions.add(mission)
                     game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
+                    annotation = annotate.text(unit.pos.x, unit.pos.y, "R3")
+                    cluster_annotations.append(annotation)
                     continue
 
             if not full_resources_on_next_turn:
@@ -558,6 +564,8 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                     mission = Mission(unit.id, new_pos, unit.build_city(), delays=2)
                     missions.add(mission)
                     game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
+                    annotation = annotate.text(unit.pos.x, unit.pos.y, "R4")
+                    cluster_annotations.append(annotation)
                     continue
 
             if full_resources_on_next_turn:
@@ -567,6 +575,8 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                     mission = Mission(unit.id, new_pos, unit.build_city(), delays=2)
                     missions.add(mission)
                     game_state.unit_ids_with_missions_assigned_this_turn.add(unit.id)
+                    annotation = annotate.text(unit.pos.x, unit.pos.y, "R5")
+                    cluster_annotations.append(annotation)
                     continue
 
 
@@ -1069,8 +1079,10 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, avo
         targeting_same_cluster = game_state.xy_to_resource_group_id.find(tuple(target_pos)) == game_state.xy_to_resource_group_id.find(tuple(unit.pos))
         if targeting_same_cluster:
             if tuple(newpos) not in game_state.convolved_collectable_tiles_xy_set:
-                # unless you have researched uranium
-                if not game_state.player.researched_uranium_projected():
+                # unless you have researched uranium or you have some resources
+                if not (game_state.player.researched_uranium_projected() or
+                        unit.get_cargo_space_used() > 0 or
+                        game_state.matrix_player_cities_nights_of_fuel_required_for_night[unit.pos.y, unit.pos.x] < 0):
                     cost[0] = 3
 
         # discourage going into a fueled city tile if you are carrying substantial coal and uranium
