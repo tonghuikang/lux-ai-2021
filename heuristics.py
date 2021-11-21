@@ -22,9 +22,6 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
-    # passing game_state attributes to compute travel range
-    unit.compute_travel_range((game_state.turns_to_night, game_state.turns_to_dawn, game_state.is_day_time),)
-
     # for debugging
     score_matrix_wrt_pos = game_state.init_matrix()
 
@@ -46,8 +43,25 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
                 if city.fuel_needed_for_night > 0:
                     if city.fuel_needed_for_night - game_state.fuel_collection_rate[unit.pos.y, unit.pos.x] * game_state.turns_to_dawn <= 0:
                         best_cell_value = [10**9,0,0,0]
+                        print("staying SU", unit.id, unit.pos)
                         annotation = annotate.text(unit.pos.x, unit.pos.y, "SU")
                         cluster_annotation.append(annotation)
+
+    # anticipate ejection
+    if tuple(unit.pos) in game_state.player_city_tile_xy_set:
+        for dy,dx in game_state.dirs_dxdy[:-1]:
+            xx,yy = unit.pos.x+dx, unit.pos.y+dy
+            if (xx,yy) not in game_state.player.units_by_xy:
+                continue
+            adj_unit: Unit = game_state.player.units_by_xy[xx,yy]
+            if int(adj_unit.cooldown) != 1:
+                continue
+            if game_state.convolved_wood_exist_matrix[yy,xx] < 1:
+                continue
+            print("staying SX", unit.id, unit.pos)
+            best_cell_value = [10**9,0,0,0]
+            annotation = annotate.text(unit.pos.x, unit.pos.y, "SX")
+            cluster_annotation.append(annotation)
 
     # only consider other cluster if the current cluster has more than one agent mining
     consider_different_cluster = False

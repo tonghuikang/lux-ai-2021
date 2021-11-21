@@ -327,6 +327,12 @@ class Game:
 
         self.unit_ids_with_missions_assigned_this_turn: Set = set()
 
+        for unit in self.player.units:
+            unit.compute_travel_range((self.turns_to_night, self.turns_to_dawn, self.is_day_time),)
+        for unit in self.opponent.units:
+            unit.compute_travel_range((self.turns_to_night, self.turns_to_dawn, self.is_day_time),)
+
+
     def calculate_features(self, missions: Missions):
 
         # load constants into object
@@ -932,9 +938,6 @@ class Game:
         closest_distance_with_features: int = [0,10**9 + 7]
         closest_position = unit.pos
 
-        # passing game_state attributes to compute travel range
-        unit.compute_travel_range((self.turns_to_night, self.turns_to_dawn, self.is_day_time),)
-
         if unit.fuel_potential >= 90*20:
             unit.fuel_potential = 10**9+7
 
@@ -1030,6 +1033,11 @@ def cleanup_missions(game_state: Game, missions: Missions, DEBUG=False):
         if tuple(mission.target_position) in game_state.opponent_city_tile_xy_set:
             del missions[unit_id]
             print("delete mission opponent already build", unit_id, mission.target_position)
+            continue
+
+        if tuple(mission.target_position) in game_state.player_city_tile_xy_set:
+            del missions[unit_id]
+            print("delete mission you already build", unit_id, mission.target_position)
             continue
 
         # if you are in a base, reconsider your mission

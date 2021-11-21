@@ -1,6 +1,6 @@
 from lux import annotate
 import random
-from typing import Dict, List
+from typing import Dict, List, Tuple
 
 from .constants import Constants
 from .game_position import Position
@@ -18,6 +18,7 @@ class Player:
         self.city_tile_count = 0
 
         self.units_by_id: Dict[str, Unit] = {}
+        self.units_by_xy: Dict[Tuple[int, int], Unit] = {}
 
     def researched_coal(self) -> bool:
         return self.research_points >= GAME_CONSTANTS["PARAMETERS"]["RESEARCH_REQUIREMENTS"]["COAL"]
@@ -35,6 +36,9 @@ class Player:
         self.units_by_id: Dict[str, Unit] = {}
         for unit in self.units:
             self.units_by_id[unit.id] = unit
+        self.units_by_xy: Dict[Tuple[int, int], Unit] = {}
+        for unit in self.units:
+            self.units_by_xy[unit.pos.x,unit.pos.y] = unit
 
 
 class City:

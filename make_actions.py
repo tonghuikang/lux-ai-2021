@@ -203,6 +203,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
     cluster_annotations = []
 
     player.units.sort(key=lambda unit: (
+        tuple(unit.pos) not in game_state.player_city_tile_xy_set,
         game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x],
         game_state.distance_from_resource_median[unit.pos.y,unit.pos.x],
         unit.pos.x*game_state.x_order_coefficient,
@@ -332,11 +333,11 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
 
             # temporarily augment night travel range
             adj_unit.cargo.wood += unit.cargo.get_most_common_resource_count()
-            adj_unit.compute_travel_range()
+            adj_unit.compute_travel_range((game_state.turns_to_night, game_state.turns_to_dawn, game_state.is_day_time),)
             best_position, best_cell_value, cluster_annotation = find_best_cluster(game_state, adj_unit, DEBUG=DEBUG, explore=True, ref_pos=unit.pos)
             distance_of_best = game_state.retrieve_distance(adj_unit.pos.x, adj_unit.pos.y, best_position.x, best_position.y)
             adj_unit.cargo.wood -= unit.cargo.get_most_common_resource_count()
-            adj_unit.compute_travel_range()
+            adj_unit.compute_travel_range((game_state.turns_to_night, game_state.turns_to_dawn, game_state.is_day_time),)
 
             print("eligible mission ejection", unit.id, unit.pos, best_cell_value)
 
@@ -363,6 +364,8 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                     if Position(xx,yy) - best_position > adj_unit.pos - best_position:
                         continue
                     print("ejecting", unit.id, unit.pos, adj_unit.id, adj_unit.pos, direction, "->", best_position)
+                    game_state.occupied_xy_set.add((xx,yy),)
+                    game_state.empty_tile_xy_set.remove((xx,yy))
                     action_2 = adj_unit.move(direction)
                     actions_ejections.append(action_1)
                     actions_ejections.append(action_2)
@@ -1085,7 +1088,9 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, avo
                 if not (game_state.player.researched_uranium_projected() or
                         unit.get_cargo_space_used() > 0 or
                         game_state.matrix_player_cities_nights_of_fuel_required_for_night[unit.pos.y, unit.pos.x] < 0):
-                    cost[0] = 3
+                    # unless you are very far from opponent
+                    if game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x] < 5:
+                        cost[0] = 3
 
         # discourage going into a fueled city tile if you are carrying substantial coal and uranium
         if unit.cargo.coal + unit.cargo.uranium >= 10:
