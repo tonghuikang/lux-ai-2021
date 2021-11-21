@@ -701,10 +701,21 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
             continue
 
         # attempt to move the unit
-        direction = attempt_direction_to(game_state, unit, mission.target_position,
+        direction, pos = attempt_direction_to(game_state, unit, mission.target_position,
                                          avoid_opponent_units=("homing" in mission.details),
                                          DEBUG=DEBUG)
-        if direction != "c":
+        if direction == "c":
+            continue
+
+        # if carrying full wood, and next location has abundant wood, if on buildable, build house now
+        if game_state.convolved_wood_exist_matrix[pos.y, pos.x] > 1:
+            if unit.cargo.wood == 100:
+                if unit.can_build(game_state.map):
+                    actions.append(unit.build_city())
+                    unit.cooldown += 2
+                    continue
+
+        if True:
             units_with_mission_but_no_action.discard(unit.id)
             action = unit.move(direction)
             print("make move", unit.id, unit.pos, direction, unit.pos.translate(direction, 1))
@@ -1129,4 +1140,4 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, avo
             game_state.occupied_xy_set.add(tuple(closest_pos))
         unit.cooldown += 2
 
-    return closest_dir
+    return closest_dir, closest_pos
