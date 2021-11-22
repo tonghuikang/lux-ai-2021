@@ -49,6 +49,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
 
     # anticipate ejection
     if tuple(unit.pos) in game_state.player_city_tile_xy_set:
+      if game_state.xy_to_resource_group_id.get_point(tuple(unit.pos)) <= 3:
         for dy,dx in game_state.dirs_dxdy[:-1]:
             xx,yy = unit.pos.x+dx, unit.pos.y+dy
             if (xx,yy) not in game_state.player.units_by_xy:
