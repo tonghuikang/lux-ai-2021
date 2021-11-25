@@ -434,9 +434,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                             continue
 
         # do not make missions if you could mine coal from a citytile that is not fueled for the night
-        if game_state.matrix_player_cities_nights_of_fuel_required_for_night[unit.pos.y, unit.pos.x] > 0 or (
-            game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] <= 3 and
-            game_state.matrix_player_cities_nights_of_fuel_required_for_game[unit.pos.y, unit.pos.x] > 0):
+        if game_state.matrix_player_cities_nights_of_fuel_required_for_night[unit.pos.y, unit.pos.x] > 0:
             if game_state.player.researched_coal():
                 if game_state.convolved_coal_exist_matrix[unit.pos.y, unit.pos.x] > 0:
                     if tuple(unit.pos) not in game_state.citytiles_with_new_units_xy_set:
@@ -928,6 +926,22 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, initia
             actions.append(annotate.line(unit.pos.x, unit.pos.y, adj_unit.pos.x, adj_unit.pos.y))
             unit.cooldown += 2
             break
+
+    # pump and dump
+    for unit in player.units:
+        unit: Unit = unit
+        if not unit.can_act():
+            continue
+        x,y = tuple(unit.pos)
+        if (x,y) in game_state.player_city_tile_xy_set:
+            continue
+        if (x,y) in game_state.buildable_tile_xy_set:
+            continue
+        if game_state.convolved_two_opponent_assets_matrix[y,x] < 2:
+            continue
+        if game_state.convolved_wood_exist_matrix[y,x] <= 1:
+            continue
+        make_random_transfer(unit, "🟣", True, game_state.player_city_tile_xy_set)
 
     if initial:
         return actions

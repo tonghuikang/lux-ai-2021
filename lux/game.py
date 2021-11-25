@@ -455,6 +455,9 @@ class Game:
         self.coal_side_matrix = self.convolve(self.coal_exist_matrix) * self.empty_tile_matrix
         self.uranium_side_matrix = self.convolve(self.uranium_exist_matrix) * self.empty_tile_matrix
 
+        self.convolved_opponent_assets_matrix = self.convolve(self.opponent_units_matrix + self.opponent_city_tile_matrix)
+        self.convolved_two_opponent_assets_matrix = self.convolve_two(self.opponent_units_matrix + self.opponent_city_tile_matrix)
+
         self.convert_into_sets()
 
         # calculate aggregate features
@@ -752,6 +755,25 @@ class Game:
         new_matrix[:,1:] += matrix[:,:-1]
         return new_matrix
 
+    def convolve_two(self, matrix):
+        # each worker gets resources from (up to) five tiles
+        new_matrix = matrix.copy()
+
+        new_matrix[:-1,:] += matrix[1:,:]
+        new_matrix[:,:-1] += matrix[:,1:]
+        new_matrix[1:,:] += matrix[:-1,:]
+        new_matrix[:,1:] += matrix[:,:-1]
+
+        new_matrix[:-1,:-1] += matrix[+1:,+1:]
+        new_matrix[:-1,+1:] += matrix[+1:,:-1]
+        new_matrix[+1:,:-1] += matrix[:-1,+1:]
+        new_matrix[+1:,+1:] += matrix[:-1,:-1]
+
+        new_matrix[:-2,:] += matrix[2:,:]
+        new_matrix[:,:-2] += matrix[:,2:]
+        new_matrix[2:,:] += matrix[:-2,:]
+        new_matrix[:,2:] += matrix[:,:-2]
+        return new_matrix
 
     def calculate_resource_matrix(self):
         # calculate value of the resource considering the reasearch level

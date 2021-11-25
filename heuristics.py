@@ -42,10 +42,31 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
             if game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x] <= 2 or city.fuel_needed_for_night <= len(city.citytiles) * 120:
                 if city.fuel_needed_for_night > 0:
                     if city.fuel_needed_for_night - game_state.fuel_collection_rate[unit.pos.y, unit.pos.x] * game_state.turns_to_dawn <= 0:
+                        unit.cooldown += 1
                         best_cell_value = [10**9,0,0,0]
                         print("staying SU", unit.id, unit.pos)
                         annotation = annotate.text(unit.pos.x, unit.pos.y, "SU")
                         cluster_annotation.append(annotation)
+
+    # anticipate pump and dump
+    if tuple(unit.pos) in game_state.player_city_tile_xy_set:
+        for dy,dx in game_state.dirs_dxdy[:-1]:
+            xx,yy = unit.pos.x+dx, unit.pos.y+dy
+            if (xx,yy) not in game_state.player.units_by_xy:
+                continue
+            adj_unit: Unit = game_state.player.units_by_xy[xx,yy]
+            if game_state.convolved_opponent_assets_matrix[yy,xx] < 2:
+                if game_state.convolved_opponent_assets_matrix[unit.pos.y,unit.pos.x] < 2:
+                    continue
+            if game_state.convolved_wood_exist_matrix[yy,xx] <= 1:
+                continue
+            if (xx,yy) in game_state.buildable_tile_xy_set:
+                continue
+            unit.cooldown += 1
+            print("staying SP", unit.id, unit.pos)
+            best_cell_value = [10**9,0,0,0]
+            annotation = annotate.text(unit.pos.x, unit.pos.y, "SP")
+            cluster_annotation.append(annotation)
 
     # anticipate ejection
     if tuple(unit.pos) in game_state.player_city_tile_xy_set:
@@ -59,6 +80,7 @@ def find_best_cluster(game_state: Game, unit: Unit, DEBUG=False, explore=False, 
                 continue
             if game_state.convolved_wood_exist_matrix[yy,xx] < 1:
                 continue
+            unit.cooldown += 1
             print("staying SX", unit.id, unit.pos)
             best_cell_value = [10**9,0,0,0]
             annotation = annotate.text(unit.pos.x, unit.pos.y, "SX")
