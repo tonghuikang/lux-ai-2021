@@ -882,7 +882,7 @@ class Game:
                             xx, yy = x+dx1+dx2, y+dy1+dy2
                             if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
                                 if (xx,yy) in self.collectable_tiles_projected_xy_set:
-                                    if self.xy_to_resource_group_id.get_tiles((xx,yy)) <= 2 or self.map_height >= 24:
+                                    if self.xy_to_resource_group_id.get_tiles((xx,yy)) <= 2:
                                         self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
         # absorb adjacent citytiles
