@@ -114,7 +114,7 @@ def get_action(policy, unit, dest):
     for label in np.argsort(policy)[::-1]:
         act = unit_actions[label]
         pos = unit.pos.translate(act[-1], 1) or unit.pos
-        if pos not in dest or in_city(pos):
+        if pos not in dest:
             return call_func(unit, *act), pos
 
     return unit.move('c'), unit.pos

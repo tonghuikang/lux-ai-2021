@@ -84,7 +84,7 @@ def agent(observation, configuration, DEBUG=False):
         with open('snapshots/missions-{}-{}.pkl'.format(str_step, game_state.player_id), 'wb') as handle:
             pickle.dump(missions, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    if game_state.map_height <= 16:
+    if game_state.map_height <= 32:
         actions = imitation_agent(observation, None)
     else:
         actions, game_state, missions = game_logic(game_state, missions)
