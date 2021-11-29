@@ -31,28 +31,29 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
                                 game_state.convolve(game_state.coal_exist_matrix),
                                 game_state.convolve(game_state.uranium_exist_matrix))
         game_state.calculate_features(missions)
-    actions_by_units_initial = make_unit_actions_supplementary(game_state, missions, initial=True, DEBUG=DEBUG)
-    cluster_annotations_and_ejections_pre = make_unit_missions(game_state, missions, is_initial_plan=True, DEBUG=DEBUG)
-    missions, pre_actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
-    cluster_annotations_and_ejections = make_unit_missions(game_state, missions, DEBUG=DEBUG)
+    # actions_by_units_initial = make_unit_actions_supplementary(game_state, missions, initial=True, DEBUG=DEBUG)
+    # cluster_annotations_and_ejections_pre = make_unit_missions(game_state, missions, is_initial_plan=True, DEBUG=DEBUG)
+    # missions, pre_actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
+    # cluster_annotations_and_ejections = make_unit_missions(game_state, missions, DEBUG=DEBUG)
     mission_annotations = annotate_missions(game_state, missions, DEBUG=DEBUG)
-    missions, actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
-    actions_by_units_supplementary = make_unit_actions_supplementary(game_state, missions, DEBUG=DEBUG)
-    movement_annotations = annotate_movements(game_state, actions_by_units)
+    # missions, actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
+    # actions_by_units_supplementary = make_unit_actions_supplementary(game_state, missions, DEBUG=DEBUG)
+    # movement_annotations = annotate_movements(game_state, actions_by_units)
 
     print("actions_by_cities", actions_by_cities)
-    print("actions_by_units_initial", actions_by_units_initial)
-    print("cluster_annotations_and_ejections_pre", cluster_annotations_and_ejections_pre)
-    print("pre_actions_by_units", pre_actions_by_units)
-    print("cluster_annotations_and_ejections", cluster_annotations_and_ejections)
+    # print("actions_by_units_initial", actions_by_units_initial)
+    # print("cluster_annotations_and_ejections_pre", cluster_annotations_and_ejections_pre)
+    # print("pre_actions_by_units", pre_actions_by_units)
+    # print("cluster_annotations_and_ejections", cluster_annotations_and_ejections)
     print("mission_annotations", mission_annotations)
-    print("actions_by_units", actions_by_units)
-    print("actions_by_units_supplementary", actions_by_units_supplementary)
-    print("state_annotations", state_annotations)
-    print("movement_annotations", movement_annotations)
-    actions = actions_by_cities + actions_by_units_initial + pre_actions_by_units + actions_by_units + actions_by_units_supplementary
-    actions += cluster_annotations_and_ejections + cluster_annotations_and_ejections_pre
-    actions += mission_annotations + movement_annotations + state_annotations
+    # print("actions_by_units", actions_by_units)
+    # print("actions_by_units_supplementary", actions_by_units_supplementary)
+    # print("state_annotations", state_annotations)
+    # print("movement_annotations", movement_annotations)
+    # actions = actions_by_cities + actions_by_units_initial + pre_actions_by_units + actions_by_units + actions_by_units_supplementary
+    # actions += cluster_annotations_and_ejections + cluster_annotations_and_ejections_pre
+    # actions += mission_annotations + movement_annotations + state_annotations
+    actions = actions_by_cities + state_annotations + mission_annotations
     actions = filter_cell_annotations(actions)
     if censoring: actions = []
     return actions, game_state, missions
@@ -86,6 +87,5 @@ def agent(observation, configuration, DEBUG=False):
 
     actions, game_state, missions = game_logic(game_state, missions)
     if game_state.map_height <= 32:
-        actions = [action for action in actions if "bw " in action or "r " in action]
         actions = actions + imitation_agent(observation, None)
     return actions

@@ -704,48 +704,48 @@ class Game:
                 self.positions_to_calculate_distances_from.add((x,y+1),)
                 self.positions_to_calculate_distances_from.add((x,y-1),)
 
-        self.distance_matrix = np.full((self.map_height,self.map_width,self.map_height,self.map_width), 1001)
+        # self.distance_matrix = np.full((self.map_height,self.map_width,self.map_height,self.map_width), 1001)
 
-        for sy in range(self.map_height):
-            for sx in range(self.map_width):
-                if (sx,sy) not in self.positions_to_calculate_distances_from:
-                    continue
-                if time.time() > self.compute_start_time + 2:
-                    continue
-                blockade_multiplier_value_for_syx = blockade_multiplier_value
+        # for sy in range(self.map_height):
+        #     for sx in range(self.map_width):
+        #         if (sx,sy) not in self.positions_to_calculate_distances_from:
+        #             continue
+        #         if time.time() > self.compute_start_time + 2:
+        #             continue
+        #         blockade_multiplier_value_for_syx = blockade_multiplier_value
 
-                start_pos = (sx,sy)
-                xy_processed = set()
+        #         start_pos = (sx,sy)
+        #         xy_processed = set()
 
-                d4 = self.dirs_dxdy[:-1]
-                heap = [(0, start_pos),]
-                while heap:
-                    curdist, (x,y) = heapq.heappop(heap)
-                    if (x,y) in xy_processed:
-                        continue
-                    xy_processed.add((x,y),)
-                    self.distance_matrix[sy,sx,y,x] = curdist
+        #         d4 = self.dirs_dxdy[:-1]
+        #         heap = [(0, start_pos),]
+        #         while heap:
+        #             curdist, (x,y) = heapq.heappop(heap)
+        #             if (x,y) in xy_processed:
+        #                 continue
+        #             xy_processed.add((x,y),)
+        #             self.distance_matrix[sy,sx,y,x] = curdist
 
-                    for dx,dy in d4:
-                        xx,yy = x+dx,y+dy
-                        if not (0 <= xx < self.map_width and 0 <= yy < self.map_height):
-                            continue
-                        if (xx,yy) in xy_processed:
-                            continue
+        #             for dx,dy in d4:
+        #                 xx,yy = x+dx,y+dy
+        #                 if not (0 <= xx < self.map_width and 0 <= yy < self.map_height):
+        #                     continue
+        #                 if (xx,yy) in xy_processed:
+        #                     continue
 
-                        edge_length = 1
-                        if (xx,yy) in self.occupied_xy_set:
-                            edge_length = blockade_multiplier_value_for_syx
-                        if (xx,yy) in self.opponent_city_tile_xy_set:
-                            edge_length = blockade_multiplier_value_for_syx * 50
-                        if self.matrix_player_cities_nights_of_fuel_required_for_game[yy,xx] < 0:
-                            edge_length = blockade_multiplier_value_for_syx * 50
+        #                 edge_length = 1
+        #                 if (xx,yy) in self.occupied_xy_set:
+        #                     edge_length = blockade_multiplier_value_for_syx
+        #                 if (xx,yy) in self.opponent_city_tile_xy_set:
+        #                     edge_length = blockade_multiplier_value_for_syx * 50
+        #                 if self.matrix_player_cities_nights_of_fuel_required_for_game[yy,xx] < 0:
+        #                     edge_length = blockade_multiplier_value_for_syx * 50
 
-                        heapq.heappush(heap, (curdist + edge_length, (xx,yy)))
+        #                 heapq.heappush(heap, (curdist + edge_length, (xx,yy)))
 
 
     def retrieve_distance(self, sx, sy, ex, ey):
-        return self.distance_matrix[sy,sx,ey,ex]
+        return abs(sx-ex) + abs(sy-ey)
 
 
     def convolve(self, matrix):
