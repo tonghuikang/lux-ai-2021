@@ -142,7 +142,7 @@ def agent(observation, configuration):
     # Worker Actions
     dest = []
     for unit in player.units:
-        if unit.can_act() and (game_state.turn % 40 < 30 or not in_city(unit.pos)):
+        if unit.can_act():
             state = make_input(observation, unit.id)
             with torch.no_grad():
                 p = model(torch.from_numpy(state).unsqueeze(0))
