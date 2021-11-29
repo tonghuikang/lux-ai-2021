@@ -128,16 +128,16 @@ def agent(observation, configuration):
     actions = []
 
     # City Actions
-    unit_count = len(player.units)
-    for city in player.cities.values():
-        for city_tile in city.citytiles:
-            if city_tile.can_act():
-                if unit_count < player.city_tile_count:
-                    actions.append(city_tile.build_worker())
-                    unit_count += 1
-                elif not player.researched_uranium():
-                    actions.append(city_tile.research())
-                    player.research_points += 1
+    # unit_count = len(player.units)
+    # for city in player.cities.values():
+    #     for city_tile in city.citytiles:
+    #         if city_tile.can_act():
+    #             if unit_count < player.city_tile_count:
+    #                 actions.append(city_tile.build_worker())
+    #                 unit_count += 1
+    #             elif not player.researched_uranium():
+    #                 actions.append(city_tile.research())
+    #                 player.research_points += 1
 
     # Worker Actions
     dest = []
