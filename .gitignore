@@ -5,6 +5,8 @@
 *.tar.gz
 *.pyc
 *.pkl
+*.pth
+*.log
 
 # notebooks
 .ipynb_checkpoints/

@@ -89,6 +89,41 @@ for filename in filenames:
 
 
 
+preamble_imitation_agent = """\
+# Upgraded Game Kit
+We defer some game decisions to the imitation agent. The model.pth is stored remotely and downloaded here.
+"""
+
+cells.append(nbf.new_markdown_cell(preamble_kit))
+
+cells.append(nbf.new_code_cell("""\
+!mkdir imitation_agent
+!mkdir imitation_agent/lux
+!wget https://tonghuikang.github.io/lux-ai-private-models/111813.pth -O imitation_agent/model.pth\
+""", metadata={"_kg_hide-input": True}))
+
+filenames = [
+    "imitation_agent/agent.py",
+    "imitation_agent/lux/game.py",
+    "imitation_agent/lux/game_map.py",
+    "imitation_agent/lux/game_objects.py",
+    "imitation_agent/lux/game_constants.py",
+    "imitation_agent/lux/game_constants.json",
+    "imitation_agent/lux/constants.py",
+    "imitation_agent/lux/annotate.py",
+]
+
+for filename in filenames:
+    savefile_cell_magic = f"%%writefile {filename}\n"
+    with open(filename, "r") as f:
+        content = savefile_cell_magic + f.read()
+    cell = nbf.new_code_cell(content, metadata={"_kg_hide-input": True})
+    cells.append(cell)
+
+
+
+
+
 preamble_rendering = """\
 # Game Rendering
 This is a replay of the agent fighting against itself.

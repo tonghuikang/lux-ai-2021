@@ -169,6 +169,8 @@ class Game:
         self.map: GameMap = GameMap(self.map_width, self.map_height)
         self.players: List[Player] = [Player(0), Player(1)]
 
+        self.y_order_coefficient = 1
+        self.x_order_coefficient = 1
         self.x_iteration_order = list(range(self.map_width))
         self.y_iteration_order = list(range(self.map_height))
         self.dirs: List = [
