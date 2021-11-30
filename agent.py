@@ -32,26 +32,27 @@ def game_logic(game_state: Game, missions: Missions, observation: Observation, D
     actions_by_units_initial = make_unit_actions_supplementary(game_state, missions, observation, initial=True, DEBUG=DEBUG)
     # cluster_annotations_and_ejections_pre = make_unit_missions(game_state, missions, is_initial_plan=True, DEBUG=DEBUG)
     # missions, pre_actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
-    # cluster_annotations_and_ejections = make_unit_missions(game_state, missions, DEBUG=DEBUG)
+    cluster_annotations_and_ejections = make_unit_missions(game_state, missions, DEBUG=DEBUG)
+    missions, actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
+    actions_by_units_supplementary = make_unit_actions_supplementary(game_state, missions, observation, DEBUG=DEBUG)
+    movement_annotations = annotate_movements(game_state, actions_by_units)
     mission_annotations = annotate_missions(game_state, missions, DEBUG=DEBUG)
-    # missions, actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
-    # actions_by_units_supplementary = make_unit_actions_supplementary(game_state, missions, DEBUG=DEBUG)
-    # movement_annotations = annotate_movements(game_state, actions_by_units)
 
     print("actions_by_cities", actions_by_cities)
-    # print("actions_by_units_initial", actions_by_units_initial)
+    print("actions_by_units_initial", actions_by_units_initial)
     # print("cluster_annotations_and_ejections_pre", cluster_annotations_and_ejections_pre)
     # print("pre_actions_by_units", pre_actions_by_units)
-    # print("cluster_annotations_and_ejections", cluster_annotations_and_ejections)
+    print("cluster_annotations_and_ejections", cluster_annotations_and_ejections)
     print("mission_annotations", mission_annotations)
-    # print("actions_by_units", actions_by_units)
-    # print("actions_by_units_supplementary", actions_by_units_supplementary)
-    # print("state_annotations", state_annotations)
-    # print("movement_annotations", movement_annotations)
+    print("actions_by_units", actions_by_units)
+    print("actions_by_units_supplementary", actions_by_units_supplementary)
+    print("state_annotations", state_annotations)
+    print("movement_annotations", movement_annotations)
     # actions = actions_by_cities + actions_by_units_initial + pre_actions_by_units + actions_by_units + actions_by_units_supplementary
     # actions += cluster_annotations_and_ejections + cluster_annotations_and_ejections_pre
     # actions += mission_annotations + movement_annotations + state_annotations
     actions = actions_by_cities + state_annotations + mission_annotations + actions_by_units_initial
+    actions += cluster_annotations_and_ejections + actions_by_units + actions_by_units_supplementary + movement_annotations
     actions = filter_cell_annotations(actions)
     if censoring: actions = []
     return actions, game_state, missions

@@ -112,5 +112,7 @@ def filter_cell_annotations(actions: List[str]):
             if (info[0],info[1]) in annotated_cell_xy_set:
                 continue
             annotated_cell_xy_set.add((info[0],info[1]))
+        if action[:2] == "m " and action[-2:] == ' c':
+            continue
         filtered_actions.append(action)
     return filtered_actions

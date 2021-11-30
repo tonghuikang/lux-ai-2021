@@ -292,6 +292,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
 
     # attempt to eject, unit is the one ejecting
     for unit in player.units:
+        continue
         # unit is the one ejecting
         unit: Unit = unit
         if not unit.can_act():
@@ -666,6 +667,8 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
       prev_actions_len = len(actions)
 
       for unit in player.units:
+        if tuple(unit.pos) not in game_state.use_rule_based_xy_set:
+            continue
         if not unit.can_act():
             units_with_mission_but_no_action.discard(unit.id)
             continue
@@ -745,10 +748,11 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
     player, opponent = game_state.player, game_state.opponent
     actions = []
 
-    for unit in player.units:
+    if initial:
+      for unit in player.units:
         if unit.can_act():
             if tuple(unit.pos) not in game_state.use_rule_based_xy_set:
-                action = get_imitation_action(observation, game_state, unit)
+                action = get_imitation_action(observation, game_state, unit, DEBUG=DEBUG)
                 actions.append(action)
 
     print("units without actions", [unit.id for unit in player.units if unit.can_act()])
@@ -760,6 +764,13 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
         (xxx,yyy) = (-1,-1)
 
         # in increasing order of priority
+
+        # attempt to move
+        for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
+            xx,yy = unit.pos.x + dx, unit.pos.y + dy
+            if (xx,yy) not in game_state.occupied_xy_set:
+                xxx,yyy = xx,yy
+                break
 
         # attempt to move away from your assets
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):

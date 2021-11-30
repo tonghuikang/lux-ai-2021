@@ -359,6 +359,16 @@ class Game:
         self.calculate_distance_matrix()
         self.use_rule_based_xy_set: Set = set()
 
+        # when to use rules
+        for x in self.x_iteration_order:
+            for y in self.y_iteration_order:
+                if self.turn < 348:
+                    if self.distance_from_opponent_assets[y,x] < 4:
+                        continue
+                    if self.distance_from_wood_tile[y,x] < 4:
+                        continue
+                self.use_rule_based_xy_set.add((x,y),)
+
         self.repopulate_targets(missions)
 
         self.citytiles_with_new_units_xy_set: Set = set()
@@ -662,6 +672,7 @@ class Game:
 
         self.distance_from_buildable_tile = calculate_distance_from_set(self.buildable_tile_xy_set)
         self.distance_from_empty_tile = calculate_distance_from_set(self.empty_tile_xy_set)
+        self.distance_from_wood_tile = calculate_distance_from_set(self.wood_exist_xy_set)
 
         self.distance_from_floodfill_by_player_city = calculate_distance_from_set(self.floodfill_by_player_city_set)
         self.distance_from_floodfill_by_opponent_city = calculate_distance_from_set(self.floodfill_by_opponent_city_set)

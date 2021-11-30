@@ -8,7 +8,6 @@ import builtins as __builtin__
 
 
 path = os.path.dirname(os.path.realpath(__file__))
-print(path)
 model = torch.jit.load(f'{path}/model.pth')
 model.eval()
 
@@ -87,49 +86,28 @@ def make_input(obs: Observation, unit_id: str):
     return b
 
 
-# def in_city(game_state, pos):
-#     try:
-#         city = game_state.map.get_cell_by_pos(pos).citytile
-#         return city is not None and city.team == game_state.id
-#     except:
-#         return False
-
-
 def call_func(obj, method, args=[]):
     return getattr(obj, method)(*args)
 
 
 unit_actions = [('move', 'n'), ('move', 's'), ('move', 'w'), ('move', 'e'), ('build_city',), ('move', 'c')]
-def get_action(policy, unit: Unit, dest: Set, DEBUG=False):
+def get_action(policy, game_state: Game, unit: Unit, dest: Set, DEBUG=False):
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
-    print(unit.id, unit.pos)
     print(np.round(policy, 2))
     for label in np.argsort(policy)[::-1]:
         act = unit_actions[label]
         pos = unit.pos.translate(act[-1], 1) or unit.pos
         if tuple(pos) not in dest or unit.pos == pos:
+            if act[0] == 'build_city' and tuple(unit.pos) not in game_state.buildable_tile_xy_set:
+                continue
+            if act[0] == 'build_city' or unit.pos != pos:
+                unit.cooldown += 2
             return call_func(unit, *act), pos
 
     return unit.move('c'), unit.pos
 
-
-# def agent(observation, configuration, game_state):
-
-#     actions = []
-
-    # City Actions
-    # unit_count = len(player.units)
-    # for city in player.cities.values():
-    #     for city_tile in city.citytiles:
-    #         if city_tile.can_act():
-    #             if unit_count < player.city_tile_count:
-    #                 actions.append(city_tile.build_worker())
-    #                 unit_count += 1
-    #             elif not player.researched_uranium():
-    #                 actions.append(city_tile.research())
-    #                 player.research_points += 1
 
 def get_imitation_action(observation: Observation, game_state: Game, unit: Unit, DEBUG=False):
     if DEBUG: print = __builtin__.print
@@ -143,7 +121,9 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
 
     policy = p.squeeze(0).numpy()
 
-    action, pos = get_action(policy, unit, dest, DEBUG=DEBUG)
+    action, pos = get_action(policy, game_state, unit, dest, DEBUG=DEBUG)
     dest.add(tuple(pos))
+    print(unit.id, unit.pos, pos, action)
+    print()
 
     return action
