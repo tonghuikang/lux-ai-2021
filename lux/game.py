@@ -363,7 +363,7 @@ class Game:
         for x in self.x_iteration_order:
             for y in self.y_iteration_order:
                 if self.turn < 348:
-                    if self.distance_from_opponent_assets[y,x] < 4:
+                    if self.distance_from_opponent_assets[y,x] < 4 and self.distance_from_collectable_resource[y,x] < 8:
                         continue
                     if self.distance_from_wood_tile[y,x] < 4:
                         continue

@@ -53,7 +53,7 @@ def game_logic(game_state: Game, missions: Missions, observation: Observation, D
     # actions += mission_annotations + movement_annotations + state_annotations
     actions = actions_by_cities + state_annotations + mission_annotations + actions_by_units_initial
     actions += cluster_annotations_and_ejections + actions_by_units + actions_by_units_supplementary + movement_annotations
-    actions = filter_cell_annotations(actions)
+    actions = filter_cell_annotations(actions, game_state)
     if censoring: actions = []
     return actions, game_state, missions
 

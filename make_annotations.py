@@ -103,7 +103,7 @@ def annotate_movements(game_state: Game, actions_by_units: List[str]):
     return annotations
 
 
-def filter_cell_annotations(actions: List[str]):
+def filter_cell_annotations(actions: List[str], game_state: Game):
     annotated_cell_xy_set = set()
     filtered_actions: List[str] = []
     for action in actions:
@@ -115,4 +115,8 @@ def filter_cell_annotations(actions: List[str]):
         if action[:2] == "m " and action[-2:] == ' c':
             continue
         filtered_actions.append(action)
+    for unit in game_state.player.units:
+        if unit.cooldown < 1:
+            no_action = unit.move("c")
+            filtered_actions.append(no_action)
     return filtered_actions
