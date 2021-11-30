@@ -215,8 +215,24 @@ cp -r $REF_DIR ref/
 
 
 cells.append(nbf.new_code_cell("""\
+!mkdir template\
+""", metadata={"_kg_hide-input": True}))
+
+filenames = [
+    "template/main.py",
+]
+
+for filename in filenames:
+    savefile_cell_magic = f"%%writefile {filename}\n"
+    with open(filename, "r") as f:
+        content = savefile_cell_magic + f.read()
+    cell = nbf.new_code_cell(content, metadata={"_kg_hide-input": True})
+    cells.append(cell)
+
+
+cells.append(nbf.new_code_cell("""\
 !cd ref/ && tar -xvzf *.tar.gz &> /dev/null
-!cp main.py ref/main.py  # fix main.py\
+!cp template/main.py ref/main.py  # fix main.py\
 """, metadata={"_kg_hide-input": True}))
 
 
@@ -272,7 +288,7 @@ wins_template = """
 
 draw_template = """
     { rank: 1, agentID: 0, name: './main.py' },
-    { rank: 1, agentID: 1, name: 'ref/main.py' }
+    { rank: 1, agentID: 1, name: './ref/main.py' }
 """
 
 lose_template = """
