@@ -4,7 +4,7 @@ import builtins as __builtin__
 from typing import Tuple, List, Set
 from lux import game
 
-from lux.game import Game, Mission, Missions, cleanup_missions
+from lux.game import Game, Mission, Missions, Observation, cleanup_missions
 from lux.game_objects import Cargo, CityTile, Unit, City
 from lux.game_position import Position
 from lux.constants import Constants
@@ -12,6 +12,7 @@ from lux.game_constants import GAME_CONSTANTS
 import lux.annotate as annotate
 
 from heuristics import find_best_cluster
+from imitation_agent import get_imitation_action
 
 DIRECTIONS = Constants.DIRECTIONS
 
@@ -736,12 +737,19 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
     return missions, actions
 
 
-def make_unit_actions_supplementary(game_state: Game, missions: Missions, initial=False, DEBUG=False) -> Tuple[Missions, List[str]]:
+def make_unit_actions_supplementary(game_state: Game, missions: Missions, observation: Observation,
+                                    initial=False, DEBUG=False) -> Tuple[Missions, List[str]]:
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
     player, opponent = game_state.player, game_state.opponent
     actions = []
+
+    for unit in player.units:
+        if unit.can_act():
+            if tuple(unit.pos) not in game_state.use_rule_based_xy_set:
+                action = get_imitation_action(observation, game_state, unit)
+                actions.append(action)
 
     print("units without actions", [unit.id for unit in player.units if unit.can_act()])
 

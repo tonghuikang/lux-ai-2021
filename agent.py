@@ -4,19 +4,17 @@ import pickle
 
 import builtins as __builtin__
 
-from lux.game import Game, Missions
+from lux.game import Game, Missions, Observation
 
 from make_actions import make_city_actions, make_unit_missions, make_unit_actions, make_unit_actions_supplementary
 from make_annotations import annotate_game_state, annotate_missions, annotate_movements, filter_cell_annotations
-
-from imitation_agent.agent import agent as imitation_agent
 
 
 game_state = Game()
 missions = Missions()
 
 
-def game_logic(game_state: Game, missions: Missions, DEBUG=False):
+def game_logic(game_state: Game, missions: Missions, observation: Observation, DEBUG=False):
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
@@ -31,7 +29,7 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
                                 game_state.convolve(game_state.coal_exist_matrix),
                                 game_state.convolve(game_state.uranium_exist_matrix))
         game_state.calculate_features(missions)
-    # actions_by_units_initial = make_unit_actions_supplementary(game_state, missions, initial=True, DEBUG=DEBUG)
+    actions_by_units_initial = make_unit_actions_supplementary(game_state, missions, observation, initial=True, DEBUG=DEBUG)
     # cluster_annotations_and_ejections_pre = make_unit_missions(game_state, missions, is_initial_plan=True, DEBUG=DEBUG)
     # missions, pre_actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
     # cluster_annotations_and_ejections = make_unit_missions(game_state, missions, DEBUG=DEBUG)
@@ -53,13 +51,13 @@ def game_logic(game_state: Game, missions: Missions, DEBUG=False):
     # actions = actions_by_cities + actions_by_units_initial + pre_actions_by_units + actions_by_units + actions_by_units_supplementary
     # actions += cluster_annotations_and_ejections + cluster_annotations_and_ejections_pre
     # actions += mission_annotations + movement_annotations + state_annotations
-    actions = actions_by_cities + state_annotations + mission_annotations
+    actions = actions_by_cities + state_annotations + mission_annotations + actions_by_units_initial
     actions = filter_cell_annotations(actions)
     if censoring: actions = []
     return actions, game_state, missions
 
 
-def agent(observation, configuration, DEBUG=False):
+def agent(observation: Observation, configuration, DEBUG=False):
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
@@ -85,7 +83,5 @@ def agent(observation, configuration, DEBUG=False):
         with open('snapshots/missions-{}-{}.pkl'.format(str_step, game_state.player_id), 'wb') as handle:
             pickle.dump(missions, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
-    actions, game_state, missions = game_logic(game_state, missions)
-    if game_state.map_height <= 32:
-        actions = actions + imitation_agent(observation, None)
+    actions, game_state, missions = game_logic(game_state, missions, observation)
     return actions

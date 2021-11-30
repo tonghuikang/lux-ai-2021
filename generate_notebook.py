@@ -97,20 +97,11 @@ We defer some game decisions to the imitation agent. The model.pth is stored rem
 cells.append(nbf.new_markdown_cell(preamble_kit))
 
 cells.append(nbf.new_code_cell("""\
-!mkdir imitation_agent
-!mkdir imitation_agent/lux
-!wget https://tonghuikang.github.io/lux-ai-private-models/111813.pth -O imitation_agent/model.pth\
+!wget https://tonghuikang.github.io/lux-ai-private-models/111813.pth -O model.pth\
 """, metadata={"_kg_hide-input": True}))
 
 filenames = [
-    "imitation_agent/agent.py",
-    "imitation_agent/lux/game.py",
-    "imitation_agent/lux/game_map.py",
-    "imitation_agent/lux/game_objects.py",
-    "imitation_agent/lux/game_constants.py",
-    "imitation_agent/lux/game_constants.json",
-    "imitation_agent/lux/constants.py",
-    "imitation_agent/lux/annotate.py",
+    "imitation_agent.py",
 ]
 
 for filename in filenames:
@@ -182,10 +173,12 @@ str_step = "010"
 player_id = 0
 with open(f'snapshots/game_state-{str_step}-{player_id}.pkl', 'rb') as handle:
     game_state = pickle.load(handle)
+with open(f'snapshots/observation-{str_step}-{player_id}.pkl', 'rb') as handle:
+    observation = pickle.load(handle)
 with open(f'snapshots/missions-{str_step}-{player_id}.pkl', 'rb') as handle:
     missions = pickle.load(handle)
 
-game_logic(game_state, missions, DEBUG=True)
+game_logic(game_state, missions, observation, DEBUG=True)
 plt.imshow(game_state.convolved_collectable_tiles_matrix)
 plt.colorbar()
 plt.show()\
@@ -250,7 +243,7 @@ cells.append(nbf.new_code_cell("""\
 
 
 cells.append(nbf.new_code_cell("""\
-!timeout 30m bash ./evaluate_for_map_size.sh 12\
+!timeout 1h bash ./evaluate_for_map_size.sh 12\
 """, metadata={"_kg_hide-input": True}))
 
 
@@ -265,7 +258,7 @@ cells.append(nbf.new_code_cell("""\
 
 
 cells.append(nbf.new_code_cell("""\
-!timeout 5h bash ./evaluate_for_map_size.sh 32\
+!timeout 4h bash ./evaluate_for_map_size.sh 32\
 """, metadata={"_kg_hide-input": True}))
 
 

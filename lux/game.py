@@ -15,6 +15,13 @@ from .game_constants import GAME_CONSTANTS
 INPUT_CONSTANTS = Constants.INPUT_CONSTANTS
 
 
+class Observation(Dict[str, any]):
+    def __init__(self, player=0) -> None:
+        self.player = player
+        # self.updates = []
+        # self.step = 0
+
+
 class Mission:
     def __init__(self, unit_id: str, target_position: Position, target_action: str = "", details: str = "", delays=99):
         self.target_position: Position = target_position
@@ -350,6 +357,7 @@ class Game:
         self.calculate_resource_matrix()
         self.calculate_resource_groups()
         self.calculate_distance_matrix()
+        self.use_rule_based_xy_set: Set = set()
 
         self.repopulate_targets(missions)
 
