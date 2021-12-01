@@ -1,6 +1,7 @@
 import os
 import numpy as np
 import torch
+import time
 
 from typing import Set
 from lux import annotate
@@ -164,10 +165,15 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
 
     average_policy = np.zeros(6)
 
+    time_remaining = 2.5 - (time.time() - game_state.compute_start_time)
+    NUMBER_OF_TRANSFORMS = min(8, max(3, int(10 * time_remaining/2.5)))
+    print("NUMBER_OF_TRANSFORMS", NUMBER_OF_TRANSFORMS, time_remaining)
+    random.shuffle(transforms)
+
     with torch.no_grad():
 
         transformed_states = []
-        for transform, inv_permute in transforms:
+        for transform, inv_permute in transforms[:NUMBER_OF_TRANSFORMS]:
             transformed_state = transform(state)
             transformed_states.append(transformed_state)
         transformed_states = torch.from_numpy(np.array(transformed_states))
