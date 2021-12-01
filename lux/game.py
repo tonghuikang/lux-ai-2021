@@ -357,17 +357,50 @@ class Game:
         self.calculate_resource_matrix()
         self.calculate_resource_groups()
         self.calculate_distance_matrix()
-        self.use_rule_based_xy_set: Set = set()
 
         # when to use rules
+        for unit in self.player.units:
+            x,y = tuple(unit.pos)
+            if self.turn >= 348:
+               unit.use_rule_base = True
+               continue
+            if unit.cargo.uranium >= 50 and (x,y) not in self.collectable_tiles_projected_xy_set:
+                unit.use_rule_base = True
+                continue
+            # if unit.cargo.coal >= 50:
+            #     unit.use_rule_base = True
+            #     continue
+            if self.distance_from_collectable_resource_projected[y,x] > 8:
+                unit.use_rule_base = True
+                continue
+            if self.distance_from_wood_tile[y,x] < 4:
+                unit.use_rule_base = False
+                continue
+
+        # # gating
+        # for unit in self.player.units:
+        #     unit.use_rule_base = False
+
+
+        # places to avoid building
+        self.avoid_building_xy_set: Set = set()
         for x in self.x_iteration_order:
             for y in self.y_iteration_order:
-                if self.turn < 348:
-                    if self.distance_from_opponent_assets[y,x] < 4 and self.distance_from_collectable_resource[y,x] < 8:
+                if self.turn > 350:
+                    continue
+                if not self.player.researched_uranium():
+                    continue
+                if self.distance_from_opponent_assets[y,x] < 3:
+                    continue
+                for dx,dy in self.dirs_dxdy:
+                    xx, yy = x+dx, y+dy
+                    if not (0 <= xx < self.map_width and 0 <= yy < self.map_height):
                         continue
-                    if self.distance_from_wood_tile[y,x] < 4:
-                        continue
-                self.use_rule_based_xy_set.add((x,y),)
+                    if self.wood_amount_matrix[yy,xx] < 400:
+                        self.avoid_building_xy_set.add((x,y),)
+                        break
+
+
 
         self.repopulate_targets(missions)
 
@@ -661,6 +694,7 @@ class Game:
 
         # calculate distance from resource (with projected research requirements)
         self.distance_from_collectable_resource = calculate_distance_from_set(self.collectable_tiles_xy_set)
+        self.distance_from_collectable_resource_projected = calculate_distance_from_set(self.collectable_tiles_projected_xy_set)
 
         # calculate distance from citytiles or units
         self.distance_from_player_assets = calculate_distance_from_set(self.player_units_xy_set | self.player_city_tile_xy_set)

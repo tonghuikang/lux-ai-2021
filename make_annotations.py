@@ -68,12 +68,12 @@ def annotate_missions(game_state: Game, missions: Missions, DEBUG=False):
         annotation = annotate.line(unit.pos.x, unit.pos.y, mission.target_position.x, mission.target_position.y)
         annotations.append(annotation)
 
-        if mission.target_action and mission.target_action.split(" ")[0] == "bcity":
-            annotation = annotate.x(mission.target_position.x, mission.target_position.y)
-            annotations.append(annotation)
-        else:
-            annotation = annotate.circle(mission.target_position.x, mission.target_position.y)
-            annotations.append(annotation)
+        # if mission.target_action and mission.target_action.split(" ")[0] == "bcity":
+        #     annotation = annotate.x(mission.target_position.x, mission.target_position.y)
+        #     annotations.append(annotation)
+        # else:
+        #     annotation = annotate.circle(mission.target_position.x, mission.target_position.y)
+        #     annotations.append(annotation)
 
     annotation = annotate.sidetext("Unit Count: {}-{} Citytiles: {}-{} Groups: {}/{} Runtime: {:.3f}".format(
         len(game_state.player.units), len(game_state.opponent.units),

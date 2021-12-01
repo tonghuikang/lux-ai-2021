@@ -150,6 +150,7 @@ class Unit:
         self.cargo.coal = coal
         self.cargo.uranium = uranium
         self.fuel_potential = wood*1 + coal*5 + uranium*20
+        self.use_rule_base = False
         self.compute_travel_range()
 
     def is_worker(self) -> bool:

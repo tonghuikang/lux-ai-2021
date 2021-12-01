@@ -3,8 +3,10 @@ import numpy as np
 import torch
 
 from typing import Set
+from lux import annotate
 from lux.game import Game, Observation, Unit
 import builtins as __builtin__
+import random
 
 
 path = os.path.dirname(os.path.realpath(__file__))
@@ -86,17 +88,37 @@ def make_input(obs: Observation, unit_id: str):
     return b
 
 
+def probabilistic_sort(logits):
+    probs = np.exp(logits)
+    probs = probs/np.sum(probs)
+
+    pool = [(i,x) for i,x in enumerate(probs)]
+
+    order = []
+    while pool:
+        (i,x), = random.choices(pool, weights=[x for i,x in pool])
+        order.append(i)
+        pool.remove((i,x))
+    return order
+
+
 def call_func(obj, method, args=[]):
     return getattr(obj, method)(*args)
 
 
 unit_actions = [('move', 'n'), ('move', 's'), ('move', 'w'), ('move', 'e'), ('build_city',), ('move', 'c')]
-def get_action(policy, game_state: Game, unit: Unit, dest: Set, DEBUG=False):
+def get_action(policy, game_state: Game, unit: Unit, dest: Set, DEBUG=False, use_probabilistic_sort=False):
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
+    order = np.argsort(policy)[::-1]
+    if use_probabilistic_sort:
+        order = probabilistic_sort(policy)
+
     print(np.round(policy, 2))
-    for label in np.argsort(policy)[::-1]:
+    print(order)
+    annotations = []
+    for label in order:
         act = unit_actions[label]
         pos = unit.pos.translate(act[-1], 1) or unit.pos
         if tuple(pos) not in dest or unit.pos == pos:
@@ -104,12 +126,14 @@ def get_action(policy, game_state: Game, unit: Unit, dest: Set, DEBUG=False):
                 continue
             if act[0] == 'build_city' or unit.pos != pos:
                 unit.cooldown += 2
-            return call_func(unit, *act), pos
+            if act[0] != ('move', 'c'):
+                annotations.append(annotate.x(pos.x, pos.y))
+            return call_func(unit, *act), pos, annotations
 
-    return unit.move('c'), unit.pos
+    return unit.move('c'), unit.pos, annotations
 
 
-def get_imitation_action(observation: Observation, game_state: Game, unit: Unit, DEBUG=False):
+def get_imitation_action(observation: Observation, game_state: Game, unit: Unit, DEBUG=False, use_probabilistic_sort=False):
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
@@ -121,9 +145,9 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
 
     policy = p.squeeze(0).numpy()
 
-    action, pos = get_action(policy, game_state, unit, dest, DEBUG=DEBUG)
+    action, pos, annotations = get_action(policy, game_state, unit, dest, DEBUG=DEBUG, use_probabilistic_sort=use_probabilistic_sort)
     dest.add(tuple(pos))
     print(unit.id, unit.pos, pos, action)
     print()
 
-    return action
+    return [action] + annotations

@@ -2,6 +2,8 @@
 
 import builtins as __builtin__
 from typing import Tuple, List, Set
+
+from numpy import False_
 from lux import game
 
 from lux.game import Game, Mission, Missions, Observation, cleanup_missions
@@ -50,6 +52,10 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
 
     def build_worker(city_tile: CityTile, annotation: str=""):
         nonlocal units_cnt
+
+        if tuple(city_tile.pos) in game_state.avoid_building_xy_set:
+            return
+
         action = city_tile.build_worker()
         actions.append(action)
         units_cnt += 1
@@ -667,7 +673,7 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
       prev_actions_len = len(actions)
 
       for unit in player.units:
-        if tuple(unit.pos) not in game_state.use_rule_based_xy_set:
+        if not unit.use_rule_base:
             continue
         if not unit.can_act():
             units_with_mission_but_no_action.discard(unit.id)
@@ -751,9 +757,10 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
     if initial:
       for unit in player.units:
         if unit.can_act():
-            if tuple(unit.pos) not in game_state.use_rule_based_xy_set:
-                action = get_imitation_action(observation, game_state, unit, DEBUG=DEBUG)
-                actions.append(action)
+            if not unit.use_rule_base:
+                actions_from_imitation = get_imitation_action(observation, game_state, unit, DEBUG=DEBUG,
+                                                              use_probabilistic_sort=False)
+                actions.extend(actions_from_imitation)
 
     print("units without actions", [unit.id for unit in player.units if unit.can_act()])
 
