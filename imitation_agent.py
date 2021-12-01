@@ -89,9 +89,7 @@ def make_input(obs: Observation, unit_id: str):
 
 
 def probabilistic_sort(logits):
-    probs = np.exp(logits)
-    probs = probs/np.sum(probs)
-
+    probs = np.exp(logits)/np.sum(np.exp(logits))
     pool = [(i,x) for i,x in enumerate(probs)]
 
     order = []
@@ -107,6 +105,29 @@ def call_func(obj, method, args=[]):
 
 
 unit_actions = [('move', 'n'), ('move', 's'), ('move', 'w'), ('move', 'e'), ('build_city',), ('move', 'c')]
+
+transforms = [
+    (lambda x: np.rot90(x,              axes=(1, 2),    k=0).copy(),  [1,2,3,4]),
+    (lambda x: np.rot90(np.flip(x,1),   axes=(1, 2),    k=0).copy(),  [1,2,4,3]),
+    (lambda x: np.rot90(x,              axes=(1, 2),    k=1).copy(),  [3,4,2,1]),
+    (lambda x: np.rot90(np.flip(x,1),   axes=(1, 2),    k=1).copy(),  [4,3,2,1]),
+    (lambda x: np.rot90(x,              axes=(1, 2),    k=2).copy(),  [2,1,4,3]),
+    (lambda x: np.rot90(np.flip(x,1),   axes=(1, 2),    k=2).copy(),  [2,1,3,4]),
+    (lambda x: np.rot90(x,              axes=(1, 2),    k=3).copy(),  [4,3,1,2]),
+    (lambda x: np.rot90(np.flip(x,1),   axes=(1, 2),    k=3).copy(),  [3,4,1,2]),
+]
+
+def invert_permute(permute):
+    inv_permute = [-1 for _ in range(4)]
+    for i,x in enumerate(permute):
+        x -= 1
+        inv_permute[x] = i
+    inv_permute = np.array(inv_permute)
+    return inv_permute
+
+transforms = [(transform, invert_permute(permute)) for transform, permute in transforms]
+
+
 def get_action(policy, game_state: Game, unit: Unit, dest: Set, DEBUG=False, use_probabilistic_sort=False):
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
@@ -140,12 +161,26 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
     # Worker Actions
     dest = game_state.occupied_xy_set
     state = make_input(observation, unit.id)
+
+    average_policy = np.zeros(6)
+
     with torch.no_grad():
-        p = model(torch.from_numpy(state).unsqueeze(0))
 
-    policy = p.squeeze(0).numpy()
+        transformed_states = []
+        for transform, inv_permute in transforms:
+            transformed_state = transform(state)
+            transformed_states.append(transformed_state)
+        transformed_states = torch.from_numpy(np.array(transformed_states))
 
-    action, pos, annotations = get_action(policy, game_state, unit, dest, DEBUG=DEBUG, use_probabilistic_sort=use_probabilistic_sort)
+        p = model(transformed_states)
+
+        for (transform, inv_permute), policy in zip(transforms, p.squeeze(0).numpy()):
+            policy[:4] = policy[inv_permute]
+            print(np.round(policy, 2))
+            average_policy += policy
+
+
+    action, pos, annotations = get_action(average_policy, game_state, unit, dest, DEBUG=DEBUG, use_probabilistic_sort=use_probabilistic_sort)
     dest.add(tuple(pos))
     print(unit.id, unit.pos, pos, action)
     print()

@@ -396,7 +396,7 @@ class Game:
                     xx, yy = x+dx, y+dy
                     if not (0 <= xx < self.map_width and 0 <= yy < self.map_height):
                         continue
-                    if self.wood_amount_matrix[yy,xx] < 400:
+                    if 0 < self.wood_amount_matrix[yy,xx] < 400:
                         self.avoid_building_xy_set.add((x,y),)
                         break
 
