@@ -143,11 +143,12 @@ def get_action(policy, game_state: Game, unit: Unit, dest: Set, DEBUG=False, use
     for label in order:
         act = unit_actions[label]
         pos = unit.pos.translate(act[-1], 1) or unit.pos
-        if (tuple(pos) not in dest) or (unit.fuel_potential > 0 and tuple(pos) in game_state.player_city_tile_xy_set):
+        if (tuple(pos) not in dest) or (unit.pos == pos) or (unit.fuel_potential > 0 and tuple(pos) in game_state.player_city_tile_xy_set):
             if act[0] == 'build_city':
                 if tuple(unit.pos) not in game_state.buildable_tile_xy_set:
                     continue
                 if tuple(unit.pos) in game_state.avoid_building_citytiles_xy_set:
+                    print("avoid building", unit.pos, unit.id)
                     continue
             if act[0] == 'build_city' or unit.pos != pos:
                 unit.cooldown += 2
@@ -168,18 +169,19 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
 
     average_policy = np.zeros(6)
 
-    time_remaining = 2.5 - (time.time() - game_state.compute_start_time)
-    NUMBER_OF_TRANSFORMS = min(8, max(3, int(10 * time_remaining/2.5)))
+    time_indented = 2.0
+    time_remaining = time_indented - (time.time() - game_state.compute_start_time)
+    NUMBER_OF_TRANSFORMS = min(8, max(3, int(10 * time_remaining/time_indented)))
     print("NUMBER_OF_TRANSFORMS", NUMBER_OF_TRANSFORMS, time_remaining)
     random.shuffle(transforms)
 
     with torch.no_grad():
 
-        transformed_states = []
-        for transform, inv_permute in transforms[:NUMBER_OF_TRANSFORMS]:
+        transformed_states = np.zeros((NUMBER_OF_TRANSFORMS, 20, 32, 32), dtype=np.float32)
+        for i, (transform, inv_permute) in enumerate(transforms[:NUMBER_OF_TRANSFORMS]):
             transformed_state = transform(state)
-            transformed_states.append(transformed_state)
-        transformed_states = torch.from_numpy(np.array(transformed_states))
+            transformed_states[i,:,:,:] = transformed_state
+        transformed_states = torch.from_numpy(transformed_states)
 
         p = model(transformed_states)
 
