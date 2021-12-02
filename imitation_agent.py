@@ -143,7 +143,7 @@ def get_action(policy, game_state: Game, unit: Unit, dest: Set, DEBUG=False, use
     for label in order:
         act = unit_actions[label]
         pos = unit.pos.translate(act[-1], 1) or unit.pos
-        if tuple(pos) not in dest or unit.pos == pos:
+        if (tuple(pos) not in dest) or (unit.fuel_potential > 0 and tuple(pos) in game_state.player_city_tile_xy_set):
             if act[0] == 'build_city':
                 if tuple(unit.pos) not in game_state.buildable_tile_xy_set:
                     continue
@@ -190,7 +190,7 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
 
 
     action, pos, annotations = get_action(average_policy, game_state, unit, dest, DEBUG=DEBUG, use_probabilistic_sort=use_probabilistic_sort)
-    if tuple(pos) not in game_state.player_city_tile_xy_set and unit.fuel_potential == 0:
+    if tuple(pos) not in game_state.player_city_tile_xy_set:
         dest.add(tuple(pos))
     print(unit.id, unit.pos, pos, action)
     print()
