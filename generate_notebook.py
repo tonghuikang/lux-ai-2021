@@ -208,7 +208,7 @@ cells.append(nbf.new_code_cell("""\
 
 cells.append(nbf.new_code_cell("""\
 %%bash
-REF_DIR="/kaggle/input/lux-ai-published-agents/realneuralnetwork/lux-ai-with-il-decreasing-learning-rate/v3/*"
+REF_DIR="/kaggle/input/hungry-goose-alphageese-agents/111813_no_curfew/*"
 mkdir -p ref/  # imitation agent
 cp -r $REF_DIR ref/
 """, metadata={"_kg_hide-input": True}))
