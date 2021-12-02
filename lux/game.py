@@ -364,9 +364,9 @@ class Game:
             if self.turn >= 348:
                unit.use_rule_base = True
                continue
-            if unit.cargo.uranium >= 50 and (x,y) not in self.collectable_tiles_projected_xy_set:
-                unit.use_rule_base = True
-                continue
+            # if unit.cargo.uranium >= 50 and (x,y) not in self.collectable_tiles_projected_xy_set:
+            #     unit.use_rule_base = True
+            #     continue
             # if unit.cargo.coal >= 50:
             #     unit.use_rule_base = True
             #     continue
@@ -382,8 +382,8 @@ class Game:
         #     unit.use_rule_base = False
 
 
-        # places to avoid building
-        self.avoid_building_xy_set: Set = set()
+        # places to avoid building workers
+        self.avoid_building_workers_xy_set: Set = set()
         for x in self.x_iteration_order:
             for y in self.y_iteration_order:
                 if self.turn > 350:
@@ -397,12 +397,33 @@ class Game:
                     if not (0 <= xx < self.map_width and 0 <= yy < self.map_height):
                         continue
                     if 0 < self.wood_amount_matrix[yy,xx] < 400:
-                        self.avoid_building_xy_set.add((x,y),)
+                        self.avoid_building_workers_xy_set.add((x,y),)
                         break
 
 
+        # place and time to avoid building citytiles
+        self.avoid_building_citytiles_xy_set: Set = set()
+        for x in self.x_iteration_order:
+            for y in self.y_iteration_order:
+                if self.turn%40 != 30:
+                    continue
+                if self.distance_from_player_citytiles[y,x] <= 1:
+                    continue
+                if self.fuel_collection_rate[y,x] >= 23:
+                    continue
+                self.avoid_building_citytiles_xy_set.add((x,y), )
+
 
         self.repopulate_targets(missions)
+
+        self.player.units.sort(key=lambda unit: (
+            tuple(unit.pos) not in self.player_city_tile_xy_set,
+            self.distance_from_opponent_assets[unit.pos.y,unit.pos.x],
+            self.distance_from_resource_median[unit.pos.y,unit.pos.x],
+            unit.pos.x*self.x_order_coefficient,
+            unit.pos.y*self.y_order_coefficient,
+            unit.encode_tuple_for_cmp()))
+
 
         self.citytiles_with_new_units_xy_set: Set = set()
         self.heuristics_from_positions: Dict = dict()
@@ -928,7 +949,7 @@ class Game:
                                 if self.xy_to_resource_group_id.get_tiles((xx,yy),) == 0:
                                     self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
-        # consider resources two steps away as part of the cluster, if cluster size is not exceeded or map is large
+        # consider resources two steps away as part of the cluster
         for y in self.y_iteration_order:
             for x in self.x_iteration_order:
                 if (x,y) in self.collectable_tiles_projected_xy_set:
@@ -936,8 +957,8 @@ class Game:
                         for dy2,dx2 in self.dirs_dxdy[:-1]:
                             xx, yy = x+dx1+dx2, y+dy1+dy2
                             if 0 <= yy < self.map_height and 0 <= xx < self.map_width:
-                                if (xx,yy) in self.collectable_tiles_projected_xy_set:
-                                    if self.xy_to_resource_group_id.get_tiles((xx,yy)) <= 2:
+                                # if (xx,yy) in self.collectable_tiles_projected_xy_set:
+                                #     if self.xy_to_resource_group_id.get_tiles((xx,yy)) <= 2:
                                         self.xy_to_resource_group_id.union((x,y), (xx,yy))
 
         # absorb adjacent citytiles

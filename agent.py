@@ -8,7 +8,7 @@ from lux.game import Game, Missions, Observation
 
 from make_actions import make_city_actions, make_unit_missions, make_unit_actions, make_unit_actions_supplementary
 from make_annotations import annotate_game_state, annotate_missions, annotate_movements, filter_cell_annotations
-
+from imitation_agent import get_imitation_action
 
 game_state = Game()
 missions = Missions()

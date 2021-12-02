@@ -3,9 +3,6 @@
 import builtins as __builtin__
 from typing import Tuple, List, Set
 
-from numpy import False_
-from lux import game
-
 from lux.game import Game, Mission, Missions, Observation, cleanup_missions
 from lux.game_objects import Cargo, CityTile, Unit, City
 from lux.game_position import Position
@@ -53,7 +50,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
     def build_worker(city_tile: CityTile, annotation: str=""):
         nonlocal units_cnt
 
-        if tuple(city_tile.pos) in game_state.avoid_building_xy_set:
+        if tuple(city_tile.pos) in game_state.avoid_building_workers_xy_set:
             return
 
         action = city_tile.build_worker()
@@ -208,15 +205,6 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
     actions_ejections = []
 
     cluster_annotations = []
-
-    player.units.sort(key=lambda unit: (
-        tuple(unit.pos) not in game_state.player_city_tile_xy_set,
-        game_state.distance_from_opponent_assets[unit.pos.y,unit.pos.x],
-        game_state.distance_from_resource_median[unit.pos.y,unit.pos.x],
-        unit.pos.x*game_state.x_order_coefficient,
-        unit.pos.y*game_state.y_order_coefficient,
-        unit.encode_tuple_for_cmp()))
-
 
     # attempt to eject coal/uranium, unit is the one ejecting
     for unit in player.units:
