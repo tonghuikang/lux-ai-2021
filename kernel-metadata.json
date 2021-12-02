@@ -7,7 +7,7 @@
   "is_private": "true",
   "enable_gpu": "false",
   "enable_internet": "true",
-  "dataset_sources": ["huikang/lux-ai-published-agents"],
+  "dataset_sources": ["huikang/lux-ai-published-agents", "huikang/hungry-goose-alphageese-agents"],
   "competition_sources": ["c/lux-ai-2021"],
   "kernel_sources": ["shoheiazuma/lux-ai-with-imitation-learning", "huikang/lux-ai-imitation-learning"]
 }
