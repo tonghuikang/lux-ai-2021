@@ -97,7 +97,13 @@ We defer some game decisions to the imitation agent. The model.pth is stored rem
 cells.append(nbf.new_markdown_cell(preamble_kit))
 
 cells.append(nbf.new_code_cell("""\
-!wget https://tonghuikang.github.io/lux-ai-private-models/111813.pth -O model.pth\
+!wget https://tonghuikang.github.io/lux-ai-private-models/111813.pth -O model.pth
+# !wget https://tonghuikang.github.io/lux-ai-private-models/111514.pth -O model.pth
+# !wget https://tonghuikang.github.io/lux-ai-private-models/111912.pth -O model.pth
+# !wget https://tonghuikang.github.io/lux-ai-private-models/112523.pth -O model.pth
+# !wget https://tonghuikang.github.io/lux-ai-private-models/112613.pth -O model.pth
+# !wget https://tonghuikang.github.io/lux-ai-private-models/112620.pth -O model.pth
+# !wget https://tonghuikang.github.io/lux-ai-private-models/112818.pth -O model.pth
 """, metadata={"_kg_hide-input": True}))
 
 filenames = [
@@ -208,8 +214,8 @@ cells.append(nbf.new_code_cell("""\
 
 cells.append(nbf.new_code_cell("""\
 %%bash
-REF_DIR="/kaggle/input/lux-ai-published-agents/realneuralnetwork/lux-ai-with-il-decreasing-learning-rate/v3/*"
-# REF_DIR="/kaggle/input/hungry-goose-alphageese-agents/111813_no_curfew/*"
+# REF_DIR="/kaggle/input/lux-ai-published-agents/realneuralnetwork/lux-ai-with-il-decreasing-learning-rate/v3/*"
+REF_DIR="/kaggle/input/hungry-goose-alphageese-agents/111813_no_curfew/*"
 mkdir -p ref/  # imitation agent
 cp -r $REF_DIR ref/
 """, metadata={"_kg_hide-input": True}))

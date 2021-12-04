@@ -173,7 +173,8 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
     time_remaining = time_indented - (time.time() - game_state.compute_start_time)
     NUMBER_OF_TRANSFORMS = min(8, max(3, int(10 * time_remaining/time_indented)))
     print("NUMBER_OF_TRANSFORMS", NUMBER_OF_TRANSFORMS, time_remaining)
-    random.shuffle(transforms)
+    # random.shuffle(transforms)
+    # NUMBER_OF_TRANSFORMS = 8
 
     with torch.no_grad():
 
@@ -184,8 +185,7 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
         transformed_states = torch.from_numpy(transformed_states)
 
         p = model(transformed_states)
-
-        for (transform, inv_permute), policy in zip(transforms, p.squeeze(0).numpy()):
+        for (transform, inv_permute), policy in zip(transforms, p.numpy()):
             policy[:4] = policy[inv_permute]
             print(np.round(policy, 2))
             average_policy += policy
