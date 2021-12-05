@@ -588,7 +588,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_subsequent_plan=
             # if there is a citytile nearby already
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
                 unit, require_reachable=True, require_night=True, enforce_night=True, enforce_night_addn=10,
-                minimum_size=10, maximum_distance=unit.cargo.uranium//3)
+                minimum_size=10, maximum_distance=unit.cargo.uranium//3, DEBUG=DEBUG)
             if unit.pos != homing_position:
                 print("homing two", unit.id, unit.pos, homing_position)
                 mission = Mission(unit.id, homing_position, details="homing two", delays=homing_distance + 2)
@@ -603,7 +603,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_subsequent_plan=
             # if there is a citytile nearby already
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
                 unit, require_reachable=True, require_night=True, enforce_night=True,
-                minimum_size=3, maximum_distance=unit.cargo.uranium//3)
+                minimum_size=3, maximum_distance=unit.cargo.uranium//3, DEBUG=DEBUG)
             if unit.pos != homing_position:
                 print("homing one", unit.id, unit.pos, homing_position, homing_distance)
                 mission = Mission(unit.id, homing_position, details="homing", delays=homing_distance + 2)
@@ -636,7 +636,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_subsequent_plan=
 
         # homing mission
         if unit.get_cargo_space_used() > 0:
-            homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(unit)
+            homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(unit, DEBUG=DEBUG)
             print("homing mission", unit.id, unit.pos, "->", homing_position, homing_distance)
             mission = Mission(unit.id, homing_position, "", details="homing", delays=homing_distance + 2)
             missions.add(mission)

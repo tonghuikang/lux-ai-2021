@@ -1046,11 +1046,14 @@ class Game:
 
     def find_nearest_city_requiring_fuel(self, unit: Unit, require_reachable=True,
                                          require_night=False, prefer_night=True, enforce_night=False, enforce_night_addn=0,
-                                         minimum_size=0, maximum_distance=100):
+                                         minimum_size=0, maximum_distance=100, DEBUG=False):
         # require_night - require refuelling to bring the city through the night
         # prefer_night - prefer refuelling a city that could not survive the night
         # enforce_night - only refuel city that could not survive the night
         # enforce_night_addn - only refuel city that could not survive the night + enforce_night_addn
+        if DEBUG: print = __builtin__.print
+        else: print = lambda *args: None
+
         closest_distance_with_features: int = [0,10**9 + 7]
         closest_position = unit.pos
 

@@ -276,12 +276,12 @@ cells.append(nbf.new_code_cell("""\
 
 
 cells.append(nbf.new_code_cell("""\
-!timeout 1h bash ./evaluate_for_map_size.sh 24\
+!timeout 30m bash ./evaluate_for_map_size.sh 24\
 """, metadata={"_kg_hide-input": True}))
 
 
 cells.append(nbf.new_code_cell("""\
-!timeout 1h bash ./evaluate_for_map_size.sh 32\
+!timeout 30m bash ./evaluate_for_map_size.sh 32\
 """, metadata={"_kg_hide-input": True}))
 
 

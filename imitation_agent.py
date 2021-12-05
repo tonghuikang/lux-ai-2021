@@ -181,6 +181,7 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
     state = make_input(observation, unit.id)
 
     average_policy = np.zeros(6)
+    ranked_policy = np.zeros(6)
     NUMBER_OF_TRANSFORMS = game_state.number_of_transforms
 
     with torch.no_grad():
@@ -195,18 +196,23 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
         for (transform, inv_permute), policy in zip(transforms, p.numpy()):
             policy[:4] = policy[inv_permute]
             print(np.round(policy, 2))
+            # booster considering transfer actions are discarded
+            if tuple(unit.pos) in game_state.wood_exist_xy_set:
+                average_policy[-1] += 0.5
+
+            if game_state.player.researched_coal():
+                if tuple(unit.pos) in game_state.coal_exist_xy_set:
+                    average_policy[-1] += 1
+
+            if game_state.player.researched_uranium():
+                if tuple(unit.pos) in game_state.uranium_exist_xy_set:
+                    average_policy[-1] += 2
+
             average_policy += policy
+            ranked_policy += policy.argsort().argsort()
 
-    if tuple(unit.pos) in game_state.wood_exist_xy_set:
-        average_policy[-1] += 0.5*NUMBER_OF_TRANSFORMS
-
-    if game_state.player.researched_coal():
-        if tuple(unit.pos) in game_state.coal_exist_xy_set:
-            average_policy[-1] += 1*NUMBER_OF_TRANSFORMS
-
-    if game_state.player.researched_uranium():
-        if tuple(unit.pos) in game_state.uranium_exist_xy_set:
-            average_policy[-1] += 2*NUMBER_OF_TRANSFORMS
+    print(ranked_policy)
+    print(average_policy)
 
     action, pos, annotations = get_action(average_policy, game_state, unit, dest, DEBUG=DEBUG, use_probabilistic_sort=use_probabilistic_sort)
     if tuple(pos):
