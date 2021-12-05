@@ -370,7 +370,7 @@ class Game:
             # if unit.cargo.coal >= 50:
             #     unit.use_rule_base = True
             #     continue
-            if self.distance_from_collectable_resource_projected[y,x] > 8:
+            if self.distance_from_collectable_resource_projected[y,x] > 6:
                 unit.use_rule_base = True
                 continue
             if self.distance_from_wood_tile[y,x] < 4:
@@ -388,18 +388,24 @@ class Game:
             for y in self.y_iteration_order:
                 if self.turn > 350:
                     continue
+                if (x,y) not in self.player_city_tile_xy_set:
+                    continue
                 if not self.player.researched_uranium():
                     continue
                 if self.distance_from_opponent_assets[y,x] < 3:
+                    continue
+                if self.distance_from_player_units[y,x] >= 3:
+                    continue
+                if self.distance_from_player_units[y,x] <= 1 and self.distance_from_wood_tile[y,x] < 3:
+                    self.avoid_building_workers_xy_set.add((x,y),)
                     continue
                 for dx,dy in self.dirs_dxdy:
                     xx, yy = x+dx, y+dy
                     if not (0 <= xx < self.map_width and 0 <= yy < self.map_height):
                         continue
-                    if 0 < self.wood_amount_matrix[yy,xx] < 400:
+                    if 0 < self.wood_amount_matrix[yy,xx] < 500:
                         self.avoid_building_workers_xy_set.add((x,y),)
                         break
-
 
         # place and time to avoid building citytiles
         self.avoid_building_citytiles_xy_set: Set = set()
@@ -1049,10 +1055,12 @@ class Game:
                 continue
             if city.night_fuel_duration < self.night_turns_left:
                 for citytile in city.citytiles:
-                    distance_with_features = [0,self.retrieve_distance(unit.pos.x, unit.pos.y, citytile.pos.x, citytile.pos.y)]
+                    distance_with_features = [
+                        -len(bin(len(city.citytiles))),
+                        self.retrieve_distance(unit.pos.x, unit.pos.y, citytile.pos.x, citytile.pos.y)]
                     if require_reachable:
                         # the city should not die before the unit can reach
-                        if distance_with_features[1] * 2 >= self.turns_to_night + (city.night_fuel_duration // 10)*40 + city.night_fuel_duration:
+                        if distance_with_features[1] * 2 >= self.turns_to_night + (city.night_fuel_duration // 10)*40 + city.night_fuel_duration and False:
                             continue
                         # the unit should not die before the unit can reach the city
                         if distance_with_features[1] >= unit.travel_range:
@@ -1066,7 +1074,7 @@ class Game:
                     if prefer_night:
                         if city.fuel_needed_for_night > 0:
                             # prefer to save cities from the night
-                            distance_with_features[0] = -1
+                            distance_with_features[0] -= 2
                     if enforce_night:
                         if city.fuel_needed_for_night - enforce_night_addn * city.get_light_upkeep() < 0:
                             continue
@@ -1074,6 +1082,7 @@ class Game:
                         closest_distance_with_features = distance_with_features
                         closest_position = citytile.pos
 
+        print(closest_distance_with_features, closest_position)
         return closest_distance_with_features[1], closest_position
 
 
@@ -1134,9 +1143,10 @@ def cleanup_missions(game_state: Game, missions: Missions, DEBUG=False):
             continue
 
         if tuple(mission.target_position) in game_state.player_city_tile_xy_set:
-            del missions[unit_id]
-            print("delete mission you already build", unit_id, mission.target_position)
-            continue
+            if not mission.details == "homing":
+                del missions[unit_id]
+                print("delete mission you already build", unit_id, mission.target_position)
+                continue
 
         # if you are in a base, reconsider your mission
         if tuple(unit.pos) in game_state.player_city_tile_xy_set:

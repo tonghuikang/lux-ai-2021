@@ -198,7 +198,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
     return reset_missions, actions
 
 
-def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=False, DEBUG=False) -> Missions:
+def make_unit_missions(game_state: Game, missions: Missions, is_subsequent_plan=False, DEBUG=False) -> Missions:
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
@@ -210,18 +210,20 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
 
     # attempt to eject coal/uranium, unit is the one ejecting
     for unit in player.units:
+        if not is_subsequent_plan:
+            continue
         # unit is the one ejecting
         unit: Unit = unit
         if not unit.can_act():
             continue
 
-        # source unit has lots of fuel (full coal or 50 uranium)
-        if not (unit.cargo.uranium > 50 or unit.cargo.coal >= 100):
+        # source unit has plenty of uranium
+        if not (unit.cargo.uranium >= 30):
             continue
 
         # source unit not in empty tile
-        if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set:
-            continue
+        # if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set:
+        #     continue
 
         for adj_unit in player.units:
             # adj_unit is the one being ejected
@@ -233,7 +235,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
             if adj_unit.id == unit.id:
                 continue
 
-            # source unit is not beside target unit
+            # source unit is beside target unit
             if adj_unit.pos - unit.pos != 1:
                 continue
 
@@ -294,7 +296,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
         if not unit.can_act():
             continue
 
-        if is_initial_plan and game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] < 5:
+        if is_subsequent_plan and game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] < 5:
             continue
 
         # source unit not in empty tile
@@ -580,13 +582,9 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                     cluster_annotations.append(annotation)
                     continue
 
-
-        if is_initial_plan:
-            continue
-
         # preemptive homing mission
         if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set or game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 2:
-          if unit.cargo.uranium > 0:
+          if unit.cargo.uranium > 0 and False:
             # if there is a citytile nearby already
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
                 unit, require_reachable=True, require_night=True, enforce_night=True, enforce_night_addn=10,
@@ -601,7 +599,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
                 continue
 
         if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set or game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 2:
-          if unit.cargo.uranium > 0 and unit.cargo.get_most_common_resource() == "uranium":
+          if unit.cargo.uranium > 0 and unit.cargo.get_most_common_resource() == "uranium" and False:
             # if there is a citytile nearby already
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
                 unit, require_reachable=True, require_night=True, enforce_night=True,

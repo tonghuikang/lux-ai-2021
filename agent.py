@@ -23,17 +23,17 @@ def game_logic(game_state: Game, missions: Missions, observation: Observation, D
     censoring = game_state.is_symmetrical()
     state_annotations = annotate_game_state(game_state)
     reset_missions, actions_by_cities = make_city_actions(game_state, missions, DEBUG=DEBUG)
-    if reset_missions:
+    if reset_missions or not game_state.player.researched_coal():
         print("reset_missions")
         missions.reset_missions(game_state.player.research_points,
                                 game_state.convolve(game_state.coal_exist_matrix),
                                 game_state.convolve(game_state.uranium_exist_matrix))
         game_state.calculate_features(missions)
     actions_by_units_initial = make_unit_actions_supplementary(game_state, missions, observation, initial=True, DEBUG=DEBUG)
-    # cluster_annotations_and_ejections_pre = make_unit_missions(game_state, missions, is_initial_plan=True, DEBUG=DEBUG)
+    cluster_annotations_and_ejections_pre = make_unit_missions(game_state, missions, is_subsequent_plan=False, DEBUG=DEBUG)
     # missions, pre_actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
-    cluster_annotations_and_ejections = make_unit_missions(game_state, missions, DEBUG=DEBUG)
     missions, actions_by_units = make_unit_actions(game_state, missions, DEBUG=DEBUG)
+    cluster_annotations_and_ejections = make_unit_missions(game_state, missions, is_subsequent_plan=True, DEBUG=DEBUG)
     actions_by_units_supplementary = make_unit_actions_supplementary(game_state, missions, observation, DEBUG=DEBUG)
     movement_annotations = annotate_movements(game_state, actions_by_units)
     mission_annotations = annotate_missions(game_state, missions, DEBUG=DEBUG)
@@ -52,7 +52,7 @@ def game_logic(game_state: Game, missions: Missions, observation: Observation, D
     # actions += cluster_annotations_and_ejections + cluster_annotations_and_ejections_pre
     # actions += mission_annotations + movement_annotations + state_annotations
     actions = actions_by_cities + state_annotations + mission_annotations + actions_by_units_initial
-    actions += cluster_annotations_and_ejections + actions_by_units + actions_by_units_supplementary + movement_annotations
+    actions += cluster_annotations_and_ejections_pre + cluster_annotations_and_ejections + actions_by_units + actions_by_units_supplementary + movement_annotations
     actions = filter_cell_annotations(actions, game_state)
     if censoring: actions = []
     return actions, game_state, missions
