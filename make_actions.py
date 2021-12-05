@@ -981,32 +981,33 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
 
 
     # no cluster rule
-    for unit in player.units:
-        unit: Unit = unit
-        if not unit.can_act():
-            continue
-        if tuple(unit.pos) not in game_state.player_city_tile_xy_set:
-            continue
-        if game_state.player_units_matrix[unit.pos.y,unit.pos.x] > 1:
-            print("dispersing", unit.id, unit.pos)
-            make_random_move_to_city(unit, "FY")
-            make_random_move_to_void(unit, "KD")
+    # for unit in player.units:
+    #     unit: Unit = unit
+    #     if not unit.can_act():
+    #         continue
+    #     if tuple(unit.pos) not in game_state.player_city_tile_xy_set:
+    #         continue
+    #     if game_state.player_units_matrix[unit.pos.y,unit.pos.x] > 1:
+    #         print("dispersing", unit.id, unit.pos)
+    #         make_random_move_to_city(unit, "FY")
+    #         make_random_move_to_void(unit, "KD")
 
 
     # return to resource to mine
-    for unit in player.units:
-        unit: Unit = unit
-        if not unit.can_act():
-            continue
-        if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
-            continue
-        if unit.cargo.uranium > 0:
-            continue
-        make_random_move_to_collectable(unit, "KC")
+    # for unit in player.units:
+    #     unit: Unit = unit
+    #     if not unit.can_act():
+    #         continue
+    #     if tuple(unit.pos) in game_state.convolved_collectable_tiles_xy_set:
+    #         continue
+    #     if unit.cargo.uranium > 0:
+    #         continue
+    #     make_random_move_to_collectable(unit, "KC")
 
 
     # dump it into a nearby citytile
     for unit in player.units:
+        break
         unit: Unit = unit
         if not unit.can_act():
             continue
