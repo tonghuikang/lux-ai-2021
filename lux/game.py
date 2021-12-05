@@ -382,6 +382,40 @@ class Game:
             if unit.can_act() and unit.use_rule_base:
                 self.player_unit_can_act_count += 1
 
+        self.sinking_cities_xy_set = set()
+        for city in self.player.cities.values():
+            if self.is_day_time:
+                continue
+
+            collection_rates = []
+            adjacent_and_residing_units = set()
+            for citytile in city.citytiles:
+                collection_rates.append(self.fuel_collection_rate[citytile.pos.y, citytile.pos.x])
+                for dx,dy in self.dirs_dxdy:
+                    xx, yy = citytile.pos.x+dx, citytile.pos.y+dy
+                    if (xx, yy) in self.player.units_by_xy:
+                        adj_unit = self.player.units_by_xy[xx,yy]
+                        if adj_unit.can_act():
+                            adjacent_and_residing_units.add(adj_unit.id)
+            collection_rates.sort(reverse=True)
+
+            maximum_collection = sum(collection_rates[:len(adjacent_and_residing_units)])
+            maximum_injection = 0
+            for adj_unit_id in adjacent_and_residing_units:
+                adj_unit = self.player.units_by_id[adj_unit_id]
+                maximum_injection += adj_unit.fuel_potential
+
+            if city.fuel + maximum_collection + maximum_injection < city.get_light_upkeep():
+                for citytile in city.citytiles:
+                    self.sinking_cities_xy_set.add((citytile.pos.x, citytile.pos.y))
+                    self.occupied_xy_set.add((citytile.pos.x, citytile.pos.y))
+
+        # if there are cities beside coal or uranium, stop producing units and do research, and encourage building cities
+        self.worker_production_ban = False
+        for city in self.player.cities.values():
+            city_beside_coal = False
+            city_beside_uranium = False
+
         # 1 transform 10 ms
         # 4 transform 25 ms
         # 8 transform 45 ms

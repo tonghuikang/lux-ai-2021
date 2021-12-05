@@ -156,6 +156,8 @@ def get_action(policy, game_state: Game, unit: Unit, dest: Set, DEBUG=False, use
                 if tuple(unit.pos) in game_state.avoid_building_citytiles_xy_set:
                     print("avoid building", unit.pos, unit.id)
                     continue
+            if tuple(pos) in game_state.sinking_cities_xy_set:
+                continue
             if unit.fuel_potential == 0 and game_state.turn %40 >= 30:
                 if game_state.fuel_collection_rate[pos.y, pos.x] == 0 and tuple(pos) not in game_state.player_city_tile_xy_set:
                     continue
