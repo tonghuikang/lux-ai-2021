@@ -377,6 +377,18 @@ class Game:
                 unit.use_rule_base = False
                 continue
 
+        self.player_unit_can_act_count = 1
+        for unit in self.player.units:
+            if unit.can_act() and unit.use_rule_base:
+                self.player_unit_can_act_count += 1
+
+        # 1 transform 10 ms
+        # 4 transform 25 ms
+        # 8 transform 45 ms
+
+        allowed_transforms = 1500//5
+        self.number_of_transforms = max(1, min(8, allowed_transforms//self.player_unit_can_act_count))
+
         # # gating
         # for unit in self.player.units:
         #     unit.use_rule_base = False

@@ -18,6 +18,6 @@ rm -rf replays
 # rsync -a --exclude="*.pkl" --exclude="*.pyc" --"exclude=*.log" --exclude=replays/ . hkmac@35.221.209.96:v4
 
 # play game until you lose, and then visualise
-while GFOOTBALL_DATA_DIR=C lux-ai-2021 --loglevel 1 --maxtime 30000 --height 24 --width 24 --out replay.json  ./main.py ../i13/main.py | tee "$(tty)" | grep -q 'rank: 1, agentID: 0'; do
+while GFOOTBALL_DATA_DIR=C lux-ai-2021 --loglevel 1 --maxtime 30000 --height 12 --width 12 --out replay.json  ./main.py ../i13/main.py | tee "$(tty)" | grep -q 'rank: 1, agentID: 0'; do
     cp replay.json replay_old.json
 done; lux-ai-vis replay.json

@@ -174,17 +174,14 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
+    start_time = time.time()
+
     # Worker Actions
     dest = game_state.occupied_xy_set
     state = make_input(observation, unit.id)
 
     average_policy = np.zeros(6)
-
-    time_indented = 2.0
-    time_remaining = time_indented - (time.time() - game_state.compute_start_time)
-    NUMBER_OF_TRANSFORMS = min(8, max(3, int(10 * time_remaining/time_indented)))
-    print("NUMBER_OF_TRANSFORMS", NUMBER_OF_TRANSFORMS, time_remaining)
-    # NUMBER_OF_TRANSFORMS = 1
+    NUMBER_OF_TRANSFORMS = game_state.number_of_transforms
 
     with torch.no_grad():
 
@@ -214,7 +211,7 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
     action, pos, annotations = get_action(average_policy, game_state, unit, dest, DEBUG=DEBUG, use_probabilistic_sort=use_probabilistic_sort)
     if tuple(pos):
         dest.add(tuple(pos))
-    print(unit.id, unit.pos, pos, action)
+    print(unit.id, unit.pos, pos, action, time.time() - start_time)
     print()
 
     return [action] + annotations

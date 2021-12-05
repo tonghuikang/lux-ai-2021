@@ -252,7 +252,7 @@ cells.append(nbf.new_code_cell("""\
 %%writefile evaluate_for_map_size.sh
 
 MAP_SIZE=$1
-for run in {10000001..10000200};
+for run in {20000001..20000200};
     do GFOOTBALL_DATA_DIR=C lux-ai-2021 --seed $run --loglevel 1 --maxtime 10000 \\
     --height $MAP_SIZE --width $MAP_SIZE --storeReplay=false --storeLogs=false \\
     ./main.py ./ref/main.py >> logs-$MAP_SIZE.txt;
@@ -276,12 +276,12 @@ cells.append(nbf.new_code_cell("""\
 
 
 cells.append(nbf.new_code_cell("""\
-!timeout 2h bash ./evaluate_for_map_size.sh 24\
+!timeout 1h bash ./evaluate_for_map_size.sh 24\
 """, metadata={"_kg_hide-input": True}))
 
 
 cells.append(nbf.new_code_cell("""\
-!timeout 4h bash ./evaluate_for_map_size.sh 32\
+!timeout 1h bash ./evaluate_for_map_size.sh 32\
 """, metadata={"_kg_hide-input": True}))
 
 
