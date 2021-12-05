@@ -364,9 +364,9 @@ class Game:
             if self.turn >= 348:
                unit.use_rule_base = True
                continue
-            # if unit.cargo.uranium >= 50 and (x,y) not in self.collectable_tiles_projected_xy_set:
-            #     unit.use_rule_base = True
-            #     continue
+            if unit.cargo.uranium > 20 and (x,y) not in self.convolved_collectable_tiles_xy_set:
+                unit.use_rule_base = True
+                continue
             # if unit.cargo.coal >= 50:
             #     unit.use_rule_base = True
             #     continue

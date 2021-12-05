@@ -101,7 +101,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
     city_tiles.sort(key=lambda city_tile:(
         - calculate_city_cluster_bonus(city_tile.pos),
         - max(1, game_state.distance_from_player_units[city_tile.pos.y,city_tile.pos.x])  # max because we assume that it will leave
-        + max(3, game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x] / 2),
+        + max(0, game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x] / 2),
         - game_state.distance_from_collectable_resource[city_tile.pos.y,city_tile.pos.x],
         - game_state.distance_from_edge[city_tile.pos.y,city_tile.pos.x],
         city_tile.pos.x * game_state.x_order_coefficient,
@@ -130,6 +130,8 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         nearest_resource_distance = game_state.distance_from_collectable_resource[city_tile.pos.y, city_tile.pos.x]
         travel_range_emptyhanded = 1 + game_state.turns_to_night // GAME_CONSTANTS["PARAMETERS"]["UNIT_ACTION_COOLDOWN"]["WORKER"]
         resource_in_travel_range = nearest_resource_distance <= travel_range_emptyhanded
+        if game_state.player.researched_uranium():
+            resource_in_travel_range = True
 
         cluster_leader = game_state.xy_to_resource_group_id.find(tuple(city_tile.pos))
         cluster_unit_limit_exceeded = \
@@ -144,7 +146,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         # allow cities to build workers even if cluster_unit_limit_exceeded
         # because uranium is researched or scouting for advanced resources
         # require resource_in_travel_range
-        if player.researched_uranium() or (units_cnt <= units_cap//4 and game_state.turn%40 < 10):
+        if player.researched_uranium() or (units_cnt <= units_cap//4):
             if resource_in_travel_range:
                 # but do not build workers beside wood to conserve wood
                 if game_state.wood_side_matrix[city_tile.pos.y, city_tile.pos.x] == 0:
@@ -470,7 +472,7 @@ def make_unit_missions(game_state: Game, missions: Missions, is_initial_plan=Fal
 
 
         # you consider building a citytile only if you are currently targeting the cluster you are in
-        if targeting_current_cluster:
+        if targeting_current_cluster and False:
 
             def get_best_eligible_tile(xy_set: Set) -> Tuple[Position, int]:
 
@@ -800,6 +802,7 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
         if (xx,yy) not in game_state.occupied_xy_set:
             if (xx,yy) not in game_state.player_city_tile_xy_set:
                 game_state.occupied_xy_set.add((xx,yy))
+            print("make_random_move_to_void", unit.id, unit.pos)
             action = unit.move(direction)
             actions.append(action)
             if annotation:
@@ -813,6 +816,8 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
             return
         for direction,(dx,dy) in zip(game_state.dirs, game_state.dirs_dxdy[:-1]):
             xx,yy = unit.pos.x + dx, unit.pos.y + dy
+            if (xx,yy) in game_state.player_city_tile_xy_set:
+                continue
             if (xx,yy) not in game_state.occupied_xy_set:
                 if game_state.distance_from_preferred_median[yy,xx] < game_state.distance_from_preferred_median[unit.pos.y,unit.pos.x]:
                     # attempt to collide together and build additional citytile
@@ -823,6 +828,7 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
         if (xx,yy) not in game_state.occupied_xy_set:
             if (xx,yy) not in game_state.player_city_tile_xy_set:
                 game_state.occupied_xy_set.add((xx,yy))
+            print("make_random_move_to_center", unit.id, unit.pos)
             action = unit.move(direction)
             actions.append(action)
             if annotation:
@@ -847,6 +853,7 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
         if (xx,yy) not in game_state.occupied_xy_set:
             if (xx,yy) not in game_state.player_city_tile_xy_set:
                 game_state.occupied_xy_set.add((xx,yy))
+            print("make_random_move_to_collectable", unit.id, unit.pos)
             action = unit.move(direction)
             actions.append(action)
             if annotation:
@@ -870,6 +877,7 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
         if (xx,yy) not in game_state.occupied_xy_set:
             if (xx,yy) not in game_state.player_city_tile_xy_set:
                 game_state.occupied_xy_set.add((xx,yy))
+            print("make_random_move_to_city", unit.id, unit.pos)
             action = unit.move(direction)
             actions.append(action)
             if annotation:
@@ -1030,9 +1038,9 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
         unit: Unit = unit
         if not unit.can_act():
             continue
-        if unit.get_cargo_space_left() == 0 and unit.is_worker() and game_state.map_resource_count < 500:
-            actions.append(unit.build_city())
-            continue
+        # if unit.get_cargo_space_left() == 0 and unit.is_worker() and game_state.map_resource_count < 500:
+        #     actions.append(unit.build_city())
+        #     continue
         if unit.get_cargo_space_used() == 0:
             continue
         make_random_transfer(unit, "KT", True, game_state.buildable_tile_xy_set)

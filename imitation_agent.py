@@ -9,6 +9,8 @@ from lux.game import Game, Observation, Unit
 import builtins as __builtin__
 import random
 
+random.seed(42)
+
 
 path = os.path.dirname(os.path.realpath(__file__))
 model = torch.jit.load(f'{path}/model.pth')
@@ -117,6 +119,8 @@ transforms = [
     (lambda x: np.rot90(x,              axes=(1, 2),    k=3).copy(),  [4,3,1,2]),
     (lambda x: np.rot90(np.flip(x,1),   axes=(1, 2),    k=3).copy(),  [3,4,1,2]),
 ]
+random.shuffle(transforms)
+
 
 def invert_permute(permute):
     inv_permute = [-1 for _ in range(4)]
@@ -145,11 +149,18 @@ def get_action(policy, game_state: Game, unit: Unit, dest: Set, DEBUG=False, use
         pos = unit.pos.translate(act[-1], 1) or unit.pos
         if (tuple(pos) not in dest) or (unit.pos == pos) or (unit.fuel_potential > 0 and tuple(pos) in game_state.player_city_tile_xy_set):
             if act[0] == 'build_city':
+                if unit.get_cargo_space_used() != 100:
+                    continue
                 if tuple(unit.pos) not in game_state.buildable_tile_xy_set:
                     continue
                 if tuple(unit.pos) in game_state.avoid_building_citytiles_xy_set:
                     print("avoid building", unit.pos, unit.id)
                     continue
+            if unit.fuel_potential == 0 and game_state.turn %40 > 31:
+                if game_state.fuel_collection_rate[pos.y, pos.x] == 0 and tuple(pos) not in game_state.player_city_tile_xy_set:
+                    continue
+            if unit.fuel_potential > 0 and game_state.matrix_player_cities_nights_of_fuel_required_for_game[pos.y, pos.x] < -20:
+                continue
             if act[0] == 'build_city' or unit.pos != pos:
                 unit.cooldown += 2
             if act[0] != ('move', 'c'):
@@ -173,8 +184,7 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
     time_remaining = time_indented - (time.time() - game_state.compute_start_time)
     NUMBER_OF_TRANSFORMS = min(8, max(3, int(10 * time_remaining/time_indented)))
     print("NUMBER_OF_TRANSFORMS", NUMBER_OF_TRANSFORMS, time_remaining)
-    # random.shuffle(transforms)
-    # NUMBER_OF_TRANSFORMS = 8
+    # NUMBER_OF_TRANSFORMS = 1
 
     with torch.no_grad():
 
@@ -190,9 +200,19 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
             print(np.round(policy, 2))
             average_policy += policy
 
+    if tuple(unit.pos) in game_state.wood_exist_xy_set:
+        average_policy[-1] += 0.5*NUMBER_OF_TRANSFORMS
+
+    if game_state.player.researched_coal():
+        if tuple(unit.pos) in game_state.coal_exist_xy_set:
+            average_policy[-1] += 1*NUMBER_OF_TRANSFORMS
+
+    if game_state.player.researched_uranium():
+        if tuple(unit.pos) in game_state.uranium_exist_xy_set:
+            average_policy[-1] += 2*NUMBER_OF_TRANSFORMS
 
     action, pos, annotations = get_action(average_policy, game_state, unit, dest, DEBUG=DEBUG, use_probabilistic_sort=use_probabilistic_sort)
-    if tuple(pos) not in game_state.player_city_tile_xy_set:
+    if tuple(pos):
         dest.add(tuple(pos))
     print(unit.id, unit.pos, pos, action)
     print()
