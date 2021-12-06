@@ -101,8 +101,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
     city_tiles.sort(key=lambda city_tile:(
         - calculate_city_cluster_bonus(city_tile.pos),
         - max(1, game_state.distance_from_player_units[city_tile.pos.y,city_tile.pos.x])  # max because we assume that it will leave
-        + max(0, game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x] / 2)
-            * (1 + int(game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x] > 5)),
+        + max(0, game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x] * 3/2),
         + game_state.player_units_matrix[city_tile.pos.y,city_tile.pos.x],
         - game_state.distance_from_collectable_resource[city_tile.pos.y,city_tile.pos.x],
         - game_state.distance_from_edge[city_tile.pos.y,city_tile.pos.x],
@@ -713,6 +712,7 @@ def make_unit_actions(game_state: Game, missions: Missions, DEBUG=False) -> Tupl
         # attempt to move the unit
         direction, pos = attempt_direction_to(game_state, unit, mission.target_position,
                                          avoid_opponent_units=("homing" in mission.details),
+                                         use_exact=("homing" in mission.details),
                                          DEBUG=DEBUG)
         if direction == "c":
             continue
@@ -1054,7 +1054,7 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
         # if unit.get_cargo_space_left() == 0 and unit.is_worker() and game_state.map_resource_count < 500:
         #     actions.append(unit.build_city())
         #     continue
-        if unit.get_cargo_space_used() == 0:
+        if unit.get_cargo_space_used() < 10:
             continue
         make_random_transfer(unit, "KT", True, game_state.buildable_tile_xy_set)
         if tuple(unit.pos) in game_state.buildable_tile_xy_set:
@@ -1096,7 +1096,7 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
     return actions
 
 
-def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, avoid_opponent_units=False, DEBUG=False) -> DIRECTIONS:
+def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, avoid_opponent_units=False, use_exact=False, DEBUG=False) -> DIRECTIONS:
     if DEBUG: print = __builtin__.print
     else: print = lambda *args: None
 
@@ -1160,7 +1160,7 @@ def attempt_direction_to(game_state: Game, unit: Unit, target_pos: Position, avo
                     cost[0] = 1
 
         # path distance as main differentiator
-        path_dist = game_state.retrieve_distance(newpos.x, newpos.y, target_pos.x, target_pos.y)
+        path_dist = game_state.retrieve_distance(newpos.x, newpos.y, target_pos.x, target_pos.y, use_exact=use_exact)
         cost[1] = path_dist
 
         # manhattan distance to tie break

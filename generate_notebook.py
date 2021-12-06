@@ -98,12 +98,12 @@ cells.append(nbf.new_markdown_cell(preamble_kit))
 
 cells.append(nbf.new_code_cell("""\
 !wget https://tonghuikang.github.io/lux-ai-private-models/111813.pth -O model.pth
-# !wget https://tonghuikang.github.io/lux-ai-private-models/111514.pth -O model.pth
-# !wget https://tonghuikang.github.io/lux-ai-private-models/111912.pth -O model.pth
-# !wget https://tonghuikang.github.io/lux-ai-private-models/112523.pth -O model.pth
-# !wget https://tonghuikang.github.io/lux-ai-private-models/112613.pth -O model.pth
-# !wget https://tonghuikang.github.io/lux-ai-private-models/112620.pth -O model.pth
-# !wget https://tonghuikang.github.io/lux-ai-private-models/112818.pth -O model.pth
+!wget https://tonghuikang.github.io/lux-ai-private-models/111514.pth -O model.pth
+!wget https://tonghuikang.github.io/lux-ai-private-models/111912.pth -O model.pth
+!wget https://tonghuikang.github.io/lux-ai-private-models/112523.pth -O model.pth
+!wget https://tonghuikang.github.io/lux-ai-private-models/112613.pth -O model.pth
+!wget https://tonghuikang.github.io/lux-ai-private-models/112620.pth -O model.pth
+!wget https://tonghuikang.github.io/lux-ai-private-models/112818.pth -O model.pth
 """, metadata={"_kg_hide-input": True}))
 
 filenames = [
@@ -252,7 +252,7 @@ cells.append(nbf.new_code_cell("""\
 %%writefile evaluate_for_map_size.sh
 
 MAP_SIZE=$1
-for run in {20000001..20000200};
+for run in {30000001..30000200};
     do GFOOTBALL_DATA_DIR=C lux-ai-2021 --seed $run --loglevel 1 --maxtime 10000 \\
     --height $MAP_SIZE --width $MAP_SIZE --storeReplay=false --storeLogs=false \\
     ./main.py ./ref/main.py >> logs-$MAP_SIZE.txt;
@@ -271,7 +271,7 @@ cells.append(nbf.new_code_cell("""\
 
 
 cells.append(nbf.new_code_cell("""\
-!timeout 1h bash ./evaluate_for_map_size.sh 16\
+!timeout 1.5h bash ./evaluate_for_map_size.sh 16\
 """, metadata={"_kg_hide-input": True}))
 
 

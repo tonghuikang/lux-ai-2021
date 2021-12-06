@@ -361,6 +361,9 @@ class Game:
         # when to use rules
         for unit in self.player.units:
             x,y = tuple(unit.pos)
+            if self.player.researched_uranium() and unit.cargo.wood == 100:
+                unit.use_rule_base = False
+                continue
             if self.turn >= 348:
                unit.use_rule_base = True
                continue
@@ -822,56 +825,51 @@ class Game:
         # avoid blocked places as much as possible
         self.positions_to_calculate_distances_from = set()
 
-        for unit in self.player.units:
-            x,y = tuple(unit.pos)
-            self.positions_to_calculate_distances_from.add((x,y),)
-            if unit.can_act():
-                self.positions_to_calculate_distances_from.add((x+1,y),)
-                self.positions_to_calculate_distances_from.add((x-1,y),)
-                self.positions_to_calculate_distances_from.add((x,y+1),)
-                self.positions_to_calculate_distances_from.add((x,y-1),)
-
-        # self.distance_matrix = np.full((self.map_height,self.map_width,self.map_height,self.map_width), 1001)
-
-        # for sy in range(self.map_height):
-        #     for sx in range(self.map_width):
-        #         if (sx,sy) not in self.positions_to_calculate_distances_from:
-        #             continue
-        #         if time.time() > self.compute_start_time + 2:
-        #             continue
-        #         blockade_multiplier_value_for_syx = blockade_multiplier_value
-
-        #         start_pos = (sx,sy)
-        #         xy_processed = set()
-
-        #         d4 = self.dirs_dxdy[:-1]
-        #         heap = [(0, start_pos),]
-        #         while heap:
-        #             curdist, (x,y) = heapq.heappop(heap)
-        #             if (x,y) in xy_processed:
-        #                 continue
-        #             xy_processed.add((x,y),)
-        #             self.distance_matrix[sy,sx,y,x] = curdist
-
-        #             for dx,dy in d4:
-        #                 xx,yy = x+dx,y+dy
-        #                 if not (0 <= xx < self.map_width and 0 <= yy < self.map_height):
-        #                     continue
-        #                 if (xx,yy) in xy_processed:
-        #                     continue
-
-        #                 edge_length = 1
-        #                 if (xx,yy) in self.occupied_xy_set:
-        #                     edge_length = blockade_multiplier_value_for_syx
-        #                 if (xx,yy) in self.opponent_city_tile_xy_set:
-        #                     edge_length = blockade_multiplier_value_for_syx * 50
-        #                 if self.matrix_player_cities_nights_of_fuel_required_for_game[yy,xx] < 0:
-        #                     edge_length = blockade_multiplier_value_for_syx * 50
-
-        #                 heapq.heappush(heap, (curdist + edge_length, (xx,yy)))
+        self.compute_distance_to_target_cache = {}
 
 
-    def retrieve_distance(self, sx, sy, ex, ey):
+    def compute_distance_to_target(self,sx,sy):
+        if (sx,sy) in self.compute_distance_to_target_cache:
+            return self.compute_distance_to_target_cache[sx,sy]
+
+        start_pos = (sx,sy)
+        xy_processed = set()
+        distance_to_target = {}
+
+        d4 = self.dirs_dxdy[:-1]
+        heap = [(0, start_pos),]
+        while heap:
+            curdist, (x,y) = heapq.heappop(heap)
+            if (x,y) in xy_processed:
+                continue
+            xy_processed.add((x,y),)
+            distance_to_target[x,y] = curdist
+
+            for dx,dy in d4:
+                xx,yy = x+dx,y+dy
+                if not (0 <= xx < self.map_width and 0 <= yy < self.map_height):
+                    continue
+                if (xx,yy) in xy_processed:
+                    continue
+
+                edge_length = 1
+                if (xx,yy) in self.occupied_xy_set:
+                    edge_length = 10
+                if (xx,yy) in self.opponent_city_tile_xy_set:
+                    edge_length = 50
+                if self.matrix_player_cities_nights_of_fuel_required_for_game[yy,xx] < 0:
+                    edge_length = 500
+
+                heapq.heappush(heap, (curdist + edge_length, (xx,yy)))
+
+        self.compute_distance_to_target_cache[sx,sy] = distance_to_target
+        return distance_to_target
+
+
+    def retrieve_distance(self, sx, sy, ex, ey, use_exact=False):
+        if use_exact:
+            return self.compute_distance_to_target(ex, ey)[sx,sy]
+
         return abs(sx-ex) + abs(sy-ey)
 
 
