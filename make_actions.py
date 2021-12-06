@@ -25,6 +25,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
     game_state.repopulate_targets(missions)
 
     units_cap = sum([len(x.citytiles) for x in player.cities.values()])
+    units_cap = min(80, units_cap)
     units_cnt = len(player.units)  # current number of units
 
     actions: List[str] = []

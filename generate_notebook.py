@@ -98,12 +98,12 @@ cells.append(nbf.new_markdown_cell(preamble_kit))
 
 cells.append(nbf.new_code_cell("""\
 !wget https://tonghuikang.github.io/lux-ai-private-models/111813.pth -O model.pth
-!wget https://tonghuikang.github.io/lux-ai-private-models/111514.pth -O model.pth
-!wget https://tonghuikang.github.io/lux-ai-private-models/111912.pth -O model.pth
-!wget https://tonghuikang.github.io/lux-ai-private-models/112523.pth -O model.pth
-!wget https://tonghuikang.github.io/lux-ai-private-models/112613.pth -O model.pth
-!wget https://tonghuikang.github.io/lux-ai-private-models/112620.pth -O model.pth
-!wget https://tonghuikang.github.io/lux-ai-private-models/112818.pth -O model.pth
+# !wget https://tonghuikang.github.io/lux-ai-private-models/111514.pth -O model.pth
+# !wget https://tonghuikang.github.io/lux-ai-private-models/111912.pth -O model.pth
+# !wget https://tonghuikang.github.io/lux-ai-private-models/112523.pth -O model.pth
+# !wget https://tonghuikang.github.io/lux-ai-private-models/112613.pth -O model.pth
+# !wget https://tonghuikang.github.io/lux-ai-private-models/112620.pth -O model.pth
+# !wget https://tonghuikang.github.io/lux-ai-private-models/112818.pth -O model.pth
 """, metadata={"_kg_hide-input": True}))
 
 filenames = [
@@ -266,7 +266,7 @@ cells.append(nbf.new_code_cell("""\
 
 
 cells.append(nbf.new_code_cell("""\
-!timeout 1h bash ./evaluate_for_map_size.sh 12\
+!timeout 0.5h bash ./evaluate_for_map_size.sh 12\
 """, metadata={"_kg_hide-input": True}))
 
 
