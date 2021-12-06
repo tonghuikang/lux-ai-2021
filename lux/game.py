@@ -469,6 +469,7 @@ class Game:
         self.repopulate_targets(missions)
 
         self.player.units.sort(key=lambda unit: (
+            unit.get_cargo_space_left() > 0,
             tuple(unit.pos) not in self.player_city_tile_xy_set,
             self.distance_from_opponent_assets[unit.pos.y,unit.pos.x],
             self.distance_from_resource_median[unit.pos.y,unit.pos.x],

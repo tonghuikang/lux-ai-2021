@@ -107,16 +107,17 @@ def filter_cell_annotations(actions: List[str], game_state: Game):
     annotated_cell_xy_set = set()
     filtered_actions: List[str] = []
     for action in actions:
+        if action[:2] == "m " and action[-2:] == ' c':
+            continue
         instruction, *info = action.split()
         if instruction == "dt":
             if (info[0],info[1]) in annotated_cell_xy_set:
                 continue
             annotated_cell_xy_set.add((info[0],info[1]))
-        if action[:2] == "m " and action[-2:] == ' c':
-            continue
         filtered_actions.append(action)
     for unit in game_state.player.units:
         if unit.cooldown < 1:
             no_action = unit.move("c")
             filtered_actions.append(no_action)
+            filtered_actions.append(annotate.text(unit.pos.x, unit.pos.y, "🟤"))
     return filtered_actions

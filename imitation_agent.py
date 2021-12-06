@@ -158,6 +158,8 @@ def get_action(policy, game_state: Game, unit: Unit, dest: Set, DEBUG=False, use
                     continue
             if tuple(pos) in game_state.sinking_cities_xy_set:
                 continue
+            if tuple(pos) in game_state.opponent_city_tile_xy_set:
+                continue
             if unit.fuel_potential == 0 and game_state.turn %40 >= 30:
                 if game_state.fuel_collection_rate[pos.y, pos.x] == 0 and tuple(pos) not in game_state.player_city_tile_xy_set:
                     continue
@@ -185,6 +187,7 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
     average_policy = np.zeros(6)
     ranked_policy = np.zeros(6)
     NUMBER_OF_TRANSFORMS = game_state.number_of_transforms
+    # NUMBER_OF_TRANSFORMS = 1
 
     with torch.no_grad():
 
@@ -200,17 +203,20 @@ def get_imitation_action(observation: Observation, game_state: Game, unit: Unit,
             print(np.round(policy, 2))
             # booster considering transfer actions are discarded
             if tuple(unit.pos) in game_state.wood_exist_xy_set:
-                average_policy[-1] += 0.5
+                policy[-1] += 0.25
 
-            if game_state.player.researched_coal():
+            if game_state.player.researched_coal_projected():
                 if tuple(unit.pos) in game_state.coal_exist_xy_set:
-                    average_policy[-1] += 1
+                    policy[-1] += 0.75
 
             if game_state.player.researched_uranium():
-                if tuple(unit.pos) in game_state.uranium_exist_xy_set:
-                    average_policy[-1] += 2
+                policy[-1] += game_state.convolved_uranium_exist_matrix[unit.pos.y, unit.pos.x]
 
-            average_policy += policy
+            if game_state.player.researched_uranium_projected():
+                if tuple(unit.pos) in game_state.uranium_exist_xy_set:
+                    policy[-1] += 1.25
+
+            average_policy += policy/NUMBER_OF_TRANSFORMS
             ranked_policy += policy.argsort().argsort()
 
     print(ranked_policy)

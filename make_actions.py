@@ -102,6 +102,7 @@ def make_city_actions(game_state: Game, missions: Missions, DEBUG=False) -> List
         - calculate_city_cluster_bonus(city_tile.pos),
         - max(1, game_state.distance_from_player_units[city_tile.pos.y,city_tile.pos.x])  # max because we assume that it will leave
         + max(0, game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x] / 2)
+            * (1 + int(game_state.distance_from_opponent_assets[city_tile.pos.y,city_tile.pos.x] > 5)),
         + game_state.player_units_matrix[city_tile.pos.y,city_tile.pos.x],
         - game_state.distance_from_collectable_resource[city_tile.pos.y,city_tile.pos.x],
         - game_state.distance_from_edge[city_tile.pos.y,city_tile.pos.x],
@@ -594,13 +595,24 @@ def make_unit_missions(game_state: Game, missions: Missions, is_subsequent_plan=
                     cluster_annotations.append(annotation)
                     continue
 
+        if unit.id in missions:
+            mission: Mission = missions[unit.id]
+            if mission.target_position == unit.pos:
+                # take action and not make missions if already at position
+                continue
+
+        if unit.id in missions:
+            # the mission will be recaluated if the unit fails to make a move after make_unit_actions
+            continue
+
         # preemptive homing mission
-        if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set or game_state.distance_from_opponent_assets[unit.pos.y, unit.pos.x] > 2:
-          if unit.cargo.uranium > 0 and False:
+        if tuple(unit.pos) not in game_state.convolved_collectable_tiles_xy_set:
+          if unit.fuel_potential > 230:
             # if there is a citytile nearby already
+            print("consider homing two", unit.id)
             homing_distance, homing_position = game_state.find_nearest_city_requiring_fuel(
-                unit, require_reachable=True, require_night=True, enforce_night=True, enforce_night_addn=10,
-                minimum_size=10, maximum_distance=unit.cargo.uranium//3, DEBUG=DEBUG)
+                unit, require_reachable=True, enforce_night=False,
+                minimum_size=3, maximum_distance=(unit.cargo.uranium + unit.cargo.coal)//3, DEBUG=DEBUG)
             if unit.pos != homing_position:
                 print("homing two", unit.id, unit.pos, homing_position)
                 mission = Mission(unit.id, homing_position, details="homing two", delays=homing_distance + 2)
@@ -624,16 +636,6 @@ def make_unit_missions(game_state: Game, missions: Missions, is_subsequent_plan=
                 annotation = annotate.text(unit.pos.x, unit.pos.y, "H1")
                 cluster_annotations.append(annotation)
                 continue
-
-        if unit.id in missions:
-            mission: Mission = missions[unit.id]
-            if mission.target_position == unit.pos:
-                # take action and not make missions if already at position
-                continue
-
-        if unit.id in missions:
-            # the mission will be recaluated if the unit fails to make a move after make_unit_actions
-            continue
 
         best_position, best_cell_value, cluster_annotation = find_best_cluster(game_state, unit, DEBUG=DEBUG)
         print(unit.id, best_position, best_cell_value)
@@ -838,7 +840,7 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
         if (xx,yy) not in game_state.occupied_xy_set:
             if (xx,yy) not in game_state.player_city_tile_xy_set:
                 game_state.occupied_xy_set.add((xx,yy))
-            print("make_random_move_to_center", unit.id, unit.pos)
+            print("make_random_move_to_center", unit.id, unit.pos, direction)
             action = unit.move(direction)
             actions.append(action)
             if annotation:
@@ -1075,7 +1077,8 @@ def make_unit_actions_supplementary(game_state: Game, missions: Missions, observ
                 make_random_move_to_void(unit, "KS")
         else:
             # move to center so as to consolidate resources
-            make_random_move_to_center(unit, "KP")
+            # make_random_move_to_center(unit, "KP")
+            pass
 
 
     # make a movement within the city at night, if near the enemy
